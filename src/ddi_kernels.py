@@ -19,6 +19,7 @@ import nltk
 import nltk.data
 from nltk.tree import Tree
 from nltk.stem.wordnet import WordNetLemmatizer
+from nltk.corpus import wordnet
 
 from sklearn.pipeline import Pipeline
 from sklearn.cross_validation import KFold
@@ -31,28 +32,25 @@ from sklearn.preprocessing import MinMaxScaler
 import ssm
 from chebi_resolution import find_chebi_term3
 import relations
-import ddi_ssm
-import ddi_crf
-import ddi_sentences
-import ddi_preprocess
 
 
-basedir = "ddi_models/"
+basedir = "models/ddi_models/"
+temp_dir = "temp/"
 
 def reparse_tree(line):
     ptree = Tree.fromstring(line)
     leaves = ptree.leaves()
     
 
-def get_pair_instances(pairdic, pairtext):
+def get_pair_instances(pair, pairtext):
     pairinstances = []
     #if the first candidate has more than one mention, each one is an instance
-    if len(pairdic[relations.PAIR_E1TOKENS]) > 1:
+    if len(pair[relations.PAIR_E1TOKENS]) > 1:
         #logging.debug("%s e1 tokens", len(pairdic[ddi.PAIR_E1TOKENS]))
         #create to instances for this pair
         #print "a", [pairtext[t] for t in pairs[pair][ddi.PAIR_E1TOKENS]]
         #print "b", [pairtext[t] for t in pairs[pair][ddi.PAIR_E2TOKENS]]
-        for idx in pairdic[relations.PAIR_E1TOKENS]:
+        for idx in pair[relations.PAIR_E1TOKENS]:
             temptokens = pairtext[:]
             #for tidx in range(len(pairtext)):
             #    if tidx != idx and pairtext[tidx] == "#drug-candidatea#":
@@ -100,7 +98,7 @@ def get_pair_instances(pairdic, pairtext):
     return pairinstances
 
 
-def generatejSRE_line(pairtext, pos, lemmas, ner, entitytext):
+def generatejSRE_line(pairtext, pos, lemmas, ner):
     candidates = [0,0]
     body = ''
     for it in range(len(pairtext)):
@@ -131,6 +129,7 @@ def generatejSRE_line(pairtext, pos, lemmas, ner, entitytext):
             tokentext = pairtext[it].lstrip()
             lemma = tokentext
         else:
+            # logging.debug("{}".format(pairtext[it].lstrip()))
             tokentype = ner[it]
             tokenlabel = 'O'
             tokentext = pairtext[it].lstrip()
@@ -141,8 +140,6 @@ def generatejSRE_line(pairtext, pos, lemmas, ner, entitytext):
             elif tokentext == '-LRB-':
                 tokentext = '('
                 lemma = '('
-
-
         #if ' ' in pairtext[it][0].lstrip() or '\n' in pairtext[it][0].lstrip():
         #    print "token with spaces!"
         #    print pairs[pair][ddi.PAIR_TOKENS][it][0].lstrip()
@@ -164,65 +161,91 @@ def generatejSRE_line(pairtext, pos, lemmas, ner, entitytext):
         body += " " + str(it+1) + "&&#candidate#&&#candidate#&&-None-&&drug&&T "
     return body
 
-def generatejSREdata(pairs, docs, savefile, dditype, excludesentences=[], train=False):
+def generatejSREdata(pairs, sentence, basemodel, savefile, train=False):
     examplelines = []
     for pair in pairs:
         #logging.debug(pair)
-        e1id = docs[relations.getSentenceID(pair)][relations.SENTENCE_PAIRS][pair][relations.PAIR_E1ID]
-        e2id = docs[relations.getSentenceID(pair)][relations.SENTENCE_PAIRS][pair][relations.PAIR_E2ID]
-        sid = relations.getSentenceID(pair)
-        #skip false DDIs for type training
-        #if dditype != "all" and train and not pairs[pair][ddi.PAIR_DDI]:
-        #    continue
-        #etypes = pairs[pair][ddi.PAIR_ENTITIES_TYPE]
-        if relations.getSentenceID(pair)  in excludesentences:
-            continue
+        e1id = pair.eids[0]
+        e2id = pair.eids[1]
+        sid = sentence.sid
 
-        pairtext = docs[sid][relations.SENTENCE_TOKENS][:]
+        sentence_tokens = [t.text for t in sentence.tokens]
         #print pairtext,
-        pairtext = ddi_preprocess.blind_all_entities(pairtext,
-                                                    [ddi_preprocess.compact_id(e1id),
-                                                     ddi_preprocess.compact_id(e2id)])
-        #logging.debug("generating pair instances...")
-        pairinstances = get_pair_instances(pairs[pair], pairtext)
-        #logging.debug("done.")
-        if not pairs[pair][relations.PAIR_DDI]:
+        if not pair.relation:
             trueddi = 0
-        elif dditype == "all":
-            trueddi = 1
         else:
-            if pairs[pair][relations.PAIR_TYPE] == dditype:
-                trueddi = 1
-            else:
-                trueddi = 0
+            trueddi = 1
 
         #print pairtext
-        pos = docs[sid][relations.SENTENCE_POS]
-        stems = docs[sid][relations.SENTENCE_STEMS]
-        lemmas = docs[sid][relations.SENTENCE_LEMMAS]
-        ner = docs[sid][relations.SENTENCE_NER]
+        pos = [t.pos for t in sentence.tokens]
+        lemmas = [t.lemma for t in sentence.tokens]
+        ner = [t.tag for t in sentence.tokens]
+        logging.debug("{} {} {} {}".format(len(sentence_tokens), len(pos), len(lemmas), len(ner)))
+        pair_text, pos, lemmas, ner = blind_all_entities(sentence_tokens, sentence.entities.elist[basemodel],
+                                                         [e1id, e2id], pos, lemmas, ner)
+        logging.debug("{} {} {} {}".format(len(pair_text), len(pos), len(lemmas), len(ner)))
         #logging.debug("generating jsre lines...")
-        entitytext = [docs[sid][relations.SENTENCE_ENTITIES][e1id][relations.ENTITY_TEXT].replace(" ", "_"),
-                      docs[sid][relations.SENTENCE_ENTITIES][e2id][relations.ENTITY_TEXT].replace(" ", "_")]
-        for i in range(len(pairinstances)):
+        #for i in range(len(pairinstances)):
             #body = generatejSRE_line(pairinstances[i], pos, stems, ner)
-            body = generatejSRE_line(pairinstances[i], pos, lemmas, ner, entitytext)
-            examplelines.append(str(trueddi) + '\t' + pair + '.i' + str(i) + '\t' + body + '\n')
+        body = generatejSRE_line(pair_text, pos, lemmas, ner)
+        examplelines.append(str(trueddi) + '\t' + pair.pid + '.i' + '0\t' + body + '\n')
             #print body
         #elif candidates[0] > 1 or candidates[1] > 1:
         #    print "multiple candidates!!", pairtext
-    logging.debug("writing to file...")
-    with open(basedir + savefile, 'w') as trainfile:
+    # logging.debug("writing to file...")
+    with open(temp_dir + savefile, 'w') as trainfile:
         for l in examplelines:
             #print l
             trainfile.write(l)
-    logging.info("wrote " + basedir + savefile)
+    # logging.info("wrote " + temp_dir + savefile)
+
+
+def compact_id(eid):
+    return eid.replace('.', '').replace('-', '')
+
+
+def blind_all_entities(tokens, entities, eids, pos, lemmas, ner):
+    # logging.info(eids)
+    ogtokens = tokens[:]
+    found1 = 0
+    found2 = 0
+    for e in entities:
+        if e.eid == eids[0]:
+            first_token = e.tokens[0].order + found1 + found2
+            # logging.debug("{} {} {} {}".format(tokens[first_token], pos[first_token], lemmas[first_token], ner[first_token]))
+            tokens = tokens[:first_token] + ["#drug-candidatea#"] + tokens[first_token:]
+            pos = pos[:first_token] + [pos[first_token]] + pos[:first_token]
+            lemmas = lemmas[:first_token] + [lemmas[first_token]] + lemmas[:first_token]
+            ner = ner[:first_token] + [ner[first_token]] + ner[:first_token]
+            # logging.debug("found e1 {} {} {} {}".format(len(tokens), len(pos), len(lemmas), len(ner)))
+            found1 += 1
+        elif e.eid == eids[1]:
+            first_token = e.tokens[0].order + found1 + found2
+            # logging.debug("{} {} {} {}".format(tokens[first_token], pos[first_token], lemmas[first_token], ner[first_token]))
+            tokens = tokens[:first_token] + ["#drug-candidateb#"] + tokens[first_token:]
+            pos = pos[:first_token] + [pos[first_token]] + pos[first_token:]
+            lemmas = lemmas[:first_token] + [lemmas[first_token]] + lemmas[first_token:]
+            ner = ner[:first_token] + [ner[first_token]] + ner[first_token:]
+            # logging.debug("found e2 {} {} {} {}".format(len(tokens), len(pos), len(lemmas), len(ner)))
+            found2 += 1
+        else:
+            tokens[e.tokens[0].order] = "#drug-entity#"
+            #print "found other drug"
+    if (not found1 or not found2):
+        logging.warning("ddi_preprocess: could not find one of the pairs here!")
+        logging.warning(tokens)
+        logging.warning(ogtokens)
+        logging.info([(e.text, e.eid) for e in entities if e.eid in eids])
+        sys.exit()
+    # logging.debug("{} {} {} {}".format(len(tokens), len(pos), len(lemmas), len(ner)))
+    return tokens, pos, lemmas, ner
+
 
 def trainjSRE(inputfile, model="slk_classifier.model"):
     if os.path.isfile("ddi_models/" + model):
         print "removed old model"
         os.remove("ddi_models/" + model)
-    if not os.path.isfile(basedir + inputfile):
+    if not os.path.isfile(temp_dir + inputfile):
         print "could not find training file " + basedir + inputfile
         sys.exit()
     if platform.system() == "Windows":
@@ -233,7 +256,7 @@ def trainjSRE(inputfile, model="slk_classifier.model"):
     classpath = 'jsre/jsre-1.1/bin/' + sep + sep.join(["jsre/jsre-1.1/lib/" + l for l in libs])
     jsrecall = ['java', '-mx8g', '-classpath', classpath, "org.itc.irst.tcc.sre.Train",
                       "-k",  "SL", "-n", "4", "-w", "3", "-m", "4098",  "-c", "2",
-                      basedir + inputfile, basedir + model]
+                      temp_dir + inputfile, basedir + model]
     #print " ".join(jsrecall)
     jsrecall = Popen(jsrecall, stdout = PIPE, stderr = PIPE)
     res  = jsrecall.communicate()
@@ -252,8 +275,8 @@ def trainjSRE(inputfile, model="slk_classifier.model"):
 
 
 def testjSRE(inputfile, outputfile, model="slk_classifier.model"):
-    if os.path.isfile(basedir + outputfile):
-        os.remove(basedir + outputfile)
+    if os.path.isfile(temp_dir + outputfile):
+        os.remove(temp_dir + outputfile)
     if not os.path.isfile(basedir + model):
         print "model", basedir + model, "not found"
         sys.exit()   
@@ -261,81 +284,50 @@ def testjSRE(inputfile, outputfile, model="slk_classifier.model"):
         sep = ";"
     else:
         sep = ":"
-    logging.debug("testing %s with %s to %s", basedir + inputfile,
-                  basedir + model, basedir + outputfile)
+    #logging.debug("testing %s with %s to %s", temp_dir + inputfile,
+    #              basedir + model, temp_dir + outputfile)
     libs = ["libsvm-2.8.jar", "log4j-1.2.8.jar", "commons-digester.jar", "commons-beanutils.jar", "commons-logging.jar", "commons-collections.jar"]
     classpath = 'bin/jsre/jsre-1.1/bin/' + sep + sep.join(["bin/jsre/jsre-1.1/lib/" + l for l in libs])
     jsrecommand = ['java', '-mx4g', '-classpath', classpath, "org.itc.irst.tcc.sre.Predict",
-                      basedir + inputfile, basedir + model, basedir + outputfile]
+                      temp_dir + inputfile, basedir + model, temp_dir + outputfile]
     #print ' '.join(jsrecommand)
     jsrecall = Popen(jsrecommand, stdout = PIPE, stderr = PIPE)
     res = jsrecall.communicate()
-    logging.debug(res[0].strip().split('\n')[-2:])
+    #logging.debug(res[0].strip().split('\n')[-2:])
     #os.system(' '.join(jsrecommand))
-    if not os.path.isfile(basedir + outputfile):
+    if not os.path.isfile(temp_dir + outputfile):
         print "something went wrong with JSRE!"
         print res
         sys.exit()
-    logging.debug("done.")
+    #logging.debug("done.")
 
 
-def getjSREPredicitons(examplesfile, resultfile, pairs, kernelpairs, dditype):
+def getjSREPredicitons(examplesfile, resultfile, pairs):
     #pred_y = []
-    with open(basedir + resultfile, 'r') as resfile:
+    with open(temp_dir + resultfile, 'r') as resfile:
         pred = resfile.readlines()
-        '''for line in resfile:
-            #print line.strip()
-            if line.strip() == '1.0':
-                pred_y.append(1)
-            else:
-                pred_y.append(-1)'''
-    #print pred_y
-    
-    #true_y = []
-    with open( basedir + examplesfile, 'r') as trainfile:
+
+    with open(temp_dir + examplesfile, 'r') as trainfile:
         original = trainfile.readlines()
-        '''for lines in trainfile:
-            if lines.split('\t')[0] == '1':
-                true_y.append(1)
-            else:
-                true_y.append(-1)'''
-    #print true_y            
-    #return [[0], [0]], [], [true_y, pred_y]
+
     if len(pred) != len(original):
         print "different number of predictions!"
         sys.exit()
 
     temppreds = {}
     for i in range(len(pred)):
-        tsv = original[i].split('\t')
-        pair = '.'.join(tsv[1].split('.')[:-1])
-        if pair not in pairs:
+        original_tsv = original[i].split('\t')
+        # logging.debug(original_tsv)
+        pid = '.'.join(original_tsv[1].split('.')[:-1])
+        if pid not in pairs:
             print "pair not in pairs!"
-            print pair
+            print pid
             print pairs
             sys.exit()
         #confirm that everything makes sense
-        true = float(tsv[0])
-        if true == 0:
-            true = -1
-
-        '''if not kernelpairs[pair][ddi.PAIR_DDI]:
-            trueddi = -1
-        elif dditype == "all":
-            trueddi = 1
-        elif dditype != "all":
-            if kernelpairs[pair][ddi.PAIR_TYPE] == dditype:
-                trueddi = 1
-            else:
-                trueddi = -1
-
-        #print pairs[pair]
-        if trueddi != true:
-            print kernelpairs[pair]
-            print pairs[pair]
-            print trueddi, dditype, true
-            print "the test data for jsre is inconsistent"
-            sys.exit()'''
+        # true = float(original_tsv[0])
+        # if true == 0:
+        #    true = -1
 
         p = float(pred[i].strip())
         if p == 0:
@@ -343,12 +335,12 @@ def getjSREPredicitons(examplesfile, resultfile, pairs, kernelpairs, dditype):
         if p == 2:
             print "p=2!"
             p = 1
-
-        if pair not in temppreds:
-            temppreds[pair] = []
-        temppreds[pair].append(p)
-
-    for pair in temppreds:
+        logging.debug("{} - {} SLK: {}".format(pairs[pid].entities[0], pairs[pid].entities[1], p))
+        #if pair not in temppreds:
+        #    temppreds[pair] = []
+        #temppreds[pair].append(p)
+        pairs[pid].recognized_by[relations.SLK_PRED] = p
+    '''for pair in temppreds:
         if relations.SLK_PRED not in pairs[pair]:
             pairs[pair][relations.SLK_PRED] = {}
         p = mode(temppreds[pair])[0][0]
@@ -362,35 +354,49 @@ def getjSREPredicitons(examplesfile, resultfile, pairs, kernelpairs, dditype):
         if relations.SLK_PRED not in pairs[pair]:
             pairs[pair][relations.SLK_PRED] = {}
         if dditype not in pairs[pair][relations.SLK_PRED]:
-             pairs[pair][relations.SLK_PRED][dditype] = -1
+             pairs[pair][relations.SLK_PRED][dditype] = -1'''
     return pairs
 
-  
-def get_svm_train_line(tree, pair, sid, docsp):
+def get_wordnet_pos(treebank_tag):
+
+    if treebank_tag.startswith('J'):
+        return wordnet.ADJ
+    elif treebank_tag.startswith('V'):
+        return wordnet.VERB
+    elif treebank_tag.startswith('N'):
+        return wordnet.NOUN
+    elif treebank_tag.startswith('R'):
+        return wordnet.ADV
+    else:
+        return wordnet.NOUN
+
+
+def get_svm_train_line(tree, pair, sid):
     lmtzr = WordNetLemmatizer()
-    e1id = ddi_preprocess.compact_id(pair[relations.PAIR_E1ID])
-    e2id = ddi_preprocess.compact_id(pair[relations.PAIR_E2ID])
-    tree = tree.replace(e1id, 'candidatedrug')
-    tree = tree.replace(e2id, 'candidatedrug')
+    e1id = compact_id(pair.eids[0])
+    e2id = compact_id(pair.eids[1])
+    tree = tree.replace(pair.entities[0].tokens[0].text, 'candidatedrug')
+    tree = tree.replace(pair.entities[1].tokens[0].text, 'candidatedrug')
     #tree = tree.replace(sid.replace('.', '').replace('-', '') + 'e', 'otherdrug')
-    sid2 = ddi_preprocess.compact_id(sid) + 'e'
-    tree = re.sub(sid2 + r'\d+', 'otherdrug', tree)
+    sid2 = compact_id(sid) + 'e'
+    # TODO: replace other entities
+    #tree = re.sub(sid2 + r'\d+', 'otherdrug', tree)
     #print "tree2:", tree
     if tree[0] != '(':
         tree = '(S (' + tree + ' NN))'
     #this depends on the version of nlkt
-    #ptree = Tree.fromstring(tree)
-    ptree = Tree.parse(tree)
+    ptree = Tree.fromstring(tree)
+    #ptree = Tree.parse(tree)
     leaves = list(ptree.pos())
     lemmaleaves = []
     for t in leaves:
-        pos = ddi_crf.get_wordnet_pos(t[1])
+        pos = get_wordnet_pos(t[1])
         lemma = lmtzr.lemmatize(t[0].lower(), pos)
         lemmaleaves.append(lemma)
     #lemmaleaves = [ for t in leaves)]
-    #print "tree:", tree
+    logging.debug("tree:" + tree)
     line = '1 '
-    line += '|BT| (ROOT ' + tree +') '
+    line += '|BT|'  + tree
     #bowline = '(BOW (' + ' *)('.join(lemmaleaves) + ' *)) '
     #ptree = Tree.parse(bowline)
     #ptree = ptree.pprint(indent=-1000)
@@ -411,15 +417,6 @@ def get_svm_train_line(tree, pair, sid, docsp):
     #line += " |EV|"
     line += '\n'
     return line
-
-def use_external_data(docs, excludesentence, dditype):
-    ids, features, labels = ddi_ssm.getFeatures(docs, ddi_ssm.features,
-                                                excludesentence, dditype)
-    for i in range(len(ids)):
-        pid = ids[i]
-        sid = relations.getSentenceID(pid)
-        docs[sid][relations.SENTENCE_PAIRS][pid][relations.PAIR_SSM_VECTOR] = features[i]
-    return docs
 
 
 def trainSVMTK(docs, pairs, dditype, model="svm_tk_classifier.model", excludesentences=[]):
@@ -456,7 +453,7 @@ def trainSVMTK(docs, pairs, dditype, model="svm_tk_classifier.model", excludesen
     svmlightcall = Popen(["./svm-light-TK-1.2/svm-light-TK-1.2.1/svm_learn", "-t", "5",
                           "-L", "0.4", "-T", "2", "-S", "2", "-g", "10",
                           "-D", "0", "-C", "T", basedir + model + ".txt", basedir + model],
-                         stdout = PIPE)
+                         stdout = PIPE, stderr = PIPE)
     res  = svmlightcall.communicate()
     if not os.path.isfile("ddi_models/" + model):
         print "failed training model " + basedir + model
@@ -464,19 +461,18 @@ def trainSVMTK(docs, pairs, dditype, model="svm_tk_classifier.model", excludesen
         sys.exit()
 
 
-def testSVMTK(docs, pairs, allpairs, dditype, model="svm_tk_classifier.model", tag="", excludesentences=[] ):
-    if os.path.isfile("ddi_models/" + tag + "svm_test_data.txt"):
-            os.remove("ddi_models/" + tag + "svm_test_data.txt")
-    if os.path.isfile("ddi_models/" + tag + "svm_test_output.txt"):
-            os.remove("ddi_models/" + tag + "svm_test_output.txt")
+def testSVMTK(sentence, pairs, pairs_list, model="svm_tk_classifier.model", tag=""):
+    if os.path.isfile(basedir + tag + "svm_test_data.txt"):
+            os.remove(basedir + tag + "svm_test_data.txt")
+    if os.path.isfile(basedir + tag + "svm_test_output.txt"):
+            os.remove(basedir + tag + "svm_test_output.txt")
     #docs = use_external_data(docs, excludesentences, dditype)
-    plist = [p for p in pairs.keys() if '.'.join(p.split('.')[:-1]) not in excludesentences]
-    xerrors = 0
+    #pidlist = pairs.keys()
     total = 0
-    with open("ddi_models/" + tag + "svm_test_data.txt", 'w') as test:
-        for p in range(len(plist)):
-            sid = relations.getSentenceID(plist[p])
-            tree = pairs[plist[p]][relations.PAIR_DEP_TREE][:]
+    with open(temp_dir + tag + "svm_test_data.txt", 'w') as test:
+        for pid in pairs:
+            sid = pairs[pid].sid
+            tree = sentence.parsetree
             
             #if len(docs[sid][ddi.SENTENCE_ENTITIES]) > 30:
                 #print line
@@ -484,46 +480,36 @@ def testSVMTK(docs, pairs, allpairs, dditype, model="svm_tk_classifier.model", t
             #    line = "1 |BT| (ROOT (NP (NN candidatedrug) (, ,) (NN candidatedrug))) |ET|\n"
             #    xerrors += 1
             #else:
-            line = get_svm_train_line(tree, pairs[plist[p]], sid,
-                                          docs[sid][relations.SENTENCE_PAIRS][plist[p]])
-            if not pairs[plist[p]][relations.PAIR_DDI]:
-                line = '-' + line
-            elif pairs[plist[p]][relations.PAIR_TYPE] != dditype and dditype != "all":
-                line = '-' + line
+            line = get_svm_train_line(tree, pairs[pid], sid)
+            line = '-' + line
             test.write(line)
             total += 1
     #print "tree errors:", xerrors, "total:", total
-    svmtklightargs = ["./svm-light-TK-1.2/svm-light-TK-1.2.1/svm_classify",
-                          basedir + tag + "svm_test_data.txt",  basedir + model,
-                          basedir + tag + "svm_test_output.txt"]
+    svmtklightargs = ["./bin/svm-light-TK-1.2/svm-light-TK-1.2.1/svm_classify",
+                          temp_dir + tag + "svm_test_data.txt",  basedir + model,
+                          temp_dir + tag + "svm_test_output.txt"]
     svmlightcall = Popen(svmtklightargs, stdout=PIPE, stderr=PIPE)
     res  = svmlightcall.communicate()
-    logging.debug(res[0].split('\n')[-3:])
+    # logging.debug(res[0].split('\n')[-3:])
     #os.system(' '.join(svmtklightargs))
-    if not os.path.isfile("ddi_models/" + tag + "svm_test_output.txt"):
+    if not os.path.isfile(temp_dir + tag + "svm_test_output.txt"):
         print "something went wrong with SVM-light-TK"
         print res
         sys.exit()
-    with open("ddi_models/" + tag + "svm_test_output.txt", 'r') as out:
+    with open(temp_dir + tag + "svm_test_output.txt", 'r') as out:
         lines = out.readlines()
-    if len(lines) != len(plist):
-        print "check ddi_models/" + tag + "svm_test_output.txt! something is wrong"
+    if len(lines) != len(pairs_list):
+        print "check " + tag + "svm_test_output.txt! something is wrong"
         print res
         sys.exit()
-    for p in range(len(plist)):
-        if relations.SST_PRED not in allpairs[plist[p]]:
-            allpairs[plist[p]][relations.SST_PRED] = {}
-        if float(lines[p]) < 0:
-            allpairs[plist[p]][relations.SST_PRED][dditype] = -1
+    for p, pid in enumerate(pairs):
+        score = float(lines[p])
+        if float(score) < 0:
+            pairs[pid].recognized_by[relations.SST_PRED] = -1
         else:
-            allpairs[plist[p]][relations.SST_PRED][dditype] = 1
-    
-    for pair in allpairs:
-        if relations.SST_PRED not in allpairs[pair]:
-            allpairs[pair][relations.SST_PRED] = {}
-        if dditype not in allpairs[pair][relations.SST_PRED]:
-            allpairs[pair][relations.SST_PRED][dditype] = -1
-    return allpairs
+            pairs[pid].recognized_by[relations.SST_PRED] = 1
+        logging.info("{} - {} SST: {}".format(pairs[pid].entities[0], pairs[pid].entities[0], score))
+    return pairs
 
 
 def main():
