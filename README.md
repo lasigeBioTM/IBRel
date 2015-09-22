@@ -21,10 +21,15 @@ After setting up the dependencies, you have to edit src/config.py with the MySQL
 You can either run the system in batch or server mode.
 Batch mode expects specific data formats and can be used to train classifiers and evaluate on a test set.
 For example, to train a classifier models/class1.ser.gz from the data on corpus1:
+
     python src/main.py train --goldstd corpus1 --models models/class1
+    
 To test with this classifier on corpus2 and save the results to data/results1.pickle:
+
     python src/main.py test --goldstd corpus2 -o pickle data/results1 --models models/class1
+    
 To evaluate the results on the corpus2 gold standard:
+
     python src/evaluate.py evaluate corpus2 --results data/results1 --models models/class1
 
 If you just want to send text to previously trained classifiers and get results, use the server mode.
