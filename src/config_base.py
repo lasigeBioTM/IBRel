@@ -19,6 +19,7 @@ go_conn = MySQLdb.connect(host=go_host,
                      passwd=go_pw,
                      db=go_db)
 
+host_ip = ""
 geniass_path = "./bin/geniass"
 florchebi_path = "./bin "
 
