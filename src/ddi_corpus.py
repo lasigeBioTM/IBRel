@@ -7,7 +7,9 @@ import os
 import sys
 
 from corpus import Corpus
-from document import Document, Sentence
+from document import Document
+from src.sentence import Sentence
+
 
 class DDICorpus(Corpus):
     """

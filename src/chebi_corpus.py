@@ -8,7 +8,9 @@ import os
 import xml.etree.ElementTree as ET
 
 from corpus import Corpus
-from document import Document, Sentence
+from document import Document
+from src.sentence import Sentence
+
 
 class ChebiCorpus(Corpus):
     '''Chemdner corpus from BioCreative IV and V'''

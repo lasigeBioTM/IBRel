@@ -19,12 +19,6 @@ from chebi_resolution import find_chebi_term3
 from chebi_resolution import chebi2go
 from chebi_resolution import get_description
 import ddi_kernels
-import ddi_sentences
-import ddi_ssm
-import ddi_ensemble
-import ddi_crf
-import ddi_types
-import ddi_preprocess
 
 TRUE_DDI = 'trueDDI'
 #shallow linguist kernel prediction using jsre
@@ -42,16 +36,33 @@ class Pair(object):
     def __init__(self, entities, **kwargs):
         self.sid = kwargs.get("sid")
         self.did = kwargs.get("did")
-        self.pid = kwargs.get("did")
+        self.pid = kwargs.get("pid")
         self.entities = entities
         self.eids = (entities[0].eid, entities[1].eid)
         self.relation = False
-        self.recognized_by = []
+        self.recognized_by = {}
         self.score = 0
 
+    def get_dic(self):
+        dic = {}
+        dic["eid1"] = self.eids[0]
+        dic["eid2"] = self.eids[0]
+        dic["pid"] = self.pid
+        dic["relation"] = self.relation
+
 class Pairs(object):
-    """ List of entities
+    """ List of pairs related to a sentence
     """
+    def __init__(self, **kwargs):
+        self.pairs = {}
+        self.sid = kwargs.get("sid")
+        self.did = kwargs.get("did")
+
+    def get_dic(self):
+        dic = []
+        for p in self.pairs:
+            dic.append(p.get_dic())
+        return dic
 
 def getSentenceID(pair):
     return '.'.join(pair.split('.')[:-1])

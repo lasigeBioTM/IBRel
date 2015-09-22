@@ -10,6 +10,9 @@ import xml.dom.minidom as minidom
 import logging
 import codecs
 from bottledaemon import daemon_run
+import cPickle as pickle
+import random
+import string
 
 from document import Document
 from corpus import Corpus
@@ -21,7 +24,7 @@ import chebi_resolution
 from ssm import get_ssm
 from ensemble_ner import EnsembleNER
 import pubmed
-import relations
+from relations import Pair
 
 class IICEServer(object):
 
@@ -49,8 +52,14 @@ class IICEServer(object):
     def process_pubmed(self, pmid):
         text = pubmed.get_pubmed_abs(pmid)
 
+    def id_generator(self, size=6, chars=string.ascii_uppercase + string.digits):
+        return ''.join(random.choice(chars) for _ in range(size))
 
-    def process_multiple(self, text="", format="bioc"):
+    def process_multiple(self):
+        bottle.response.content_type = "application/json"
+        data = bottle.request.json
+        text = data["text"]
+        format = data["format"]
         test_corpus = self.generate_corpus(text)
         multiple_results = self.models.test_types(test_corpus)
         final_results = multiple_results.combine_results()
@@ -58,15 +67,18 @@ class IICEServer(object):
         final_results = add_ssm_score(final_results, self.basemodel)
         final_results.combine_results(self.basemodel, self.basemodel + "_combined")
 
-        self.ensemble.generate_data(final_results, supervisioned=False)
-        self.ensemble.test()
-        ensemble_results = ResultsNER(self.basemodel + "_combined_ensemble")
-        ensemble_results.get_ensemble_results(self.ensemble, final_results.corpus, self.basemodel + "_combined")
+        # self.ensemble.generate_data(final_results, supervisioned=False)
+        #self.ensemble.test()
+        # ensemble_results = ResultsNER(self.basemodel + "_combined_ensemble")
+        # ensemble_results.get_ensemble_results(self.ensemble, final_results.corpus, self.basemodel + "_combined")
         #output = get_output(final_results, basemodel + "_combined")
-        output = self.get_output(ensemble_results, self.basemodel + "_combined_ensemble", format)
-        #output = self.get_output(final_results, self.basemodel + "_combined")
+        results_id = self.id_generator()
+        #output = self.get_output(ensemble_results, self.basemodel + "_combined_ensemble", format, id=results_id)
+        output = self.get_output(final_results, self.basemodel + "_combined", format=format, results_id=results_id)
         #self.models.load_models()
         self.clean_up()
+        # save corpus to pickel and add ID to the output as corpusfile
+        pickle.dump(final_results.corpus, open("temp/{}.pickle".format(results_id), 'w'))
         return output
 
     def clean_up(self):
@@ -95,11 +107,34 @@ class IICEServer(object):
         :return: results dictionary with relations
         """
         data = bottle.request.json
-        for sentence in data["abstract"]["sentences"]:
+        # logging.debug(str(data))
+        if "corpusfile" in data:
+            corpus = pickle.load(open("temp/{}.pickle".format(data["corpusfile"])))
+            logging.info("loaded corpus {}".format(data["corpusfile"]))
+        else:
+            # create corpus
+            corpus = None
+            pass
+        did = "d0"
+        #for sentence in data["abstract"]["sentences"]:
+        for sentence in corpus.documents["d0"].sentences[1:]:
             sentence_pairs = []
-            for i1, e1 in enumerate(sentence["entities"]):
-                for i2, e2 in enumerate(sentence["entities"][i1:])
-                    sentence_pairs.append(e1, e2)
+            sentence_entities = sentence.entities.elist[self.basemodel + "_combined"]
+            # logging.info("sentence entities:" + str(sentence_entities))
+            sid = sentence.sid
+            for i1, e1 in enumerate(sentence_entities):
+                logging.info("sentence entities:" + str(e1))
+                if i1 < len(sentence_entities)-1:
+                    for i2, e2 in enumerate(sentence_entities[i1+1:]):
+                        logging.info("sentence entities:" + str(e2))
+                        pid = sentence.sid + ".p{}".format(len(sentence_pairs))
+                        newpair = Pair(entities=[e1, e2], sid=sid, pid=pid, did=did)
+                        sentence_pairs.append(newpair)
+                        sentence.pairs.pairs[pid] = newpair
+            logging.info(str(sentence_pairs))
+            if len(sentence_pairs) > 0:
+                corpus.documents[did].get_sentence(sid).test_relations(sentence_pairs, self.basemodel + "_combined")
+
 
         return data
 
@@ -116,7 +151,7 @@ class IICEServer(object):
         test_corpus.documents["d0"] = newdoc
         return test_corpus
 
-    def get_output(self, results, model_name, format="bioc"):
+    def get_output(self, results, model_name, format="bioc", results_id=None):
         if format == "bioc":
             a = ET.Element('collection')
             bioc = results.corpus.documents["d0"].write_bioc_results(a, model_name)
@@ -130,8 +165,8 @@ class IICEServer(object):
                 for l in lines:
                     output += ' '.join(l) + " "
         else: # default should be json
-            results_dic = {}
             results_dic = results.corpus.documents["d0"].get_dic(model_name)
+            results_dic["corpusfile"] = results_id
             output = json.dumps(results_dic)
         return output
 
@@ -237,9 +272,9 @@ def main():
         logging.info("loading time: {}; process time: {}".format(load_time, process_time))
     else:'''
     bottle.route("/hello")(server.hello)
-    bottle.route("/iice/chemdner/<text>/all.<format>", method='POST')(server.process_multiple)
-    bottle.route("/iice/chemdner/<text>/<modeltype>", method='POST')(server.process)
-    bottle.route("/iice/relations", method='POST')(server.get_relations)
+    bottle.route("/iice/chemical/entities", method='POST')(server.process_multiple)
+    #bottle.route("/iice/chemical/<text>/<modeltype>", method='POST')(server.process)
+    bottle.route("/iice/chemical/interactions", method='POST')(server.get_relations)
     #daemon_run(host='10.10.4.63', port=8080, logfile="server.log", pidfile="server.pid")
     bottle.run(host='10.10.4.63', port=8080, DEBUG=True)
 if __name__ == "__main__":

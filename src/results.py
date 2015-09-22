@@ -169,7 +169,8 @@ class ResultsNER(object):
                     #if e.score < 0.8:
                     #    logging.info("{0} score of {1}".format(e.text.encode("utf-8"),
                     #                                            e.score))
-        logging.info("{0} entities average confidence of {1}".format(total, scores/total))
+        if total > 0:
+            logging.info("{0} entities average confidence of {1}".format(total, scores/total))
 
 class ResultSetNER(object):
     """
