@@ -25,6 +25,7 @@ from ssm import get_ssm
 from ensemble_ner import EnsembleNER
 import pubmed
 from relations import Pair
+import config
 
 class IICEServer(object):
 
@@ -276,6 +277,6 @@ def main():
     #bottle.route("/iice/chemical/<text>/<modeltype>", method='POST')(server.process)
     bottle.route("/iice/chemical/interactions", method='POST')(server.get_relations)
     #daemon_run(host='10.10.4.63', port=8080, logfile="server.log", pidfile="server.pid")
-    bottle.run(host='10.10.4.63', port=8080, DEBUG=True)
+    bottle.run(host=config.host_ip, port=8080, DEBUG=True)
 if __name__ == "__main__":
     main()
