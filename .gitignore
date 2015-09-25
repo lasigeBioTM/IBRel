@@ -5,7 +5,7 @@ models/
 temp/
 .env
 # Local configurations
-src/config.py
+src/config/config.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

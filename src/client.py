@@ -1,11 +1,7 @@
 # coding=utf-8
 from __future__ import division, unicode_literals
 import sys
-
-__author__ = 'Andre'
 import requests
-
-#payload = {'key1': 'value1', 'key2': 'value2'}
 
 
 def main():
@@ -18,7 +14,7 @@ def main():
         elif sys.argv[1] == "3":
             text = "Primary Leydig cells obtained from bank vole testes and the established tumor Leydig cell line (MA-10) have been used to explore the effects of 4-tert-octylphenol (OP)."
         else:
-            text = "alcohol"
+            text = sys.argv[1]
         data = {"text": text, "format": "json"}
         r = requests.post('http://10.10.4.63:8080/iice/chemical/entities', json=data)
         print r.text
