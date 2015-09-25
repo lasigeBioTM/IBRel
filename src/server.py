@@ -14,28 +14,23 @@ import cPickle as pickle
 import random
 import string
 
-from document import Document
-from corpus import Corpus
-from chemdner_corpus import ChemdnerCorpus
-from taggercollection import TaggerCollection
-from simpletagger import SimpleTaggerModel, feature_extractors
-from results import ResultsNER
-import chebi_resolution
-from ssm import get_ssm
-from ensemble_ner import EnsembleNER
-import pubmed
-from relations import Pair
-import config
+from text.document import Document
+from text.corpus import Corpus
+from classification.ner.taggercollection import TaggerCollection
+from classification.ner.simpletagger import SimpleTaggerModel, feature_extractors
+from classification.results import ResultsNER
+from postprocessing import chebi_resolution
+from postprocessing.ssm import get_ssm
+from postprocessing.ensemble_ner import EnsembleNER
+from reader import pubmed
+from classification.re.relations import Pair
+from config import config
 
 class IICEServer(object):
 
-
-    CORENLP_DIR = "bin/stanford-corenlp-full-2015-01-30/"
-
-
     def __init__(self, basemodel, ensemble_model, submodels):
-        self.corenlpserver = StanfordCoreNLP(corenlp_path=self.CORENLP_DIR,
-                                            properties=self.CORENLP_DIR + "default.properties")
+        self.corenlpserver = StanfordCoreNLP(corenlp_path=config.corenlp_dir,
+                                            properties=config.corenlp_dir + "default.properties")
         self.basemodel = basemodel
         self.ensemble_model = ensemble_model
         self.subtypes = submodels
@@ -45,13 +40,11 @@ class IICEServer(object):
                                    features=[])
         self.ensemble.load()
 
-    #app = Bottle()
-    #run(reloader=True)
     def hello(self):
         return "Hello World!"
 
     def process_pubmed(self, pmid):
-        text = pubmed.get_pubmed_abs(pmid)
+        title, text = pubmed.get_pubmed_abs(pmid)
 
     def id_generator(self, size=6, chars=string.ascii_uppercase + string.digits):
         return ''.join(random.choice(chars) for _ in range(size))

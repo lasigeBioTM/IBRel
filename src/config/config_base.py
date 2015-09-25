@@ -21,7 +21,9 @@ go_conn = MySQLdb.connect(host=go_host,
 
 host_ip = ""
 geniass_path = "./bin/geniass"
-florchebi_path = "./bin "
+florchebi_path = "./bin"
+corenlp_dir = "bin/stanford-corenlp-full-2015-01-30/"
+stoplist = "data/stopwords.txt"
 
 chemdner_base = "CHEMDNER/"
 chemdner_train_base = "CHEMDNER/CHEMDNER_TRAIN_V01/"

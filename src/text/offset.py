@@ -1,12 +1,11 @@
 import logging
-__author__ = 'Andre'
-
 partial_overlap_before = 1
 partial_overlap_after = -1
 no_overlap = 0
 contains = 2
 contained_by = -2
 perfect_overlap = -3
+
 
 class Offset(object):
     """

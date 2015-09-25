@@ -1,8 +1,10 @@
-__author__ = 'Andre'
 import logging
 
 class Token2(object):
-    '''Token that is part of a sentence'''
+    """
+    Token that is part of a sentence
+    The 2 is because there's already a token class in NLTK
+    """
     def __init__(self, text, **kwargs):
         self.text = text
         self.sid = kwargs.get("sid")

@@ -1,19 +1,19 @@
-__author__ = 'Andre'
 import codecs
 import time
 import logging
 
-from corpus import Corpus
-from document import Document
+from text.corpus import Corpus
+from text.document import Document
+
 
 class ChemdnerCorpus(Corpus):
-    '''Chemdner corpus from BioCreative IV and V'''
+    """Chemdner corpus from BioCreative IV and V"""
     def __init__(self, corpusdir, **kwargs):
         super(ChemdnerCorpus, self).__init__(corpusdir, **kwargs)
         self.subtypes = ["IDENTIFIER", "MULTIPLE", "FAMILY", "FORMULA", "SYSTEMATIC", "ABBREVIATION", "TRIVIAL"]
 
     def load_corpus(self, corenlpserver, process=True):
-        '''Load the CHEMDNER corpus file on the dir element'''
+        """Load the CHEMDNER corpus file on the dir element"""
         # open filename and parse lines
         total_lines = sum(1 for line in open(self.path))
         n_lines = 1

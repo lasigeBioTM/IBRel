@@ -1,7 +1,5 @@
 from __future__ import division, unicode_literals
 import sys
-
-__author__ = 'Andre'
 from subprocess import Popen, PIPE, call
 import logging
 import codecs
@@ -11,9 +9,11 @@ import atexit
 from socket import error as SocketError
 import errno
 
-from offset import Offsets, Offset
-from results import ResultsNER
-from entity import ChemdnerAnnotation
+from text.offset import Offsets, Offset
+from classification.results import ResultsNER
+from text.entity import ChemdnerAnnotation
+from classification.ner.simpletagger import SimpleTaggerModel
+from config import config
 
 stanford_coding = {"-LRB-": "<", "\/": "/", "&apos;": "'", "analogs": "analogues", "analog": "analogue",
                    "-RRB-": ">", ":&apos;s": "'s"}
@@ -23,33 +23,32 @@ pattern = re.compile("|".join(rep.keys()))
 def replace_abbreviations(text):
     return pattern.sub(lambda m: rep[re.escape(m.group(0))], text)
 
-from simpletagger import SimpleTaggerModel
 
 class StanfordNERModel(SimpleTaggerModel):
     RAM = "-Xmx14g"
     RAM_TEST = "-Xmx4g"
-    STANFORD_BASE = "./bin/stanford-ner-2015-04-20"
+    STANFORD_BASE = config.stanford_ner_dir
     STANFORD_NER = "{}/stanford-ner.jar".format(STANFORD_BASE)
     NER_PROP = "{}/base.prop".format(STANFORD_BASE)
-    #NER_PROP = "{}/austen.prop".format(STANFORD_BASE)
     logging.info(NER_PROP)
     PARAMS = ["java", RAM, "-Dfile.encoding=UTF-8", "-cp", STANFORD_NER,
               "edu.stanford.nlp.ie.crf.CRFClassifier", "-prop", NER_PROP,
               "-readerAndWriter", "edu.stanford.nlp.sequences.CoNLLDocumentReaderAndWriter"]
     logging.info(PARAMS)
     TEST_SENT = "Structure-activity relationships have been investigated for inhibition of DNA-dependent protein kinase (DNA-PK) and ATM kinase by a series of pyran-2-ones, pyran-4-ones, thiopyran-4-ones, and pyridin-4-ones."
-    INLINEXML_EPATTERN_SINGLE  = re.compile(r'<(S-[A-Z-]+?)>(.+?)</\1>')
-    INLINEXML_EPATTERN_BEGIN  = re.compile(r'<(B-[A-Z-]+?)>(.+?)</\1>')
-    INLINEXML_EPATTERN_INSIDE  = re.compile(r'<(I-[A-Z-]+?)>(.+?)</\1>')
-    INLINEXML_EPATTERN_END  = re.compile(r'<(E-[A-Z-]+?)>(.+?)</\1>')
     XML_PATTERN = re.compile(r'<([A-Z-]+?)>(.+?)</\1>')
     CLEAN_XML = re.compile(r'<[^>]*>')
+
     def __init__(self, path, **kwargs):
         super(StanfordNERModel, self).__init__(path, **kwargs)
         self.process = None
         self.tagger = None
 
     def write_prop(self):
+        """
+        Write Stanford-NER prop file based on base.prop
+        :return:
+        """
         lines = codecs.open(self.NER_PROP, "r", "utf-8").readlines()
         with codecs.open(self.NER_PROP, "w", "utf-8") as props:
             for l in lines:
@@ -65,12 +64,9 @@ class StanfordNERModel(SimpleTaggerModel):
                     props.write(l)
         logging.info("wrote prop file")
 
-
     def train(self):
         self.write_prop()
         self.save_corpus_to_sbilou()
-        #process = Popen(self.PARAMS, stdout=PIPE, stderr=PIPE)
-        #res, err = process.communicate()
         process = Popen(self.PARAMS)
         process.communicate()
         logging.info("model " + self.path +'.ser.gz trained')
@@ -105,17 +101,11 @@ class StanfordNERModel(SimpleTaggerModel):
     def kill_process(self):
         self.process.kill()
 
-
     def process_results(self, sentences, corpus):
         results = ResultsNER(self.path)
         results.corpus = corpus
         for isent, sentence in enumerate(sentences):
-            #print self.sentences[isent], sentence
-            #sentence_labels = self.tag_tokens(isent, sentence)
-            #self.predicted.append(sentence_labels)
-            #self.scores.append([0 for i in sentence_labels])
             results = self.process_sentence(sentence, self.sids[isent], results)
-            #print "found {} entities".format(len(results.entities))
         logging.info("found {} entities".format(len(results.entities)))
         return results
 
@@ -244,7 +234,6 @@ class StanfordNERModel(SimpleTaggerModel):
                 elif l == "single":
                     label = "S-{}".format(entity_type)
                 #label += "_" + entity_type
-                #TODO: remove lower if its not helping
                 lines.append("{0}\t{1}\n".format(self.tokens[isent][it].text, label))
             lines.append("\n")
         with codecs.open("{}.bilou".format(self.path), "w", "utf-8") as output:

@@ -2,30 +2,17 @@ import logging
 import sys
 from xml.etree import ElementTree as ET
 import re
+
 from token2 import Token2
 from entity import Entities
-from relations import Pairs
-import ddi_kernels
-import relations
-
-__author__ = 'Andre'
-SENTENCE_ORIGINAL_TEXT = 'original_text'
-SENTENCE_TEXT = 'text'
-SENTENCE_TOKENS = 'tokens'
-SENTENCE_POS = 'partofspeech'
-SENTENCE_LEMMAS = 'lemmas'
-SENTENCE_NER = "stanford_ner"
-SENTENCE_OFFSETS = "soffsets"
-SENTENCE_PARSE = "sparse"
-SENTENCE_STEMS = 'stems'
-SENTENCE_TOKENS_FEATURES = 't_features'
-SENTENCE_ENTITIES = 'entities'
-SENTENCE_PAIRS = 'pairs'
-SENTENCE_ENTITIES_ORDER = 'entity_order'
+from classification.re.relations import Pairs
+from classification.re import ddi_kernels
+from classification.re import relations
+from entity import ChemdnerAnnotation
 
 
 class Sentence(object):
-    '''Sentence from a document, to be annotated'''
+    """Sentence from a document, to be annotated"""
     def __init__(self, text, offset=0, **kwargs):
         self.text = text
         self.sid = kwargs.get("sid")
@@ -33,14 +20,18 @@ class Sentence(object):
         self.entities = Entities(sid=self.sid, did=self.did)
         self.offset = offset
         self.pairs = Pairs()
+        self.parsetree = None
+        self.tokens = []
 
     def process_corenlp_sentence(self, corenlpres):
+        """
+        Process the results obtained with CoreNLP for this sentence
+        :param corenlpres:
+        :return:
+        """
         # self.sentences = []
         if len(corenlpres['sentences']) > 1:
             sys.exit("Number of sentences from CoreNLP is not 1.")
-        # for sentence in corenlpres['sentences']: # sentence is a dict
-            # newsent = Sentence(sentence["text"])
-            # print newsent.text
         if len(corenlpres['sentences']) == 0:
             self.tokens = []
             self.create_newtoken("", {})
@@ -50,9 +41,6 @@ class Sentence(object):
         sentence = corenlpres['sentences'][0]
         # print sentence
         self.parsetree = sentence['parsetree']
-        # print self.parsetree
-        # self.parsetree = sentence['parse']
-        self.tokens = []
         for t in sentence['words']:
             # print t[0]
             if t[0]:
@@ -79,9 +67,6 @@ class Sentence(object):
                 else:
                     self.create_newtoken(t[0], t[1])
 
-                #self.tokens.append(newtoken)
-        # logging.debug([(t.start, t.end) for t in self.tokens])
-
     def create_newtoken(self, text, props):
         newtoken = Token2(text, order=len(self.tokens))
         try:
@@ -103,8 +88,8 @@ class Sentence(object):
         return newtoken
 
     def tag_entity(self, start, end, subtype, entity=None, totalchars=0, source="goldstandard", **kwargs):
-        '''Find the tokens that match this entity. start and end are relative to the sentence.
-           Totalchars is the offset of the sentence on the document.'''
+        """Find the tokens that match this entity. start and end are relative to the sentence.
+           Totalchars is the offset of the sentence on the document."""
         tlist = []
         #logging.debug("lets tag this entity")
         # print self.tokens
@@ -144,7 +129,6 @@ class Sentence(object):
         #    print "no tokens found:", start, end, kwargs.get("text"), self.text
         #    print self.text[:start]
             # [(t.start, t.end, t.text) for t in self.tokens]
-
 
     def label_tokens(self, tlist, source, subtype="entity"):
         if len(tlist) == 1:
@@ -191,8 +175,8 @@ class Sentence(object):
         return dic
 
     def find_tokens_between(self, start, end, relativeto="doc"):
-        '''Return list of tokens between offsets. Use relativeto to consider doc indexes or
-           sentence indexes.'''
+        """Return list of tokens between offsets. Use relativeto to consider doc indexes or
+           sentence indexes."""
         foundtokens = []
         for t in self.tokens:
             if relativeto.startswith("doc") and t.dstart >= start and t.dend <= end:

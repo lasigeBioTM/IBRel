@@ -2,47 +2,33 @@ from __future__ import division, absolute_import, unicode_literals
 import logging
 import xml.etree.ElementTree as ET
 
-from offset import Offset, Offsets, perfect_overlap, contained_by, contains
-from chebi_resolution import element_base
-
-ENTITY_OFFSETS = 'offsets'
-ENTITY_START = 'start'
-ENTITY_END = 'end'
-ENTITY_TEXT = 'e_text'
-ENTITY_TYPE = 'e_type'
-ENTITY_CHEBI = 'chebi'
-ENTITY_GO = 'goterms'
-ENTITY_IDXTOKENS = 'e_itokens'
-ENTITY_URI = "e_uri"
-ENTITY_PATHWAYS = "e_pathways"
-ENTITY_DEFINITION = "e_description"
-ENTITY_CLASSIFICATIONS = "e_classifications"
-ENTITY_DRUGBANK = "e_drugbank"
+from text.offset import Offset, Offsets, perfect_overlap, contained_by, contains
+from postprocessing.chebi_resolution import element_base
+from config import config
 
 # words that may seem like they are not part of named chemical entities but they are
-chemwords = set(["oh", "so", "or", "to", "et", "me", "and", "containing", "halogen", "glucose", "heterocyclic", "ethanol",
-                 "alcohol", "alkoxy", "cholesterol", "amino", "heteroaryl", "rosemary"])
+chem_words = set()
 for e in element_base:
-    chemwords.add(e.lower())
-    chemwords.add(element_base[e][0].lower())
-stopwords = set(["isomeric", "jewel", "acide", "medicine", "formula", "crystalline", "(I)", "tetravalent", "cla",
-                 "hidroxy", "short", "omega", "linear", "cgrp", "peptide"])
-with open("data/stopwords.txt", 'r') as stopfile:
+    chem_words.add(e.lower())
+    chem_words.add(element_base[e][0].lower())
+
+# words that are never part of chemical entities
+chem_stopwords = set()
+with open(config.stoplist, 'r') as stopfile:
     for l in stopfile:
         w = l.strip().lower()
-        if w not in chemwords and len(w) > 1:
-            stopwords.add(w)
+        if w not in chem_words and len(w) > 1:
+            chem_stopwords.add(w)
 
 
 class Entity(object):
     """Base entity class"""
 
     def __init__(self, tokens, **kwargs):
-        self.type = kwargs.get(ENTITY_TYPE, None)
+        self.type = kwargs.get('e_type', None)
         self.text = kwargs.get("text", None)
         self.did = kwargs.get("did", None)
         self.eid = kwargs.get("eid")
-        # self.eid = kwargs.get("eid")
         self.tokens = tokens
         self.start = tokens[0].start
         self.end = tokens[-1].end
@@ -57,7 +43,6 @@ class Entity(object):
         output = self.text + " relative to sentence:" + str(self.start) + ":" + str(self.end)
         output += " relative to document:" + str(self.dstart) + ":" + str(self.dend) + " => "
         output += ' '.join([t.text for t in self.tokens])
-
         return output
 
     def write_chemdner_line(self, outfile, rank=1):
@@ -100,6 +85,7 @@ class Entity(object):
         dic["sentence_offset"] = self.start
         return dic
 
+
 class ChemicalEntity(Entity):
     """Chemical entities"""
     def __init__(self, tokens, **kwargs):
@@ -129,7 +115,7 @@ class ChemicalEntity(Entity):
         if "stopwords" in rules:
             words = self.text.split(" ")
             stop = False
-            for s in stopwords:
+            for s in chem_stopwords:
                 if any([s == w.lower() for w in words]):
                     logging.debug("ignored stopword %s" % e.text)
                     stop = True
@@ -155,7 +141,7 @@ class ChemicalEntity(Entity):
             return False
 
         #if all filters are 0, do not even check
-        if "ssm" in ths and ths["ssm"] != 0 and e.ssm_score < ths["ssm"] and e.text.lower() not in chemwords:
+        if "ssm" in ths and ths["ssm"] != 0 and e.ssm_score < ths["ssm"] and e.text.lower() not in chem_words:
             #logging.debug("filtered %s => %s" % (e.text,  str(e.ssm_score)))
             return False
 
@@ -182,22 +168,21 @@ class ChemdnerAnnotation(ChemicalEntity):
         super(ChemdnerAnnotation, self).__init__(tokens, **kwargs)
         self.sid = sid
 
+
 class ProteinEntity(Entity):
     def __init__(self, tokens, **kwargs):
         # Entity.__init__(self, kwargs)
-        super(ChemicalEntity, self).__init__(tokens, **kwargs)
+        super(ProteinEntity, self).__init__(tokens, **kwargs)
         self.type = "protein"
         self.subtype = kwargs.get("subtype")
 
+
     def get_dic(self):
-        dic = super(ChemicalEntity, self).get_dic()
+        dic = super(ProteinEntity, self).get_dic()
         dic["subtype"] = self.subtype
-        dic["go_id"] = self.go_id
-        dic["go_name"] = self.go_name
         dic["ssm_score"] = self.ssm_score
         dic["ssm_entity"] = self.ssm_go_ID
         return dic
-
 
 
 class Entities(object):
@@ -217,19 +202,18 @@ class Entities(object):
         self.elist[esource].append(entity)
 
     def write_chemdner_results(self, source, outfile, ths={"ssm":0.0}, rules=[], totalentities=0):
-        # for each set of results, map to chebi and measure max SSM
-        # then, filter by chebi score or SSM
-        # check if at least one char is alphabetic
-        # fix N-, C-, etc and parenthesis
-        # go through each set of results, and add the entities found to a dictionary on the respective Sentence
-        # also save which classifiers recognized which entities
-        # check if there is a result that overlaps and consider the one with best mapping
-        # logging.info(rules)
+        """
+        Write results that can be evaluated with the BioCreative evaluation script
+        :param source: Base model path
+        :param outfile: Text Results path to be evaluated
+        :param ths: Thresholds
+        :param rules: Validation rules
+        :param totalentities: Number of entities already validated on this document (for ranking)
+        :return:
+        """
         lines = []
         offsets = Offsets()
         rank = totalentities
-        #if source in self.elist:
-        #if len(self.elist.keys()) == 2:
         #    print self.elist.keys()
         for s in self.elist:
             #if s != "goldstandard":
@@ -238,77 +222,28 @@ class Entities(object):
                 #logging.info("%s - %s" % (self.sid, s))
 
                 for e in self.elist[s]:
-                    # EXCLUSION RULES
-                    #if any([word in e.text for word in self.stopwords]):
-                    #    logging.debug("ignored stopword %s" % e.text)
-                    #    continue
-                    if "stopwords" in rules:
-                        words = e.text.split(" ")
-                        stop = False
-                        for s in stopwords:
-                            if any([s == w.lower() for w in words]):
-                                logging.debug("ignored stopword %s" % e.text)
-                                stop = True
-                        if stop:
-                            continue
-
-                    if "paren" in rules:
-                        if (e.text[-1] == ")" and "(" not in e.text) or (e.text[-1] == "]" and "[" not in e.text) or (e.text[-1] == "}" and "{" not in e.text):
-                            logging.debug("parenthesis %s" % e.text)
-                            e.dend -= 1
-                            e.end -= 1
-                            e.text = e.text[:-1]
-                        if (e.text[0] == "(" and ")" not in e.text) or (e.text[0] == "[" and "]" not in e.text) or (e.text[0] == "{" and "}" not in e.text):
-                            logging.debug("parenthesis %s" % e.text)
-                            e.dstart += 1
-                            e.start += 1
-                            e.text = e.text[1:]
-
-                    #if "-" in e.text and all([len(t) > 3 for t in e.text.split("-")]):
-                    #    logging.debug("ignored dash %s" % e.text)
-                    #    continue
-                    #print e.chebi_score,
-
-                    #if all filters are 0, do not even check
-                    if "ssm" in ths and ths["ssm"] != 0 and e.ssm_score < ths["ssm"] and e.text.lower() not in chemwords:
-                        #logging.debug("filtered %s => %s" % (e.text,  str(e.ssm_score)))
+                    val = e.validate(ths, rules)
+                    if not val:
                         continue
-                    if "alpha" in rules:
-                        alpha = False
-                        for c in e.text.strip():
-                            if c.isalpha():
-                                alpha = True
-                                break
-                        if not alpha:
-                            logging.debug("ignored no alpha %s" % e.text)
-                            continue
 
-                    #if e.text.startswith("-") or e.text.endswith("-"):
-                    #    logging.debug("excluded for -: {}".format(e.text))
-                    #    continue
-
+                    # Overlap rules
                     eid_offset = Offset(e.dstart, e.dend, text=e.text, sid=e.sid)
                     exclude = [perfect_overlap]
                     if "contained_by" in rules:
                         exclude.append(contained_by)
                     toadd, v, alt = offsets.add_offset(eid_offset, exclude_if=exclude)
-                    #toadd, v, alt = offsets.add_offset(eid_offset, exclude_if=[perfect_overlap])
-
-                    #toadd = True
                     if toadd:
                         #logging.info("added %s" % e)
                         line = e.write_chemdner_line(outfile, rank)
                         lines.append(line)
                         rank += 1
-                    #elif v != -3:
-                    #    logging.debug("excluded for overlap: {} because of {}".format(e.text, alt))
         return lines, rank
 
     def get_results(self, esource):
         return self.elist.get(esource)
 
     def find_entity(self, start, end):
-        """Find entity in this sentence between the start and end (relative to document)"""
+        """Find entity in this sentence between start and end (relative to document)"""
         entity = None
         for eid in self.elist["combined_results"]:
             if eid.start == start and eid.end == end:
@@ -319,8 +254,7 @@ class Entities(object):
         """
         Combine entities from multiple models starting with base_model into one module named name
         :param base_model: string corresponding to the prefix of the models
-        :param name: new model
-        :return:
+        :param name: new model path
         """
         combined = {}
         offsets = Offsets()

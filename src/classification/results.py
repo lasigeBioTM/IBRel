@@ -1,8 +1,8 @@
-from entity import ChemdnerAnnotation
 import logging
 import pickle
 
-import config
+from text.entity import ChemdnerAnnotation
+from config import config
 from copy import deepcopy
 #from model import SINGLE_TAG, START_TAG, MIDDLE_TAG, END_TAG, OTHER_TAG
 SINGLE_TAG = "single"
@@ -12,7 +12,7 @@ MIDDLE_TAG = "middle"
 OTHER_TAG = "other"
 
 class ResultsNER(object):
-    '''Store a set of entities related to a corpus or input text '''
+    """Store a set of entities related to a corpus or input text """
     def __init__(self, name):
         self.entities = {}
         self.name = name
@@ -46,10 +46,10 @@ class ResultsNER(object):
         self.corpus = corpus
 
     def get_ner_results(self, corpus, model):
-        '''
+        """
             Read the results obtained with the model, add the entities to the entities set, and also
                 to each sentence of the corpus object.
-        '''
+        """
         logging.debug("%s sentences", (len(model.predicted)))
         sentence_entities = {} # sid -> Entities
         for si in range(len(model.predicted)):
@@ -172,6 +172,7 @@ class ResultsNER(object):
         if total > 0:
             logging.info("{0} entities average confidence of {1}".format(total, scores/total))
 
+
 class ResultSetNER(object):
     """
     Organize and process a set a results from a TaggerCollection
@@ -180,7 +181,6 @@ class ResultSetNER(object):
         self.results = [] # list of ResultsNER
         self.corpus = corpus
         self.basepath = basepath
-        #self.entities = {}
 
     def add_results(self, res):
         self.results.append(res)
@@ -191,29 +191,6 @@ class ResultSetNER(object):
         Process these results, and generate a ResultsNER object
         :return: ResultsNER object of the combined results of the classifiers
         """
-        '''for r in self.results:
-            logging.info("going through results from %s with %s entities" % (r.name, len(r.entities)))
-            #for eid in r.corpus.documents[did].sentences[sid].entities.get_results(self.basepath):
-            for eid in r.entities:
-                this_entity = r.entities.get(eid)
-                if this_entity:
-
-                    if this_entity.did not in self.entities:
-                        self.entities[this_entity.did] = {}
-                    if this_entity.sid not in self.entities[this_entity.did]:
-                        self.entities[this_entity.did][this_entity.sid] = {}
-                    self.entities[this_entity.did][this_entity.sid][eid] = this_entity
-                    self.entities[this_entity.did][this_entity.sid][eid].recognized_by = [r.name]
-        '''
-        # now add the entities to their respective sentences
-        """for did in self.entities:
-            for sid in self.entities[did]:
-                for eid in self.entities[did][sid]:
-                    #entity = self.entities[did][sid][eid]
-                    #self.corpus.documents[did].get_sentence(sid).entities.add_entity(entity, self.basepath)
-                    for s in self.corpus.documents[did].get_sentence(sid).entities.elist:
-                        logging.info("detected by %s" % s)"""
         final_results = ResultsNER(self.basepath)
-        #final_results.entities = self.entities
         final_results.corpus = self.corpus
         return final_results

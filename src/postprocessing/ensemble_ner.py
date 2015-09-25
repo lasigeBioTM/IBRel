@@ -9,7 +9,7 @@ import os
 import cPickle as pickle
 import atexit
 
-from entity import chemwords
+from text.entity import chem_words
 
 bowdic = "data/bow_dic.pickle"
 
@@ -23,11 +23,13 @@ else:
     loadedbow = False
     logging.info("new bow dictionary")
 
+
 def exit_handler():
     print 'Saving bow dictionary...!'
     pickle.dump(bow, open(bowdic, "wb"))
 
 atexit.register(exit_handler)
+
 
 def word_case(word):
     if word.islower():
@@ -51,6 +53,7 @@ def has_greek_symbol(word):
         except ValueError:
             return 0
     return 0
+
 
 class EnsembleNER(object):
     def __init__(self, path, goldset, base_model, features=None, types=None):
@@ -139,7 +142,7 @@ class EnsembleNER(object):
                     if "chemwords" in self.feature_names:
                         has_chemwords = 0
                         for w in entity.text.split(" "):
-                            if w.lower() in chemwords:
+                            if w.lower() in chem_words:
                                 has_chemwords = 1
                         vector.append(has_chemwords)
                     if "bow" in self.feature_names:

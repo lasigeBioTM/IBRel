@@ -1,5 +1,5 @@
 class Model(object):
-    '''Base class for classification models.'''
+    """Base class for classification models."""
     def __init__(self, path, **kwargs):
         self.path = path
         self.data = kwargs.get("data", [])

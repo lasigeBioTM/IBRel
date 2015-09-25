@@ -1,13 +1,11 @@
 import logging
 import pickle
 import re
-from offset import partial_overlap_after, partial_overlap_before, contained_by, perfect_overlap, Offsets, Offset
-
-__author__ = 'Andre'
+from text.offset import partial_overlap_after, partial_overlap_before, contained_by, perfect_overlap, Offsets, Offset
 
 
 class MatcherModel(object):
-    '''Model which mtaches a fixed list of entities to the text'''
+    """Model which matches a fixed list of entities to the text"""
 
     def __init__(self, path, **kwargs):
         self.path = path

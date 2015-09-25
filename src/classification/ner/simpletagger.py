@@ -1,9 +1,8 @@
 import logging
 import unicodedata
-from model import Model
-from chebi_resolution import element_base
-from chebi_resolution import amino_acids
-__author__ = 'Andre'
+from classification.model import Model
+from postprocessing.chebi_resolution import element_base
+from postprocessing.chebi_resolution import amino_acids
 
 feature_extractors = {# "text": lambda x, i: x.tokens[i].text,
                       "prefix3": lambda x, i: x.tokens[i].text[:3],
@@ -88,7 +87,7 @@ def simplewordclass(word):
 
 
 class SimpleTaggerModel(Model):
-    '''Model trained with Mallet SimpleTagger'''
+    """Model trained with a tagger"""
     def __init__(self, path, **kwargs):
         super(SimpleTaggerModel, self).__init__(path, **kwargs)
         self.sids = []
@@ -98,7 +97,7 @@ class SimpleTaggerModel(Model):
 
     def load_data(self, corpus, flist, subtype="all", mode="train"):
         """
-            Load the data from the CHEMDNER corpus to the format required by crfsuite.
+            Load the data from the corpus to the format required by crfsuite.
             Generate the following variables:
                 - self.data = list of features for each token for each sentence
                 - self.labels = list of labels for each token for each sentence
@@ -172,7 +171,6 @@ class SimpleTaggerModel(Model):
             self.sentences = basemodel.sentences[:]
         logging.info("copied %s for model %s" % (len(self.data), t))
 
-
     def generate_features(self, sentence, i, flist):
         """
             Features is dictionary mapping of featurename:value.
@@ -195,7 +193,7 @@ class SimpleTaggerModel(Model):
 
 
 class BiasModel(SimpleTaggerModel):
-    '''Model which uses the goldstandard tags'''
+    """Model which cheats by using the gold standard tags"""
 
     def test(self):
         self.predicted = self.labels

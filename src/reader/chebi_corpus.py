@@ -1,19 +1,16 @@
-import sys
-
-__author__ = 'Andre'
 import codecs
 import time
 import logging
 import os
 import xml.etree.ElementTree as ET
 
-from corpus import Corpus
-from document import Document
-from src.sentence import Sentence
+from text.corpus import Corpus
+from text.document import Document
+from text.sentence import Sentence
 
 
 class ChebiCorpus(Corpus):
-    '''Chemdner corpus from BioCreative IV and V'''
+    """Corpus based on the ChEBI annotated patents"""
     def __init__(self, corpusdir, **kwargs):
         super(ChebiCorpus, self).__init__(corpusdir, **kwargs)
         self.subtypes = ['CHEMICAL', 'FORMULA', 'LIGAND', 'ONT', 'CLASS']
@@ -84,7 +81,6 @@ class ChebiCorpus(Corpus):
             logging.info("%s sentences, %ss processing time" % (len(newdoc.sentences), abs_time))
         abs_avg = sum(time_per_abs)*1.0/len(time_per_abs)
         logging.info("average time per abstract: %ss" % abs_avg)
-
 
     def load_annotations(self, ann_dir):
         docs = self.get_docs(ann_dir)

@@ -1,4 +1,3 @@
-__author__ = 'Andre'
 import codecs
 import time
 import logging
@@ -6,9 +5,9 @@ import xml.etree.ElementTree as ET
 import os
 import sys
 
-from corpus import Corpus
-from document import Document
-from src.sentence import Sentence
+from text.corpus import Corpus
+from text.document import Document
+from text.sentence import Sentence
 
 
 class DDICorpus(Corpus):
@@ -60,8 +59,8 @@ class DDICorpus(Corpus):
         logging.info("average time per abstract: %ss" % abs_avg)
 
     def getOffsets(self, offset):
-        #check if its just one offset per entity or not
-        #add 1 to offset end to agree with python's indexes
+        # check if its just one offset per entity or not
+        # add 1 to offset end to agree with python's indexes
         offsets = []
         offsetList = offset.split(';')
         for o in offsetList:

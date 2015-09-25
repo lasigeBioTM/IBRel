@@ -1,14 +1,12 @@
-__author__ = 'Andre'
 import codecs
-import time
 import logging
 import pickle
 
 from chemdner_corpus import ChemdnerCorpus
-from document import Document
+
 
 class GproCorpus(ChemdnerCorpus):
-    '''Chemdner GPRO corpus from BioCreative V'''
+    """Chemdner GPRO corpus from BioCreative V"""
     def __init__(self, corpusdir, **kwargs):
         super(GproCorpus, self).__init__(corpusdir, **kwargs)
         self.subtypes = ["NESTED", "IDENTIFIER", "FULL_NAME", "ABBREVIATION"]
@@ -16,7 +14,7 @@ class GproCorpus(ChemdnerCorpus):
     def load_corpus(self, corenlpserver):
         """
         Assume the corpus is already loaded as a ChemdnerCorpus
-        Load the pickle and ge the docs
+        Load the pickle and get the docs
         :param corenlpserver:
         :return:
         """

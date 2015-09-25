@@ -12,8 +12,8 @@ import cPickle as pickle
 import logging
 from sys import platform as _platform
 import atexit
-from config import chebi_conn as db
-from config import florchebi_path
+from config.config import chebi_conn as db
+from config.config import florchebi_path
 
 element_base = {
     # number: name symbol ions

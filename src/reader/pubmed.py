@@ -6,6 +6,11 @@ import httplib
 import time, sys
 import xml.etree.ElementTree as ET
 
+"""
+Get texts from PubMed
+"""
+# TODO: Create a PubMedCorpus class - useful for transmir
+
 def get_pubmed_abs(pmid):
     conn = httplib.HTTPConnection("eutils.ncbi.nlm.nih.gov")
     conn.request("GET", '/entrez/eutils/efetch.fcgi?db=pubmed&id=%s&retmode=xml&rettype=xml' % pmid)
@@ -32,8 +37,7 @@ def parse_pubmed_xml(xml):
             print "Abstract not found"
             sys.exit()
     return title, abstext
-    
-    
+
     
 def main():
     print get_pubmed_abs(sys.argv[1])
