@@ -117,7 +117,7 @@ class ChemicalEntity(Entity):
             stop = False
             for s in chem_stopwords:
                 if any([s == w.lower() for w in words]):
-                    logging.debug("ignored stopword %s" % e.text)
+                    logging.debug("ignored stopword %s" % self.text)
                     stop = True
             if stop:
                 return False
@@ -125,7 +125,7 @@ class ChemicalEntity(Entity):
         if "paren" in rules:
             if (self.text[-1] == ")" and "(" not in self.text) or (self.text[-1] == "]" and "[" not in self.text) or \
                     (self.text[-1] == "}" and "{" not in self.text):
-                logging.debug("parenthesis %s" % e.text)
+                logging.debug("parenthesis %s" % self.text)
                 self.dend -= 1
                 self.end -= 1
                 self.text = self.text[:-1]
@@ -136,27 +136,27 @@ class ChemicalEntity(Entity):
                 self.start += 1
                 self.text = self.text[1:]
 
-        if "hyphen" in rules and "-" in e.text and all([len(t) > 3 for t in e.text.split("-")]):
-            logging.debug("ignored hyphen %s" % e.text)
+        if "hyphen" in rules and "-" in self.text and all([len(t) > 3 for t in self.text.split("-")]):
+            logging.debug("ignored hyphen %s" % self.text)
             return False
 
         #if all filters are 0, do not even check
-        if "ssm" in ths and ths["ssm"] != 0 and e.ssm_score < ths["ssm"] and e.text.lower() not in chem_words:
-            #logging.debug("filtered %s => %s" % (e.text,  str(e.ssm_score)))
+        if "ssm" in ths and ths["ssm"] != 0 and self.ssm_score < ths["ssm"] and self.text.lower() not in chem_words:
+            #logging.debug("filtered %s => %s" % (self.text,  str(self.ssm_score)))
             return False
 
         if "alpha" in rules:
             alpha = False
-            for c in e.text.strip():
+            for c in self.text.strip():
                 if c.isalpha():
                     alpha = True
                     break
             if not alpha:
-                logging.debug("ignored no alpha %s" % e.text)
+                logging.debug("ignored no alpha %s" % self.text)
                 return False
 
-        if "dash" in rules and (e.text.startswith("-") or e.text.endswith("-")):
-            logging.debug("excluded for -: {}".format(e.text))
+        if "dash" in rules and (self.text.startswith("-") or self.text.endswith("-")):
+            logging.debug("excluded for -: {}".format(self.text))
             return False
         return True
 

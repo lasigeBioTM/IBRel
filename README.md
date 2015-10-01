@@ -38,3 +38,4 @@ To evaluate the results on the corpus2 gold standard:
 If you just want to send text to previously trained classifiers and get results, use the server mode.
 Start the server with `python src/server.py` and input text with `python src/client`.
 You can also use your own client, sending a POST request to the address in config.host_ip.
+
