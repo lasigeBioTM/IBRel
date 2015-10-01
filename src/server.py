@@ -26,6 +26,7 @@ from reader import pubmed
 from classification.re.relations import Pair
 from config import config
 
+
 class IICEServer(object):
 
     def __init__(self, basemodel, ensemble_model, submodels):
