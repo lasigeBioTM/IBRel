@@ -11,7 +11,7 @@ import errno
 
 from text.offset import Offsets, Offset
 from classification.results import ResultsNER
-from text.entity import ChemdnerAnnotation
+from text.chemical_entity import ChemdnerAnnotation
 from classification.ner.simpletagger import SimpleTaggerModel
 from config import config
 

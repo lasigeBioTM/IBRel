@@ -29,8 +29,6 @@ import sklearn.metrics as skm
 from sklearn.preprocessing import normalize
 from sklearn.preprocessing import MinMaxScaler
 
-from postprocessing import ssm
-from postprocessing.chebi_resolution import find_chebi_term3
 import relations
 
 

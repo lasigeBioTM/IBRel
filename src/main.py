@@ -25,7 +25,9 @@ from classification.ner.simpletagger import SimpleTaggerModel, BiasModel, featur
 from classification.ner.stanfordner import StanfordNERModel
 from classification.results import ResultsNER, ResultSetNER
 from config import config
-from server import add_chebi_mappings, add_ssm_score
+if config.use_chebi:
+    from postprocessing.chebi_resolution import add_chebi_mappings
+    from postprocessing.ssm import add_ssm_score
 from evaluate import get_results, run_chemdner_evaluation, get_gold_ann_set
 
 
@@ -63,10 +65,11 @@ def run_crossvalidation(goldstd, corpus, model, cv):
         final_results = results.combine_results()
 
         # validate
-        logging.info('CV{} - VALIDATE'.format(nlist))
-        final_results = add_chebi_mappings(final_results, basemodel)
-        final_results = add_ssm_score(final_results, basemodel)
-        final_results.combine_results(basemodel, basemodel + "_combined")
+        if config.use_chebi:
+            logging.info('CV{} - VALIDATE'.format(nlist))
+            final_results = add_chebi_mappings(final_results, basemodel)
+            final_results = add_ssm_score(final_results, basemodel)
+            final_results.combine_results(basemodel, basemodel + "_combined")
 
         # evaluate
         logging.info('CV{} - EVALUATE'.format(nlist))

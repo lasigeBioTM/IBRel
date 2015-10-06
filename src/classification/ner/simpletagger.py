@@ -1,8 +1,8 @@
 import logging
 import unicodedata
 from classification.model import Model
-from postprocessing.chebi_resolution import element_base
-from postprocessing.chebi_resolution import amino_acids
+from text.chemical_entity import element_base
+from text.chemical_entity import amino_acids
 
 feature_extractors = {# "text": lambda x, i: x.tokens[i].text,
                       "prefix3": lambda x, i: x.tokens[i].text[:3],

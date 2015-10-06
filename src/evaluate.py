@@ -5,13 +5,15 @@ import cPickle as pickle
 import codecs
 import logging
 import time
+import sys
 from subprocess import Popen, PIPE, check_output
 import collections
 from operator import itemgetter
 
 from config import config
-from postprocessing import chebi_resolution
-from postprocessing.ssm import get_ssm
+if config.use_chebi:
+    from postprocessing import chebi_resolution
+    from postprocessing.ssm import get_ssm
 from postprocessing.ensemble_ner import EnsembleNER
 from classification.results import ResultsNER
 
@@ -289,6 +291,9 @@ def main():
     results.name = options.results
 
     if options.action == "chebi":
+        if not config.use_chebi:
+            print "If you want to use ChEBI, please re-run config.py and set use_chebi to true"
+            sys.exit()
         add_chebi_mappings(results, options.results + ".pickle", options.models)
     # if options.action == "go":
     #    add_go_mappings(results, options.results + ".pickle", options.models)

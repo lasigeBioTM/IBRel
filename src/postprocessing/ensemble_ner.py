@@ -9,7 +9,7 @@ import os
 import cPickle as pickle
 import atexit
 
-from text.entity import chem_words
+from text.chemical_entity import chem_words
 
 bowdic = "data/bow_dic.pickle"
 

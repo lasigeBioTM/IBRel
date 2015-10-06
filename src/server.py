@@ -25,6 +25,9 @@ from postprocessing.ensemble_ner import EnsembleNER
 from reader import pubmed
 from classification.re.relations import Pair
 from config import config
+from postprocessing.chebi_resolution import add_chebi_mappings
+from postprocessing.ssm import add_ssm_score
+
 
 class IICEServer(object):
 
@@ -163,57 +166,6 @@ class IICEServer(object):
             results_dic["corpusfile"] = results_id
             output = json.dumps(results_dic)
         return output
-
-def add_chebi_mappings(results, source):
-    """
-
-    :param results: ResultsNER object
-    :return:
-    """
-    mapped = 0
-    not_mapped = 0
-    total_score = 0
-    for did in results.corpus.documents:
-        for sentence in results.corpus.documents[did].sentences:
-            for s in sentence.entities.elist:
-                if s.startswith(source):
-                    #if s != source:
-                    #    logging.info("processing %s" % s)
-                    for entity in sentence.entities.elist[s]:
-                        chebi_info = chebi_resolution.find_chebi_term3(entity.text.encode("utf-8"))
-                        entity.chebi_id = chebi_info[0]
-                        entity.chebi_name = chebi_info[1]
-                        entity.chebi_score = chebi_info[2]
-                        # TODO: check for errors (FP and FN)
-                        if chebi_info[2] == 0:
-                            #logging.info("nothing for %s" % entity.text)
-                            not_mapped += 1
-                        else:
-                            #logging.info("%s => %s %s" % (entity.text, chebi_info[1], chebi_info[2]))
-                            mapped += 1
-                            total_score += chebi_info[2]
-    if mapped == 0:
-        mapped = 0.000001
-    logging.info("{0} mapped, {1} not mapped, average score: {2}".format(mapped, not_mapped, total_score/mapped))
-    return results
-
-def add_ssm_score(results, source):
-    total = 0
-    scores = 0
-    for did in results.corpus.documents:
-        for sentence in results.corpus.documents[did].sentences:
-            for s in sentence.entities.elist:
-                if s.startswith(source):
-                    sentence.entities.elist[s] = get_ssm(sentence.entities.elist[s], "simui", 0)
-                    total += 1
-                    scores += sum([e.ssm_score for e in sentence.entities.elist[s]])
-                    #for entity in results.corpus[did][sid].elist[s]:
-                    #    logging.info("%s %s %s %s" % (entity.text, entity.chebi_name, entity.ssm_score,
-                    #                                  entity.ssm_chebi_name))
-    if total == 0:
-        total = 0.00001
-    logging.info("average ssm score: {0}".format(scores/total))
-    return results
 
 
 def main():

@@ -14,10 +14,6 @@ import tarfile
 
 from sklearn.cross_validation import KFold
 
-from postprocessing import ssm
-from postprocessing.chebi_resolution import find_chebi_term3
-from postprocessing.chebi_resolution import chebi2go
-from postprocessing.chebi_resolution import get_description
 import ddi_kernels
 
 TRUE_DDI = 'trueDDI'
