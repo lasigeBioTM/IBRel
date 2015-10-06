@@ -8,7 +8,7 @@ from entity import Entities
 from classification.re.relations import Pairs
 from classification.re import ddi_kernels
 from classification.re import relations
-from entity import ChemdnerAnnotation
+from text.chemical_entity import ChemdnerAnnotation
 
 
 class Sentence(object):

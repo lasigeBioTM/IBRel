@@ -1,7 +1,7 @@
 import logging
 import pickle
 
-from text.entity import ChemdnerAnnotation
+from text.chemical_entity import ChemdnerAnnotation
 from config import config
 from copy import deepcopy
 #from model import SINGLE_TAG, START_TAG, MIDDLE_TAG, END_TAG, OTHER_TAG

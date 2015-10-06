@@ -13,6 +13,25 @@ measures = ['resnik', 'simui', 'simgic', 'simgic_hindex', 'simui_hindex']
 go_measures = ["resnik_go", "simui_go", "simui_hindex_go", "simgic_hindex_go"]
 
 
+def add_ssm_score(results, source):
+    total = 0
+    scores = 0
+    for did in results.corpus.documents:
+        for sentence in results.corpus.documents[did].sentences:
+            for s in sentence.entities.elist:
+                if s.startswith(source):
+                    sentence.entities.elist[s] = get_ssm(sentence.entities.elist[s], "simui", 0)
+                    total += 1
+                    scores += sum([e.ssm_score for e in sentence.entities.elist[s]])
+                    #for entity in results.corpus[did][sid].elist[s]:
+                    #    logging.info("%s %s %s %s" % (entity.text, entity.chebi_name, entity.ssm_score,
+                    #                                  entity.ssm_chebi_name))
+    if total == 0:
+        total = 0.00001
+    logging.info("average ssm score: {0}".format(scores/total))
+    return results
+
+
 def resnik(id1, id2):
     cur = db.cursor()
     cur.execute("""SELECT MAX(i.rel_info) 

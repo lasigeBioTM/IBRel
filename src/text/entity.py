@@ -1,24 +1,7 @@
 from __future__ import division, absolute_import, unicode_literals
-import logging
 import xml.etree.ElementTree as ET
 
-from text.offset import Offset, Offsets, perfect_overlap, contained_by, contains
-from postprocessing.chebi_resolution import element_base
-from config import config
-
-# words that may seem like they are not part of named chemical entities but they are
-chem_words = set()
-for e in element_base:
-    chem_words.add(e.lower())
-    chem_words.add(element_base[e][0].lower())
-
-# words that are never part of chemical entities
-chem_stopwords = set()
-with open(config.stoplist, 'r') as stopfile:
-    for l in stopfile:
-        w = l.strip().lower()
-        if w not in chem_words and len(w) > 1:
-            chem_stopwords.add(w)
+from text.offset import Offset, Offsets, perfect_overlap, contained_by
 
 
 class Entity(object):
@@ -84,89 +67,6 @@ class Entity(object):
         dic["size"] = self.dend - self.dstart
         dic["sentence_offset"] = self.start
         return dic
-
-
-class ChemicalEntity(Entity):
-    """Chemical entities"""
-    def __init__(self, tokens, **kwargs):
-        # Entity.__init__(self, kwargs)
-        super(ChemicalEntity, self).__init__(tokens, **kwargs)
-        self.type = "chemical"
-        self.subtype = kwargs.get("subtype")
-        self.chebi_id = None
-        self.chebi_score = 0
-        self.chebi_name = None
-
-    def get_dic(self):
-        dic = super(ChemicalEntity, self).get_dic()
-        dic["subtype"] = self.subtype
-        dic["chebi_id"] = self.chebi_id
-        dic["chebi_name"] = self.chebi_name
-        dic["ssm_score"] = self.ssm_score
-        dic["ssm_entity"] = self.ssm_best_ID
-        return dic
-    
-    def validate(self, ths, rules):
-        """
-        Use rules to validate if the entity was correctly identified
-        :param rules: 
-        :return: True if entity does not fall into any of the rules, False if it does
-        """
-        if "stopwords" in rules:
-            words = self.text.split(" ")
-            stop = False
-            for s in chem_stopwords:
-                if any([s == w.lower() for w in words]):
-                    logging.debug("ignored stopword %s" % self.text)
-                    stop = True
-            if stop:
-                return False
-
-        if "paren" in rules:
-            if (self.text[-1] == ")" and "(" not in self.text) or (self.text[-1] == "]" and "[" not in self.text) or \
-                    (self.text[-1] == "}" and "{" not in self.text):
-                logging.debug("parenthesis %s" % self.text)
-                self.dend -= 1
-                self.end -= 1
-                self.text = self.text[:-1]
-            if (self.text[0] == "(" and ")" not in self.text) or (self.text[0] == "[" and "]" not in self.text) or \
-                    (self.text[0] == "{" and "}" not in self.text):
-                logging.debug("parenthesis %s" % self.text)
-                self.dstart += 1
-                self.start += 1
-                self.text = self.text[1:]
-
-        if "hyphen" in rules and "-" in self.text and all([len(t) > 3 for t in self.text.split("-")]):
-            logging.debug("ignored hyphen %s" % self.text)
-            return False
-
-        #if all filters are 0, do not even check
-        if "ssm" in ths and ths["ssm"] != 0 and self.ssm_score < ths["ssm"] and self.text.lower() not in chem_words:
-            #logging.debug("filtered %s => %s" % (self.text,  str(self.ssm_score)))
-            return False
-
-        if "alpha" in rules:
-            alpha = False
-            for c in self.text.strip():
-                if c.isalpha():
-                    alpha = True
-                    break
-            if not alpha:
-                logging.debug("ignored no alpha %s" % self.text)
-                return False
-
-        if "dash" in rules and (self.text.startswith("-") or self.text.endswith("-")):
-            logging.debug("excluded for -: {}".format(self.text))
-            return False
-        return True
-
-
-class ChemdnerAnnotation(ChemicalEntity):
-    """Chemical entity annotated on the CHEMDNER corpus"""
-    def __init__(self, tokens, sid, **kwargs):
-        # ChemicalEntity.__init__(self, kwargs)
-        super(ChemdnerAnnotation, self).__init__(tokens, **kwargs)
-        self.sid = sid
 
 
 class ProteinEntity(Entity):
