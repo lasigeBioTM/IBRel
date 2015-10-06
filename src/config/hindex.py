@@ -2,16 +2,11 @@
 import MySQLdb
 import sys
 import numpy as np
+import config
 
-chebidb = MySQLdb.connect(host="localhost", # your host, usually localhost
-                     user="bioxldb", # your username
-                      passwd="xldbbio", # your password
-                      db="mychebi201301") # name of the data base
+chebidb = config.chebi_conn
 
-godb = MySQLdb.connect(host="localhost",  # your host, usually localhost
-                     user="bioxldb",  # your username
-                     passwd="xldbbio",  # your password
-                     db="mygo201402")  # name of the data base
+godb = config.go_conn
 
 chebicur = chebidb.cursor()
 gocur = godb.cursor()

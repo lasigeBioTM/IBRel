@@ -14,6 +14,7 @@ from sys import platform as _platform
 import atexit
 from config.config import chebi_conn as db
 from config.config import florchebi_path
+from config.config import stoplist
 
 chebidic = "data/chebi_dic.pickle"
 
@@ -121,7 +122,7 @@ def find_chebi_term2(term):
         # "Windows..."
         cp = "{0}/florchebi.jar;{0}/mysql-connector-java-5.1.24-bin.jar;{0}/Tokenizer.jar".format(florchebi_path)
     florcall = ["java", "-cp", cp, "xldb.flor.match.FlorTextChebi3star", db.escape_string(term),
-                "children", "true", "mychebi201301", "false", "false", "chebi", "data/stopwords.txt", "1"]
+                "children", "true", "mychebi201301", "false", "false", "chebi", stoplist, "1"]
     # print ' '.join(florcall)
     flor = Popen(florcall, stdout=PIPE)
     florresult, error = flor.communicate()
