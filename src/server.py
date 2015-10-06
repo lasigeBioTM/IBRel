@@ -29,6 +29,7 @@ from postprocessing.chebi_resolution import add_chebi_mappings
 from postprocessing.ssm import add_ssm_score
 
 
+
 class IICEServer(object):
 
     def __init__(self, basemodel, ensemble_model, submodels):
