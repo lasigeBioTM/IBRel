@@ -15,7 +15,7 @@ Framework for identifying biomedical entities
 * requirements.txt - run `pip install -r requirements.txt`
 
 ## Configuration
-After setting up the dependencies, you have to rename src/config_base.py to src/config.py and insert the MySQL information for ChEBI and GO databases.
+After setting up the dependencies, you have to run `python src/config.py` to set up some values.
 You can use the [CHEMDNER-patents sample data](http://www.biocreative.org/media/store/files/2015/chemdner_patents_sample_v02.tar.zip) to check if the system is working correctly.
 
 ## Usage
