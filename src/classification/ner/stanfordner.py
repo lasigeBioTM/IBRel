@@ -20,13 +20,15 @@ stanford_coding = {"-LRB-": "<", "\/": "/", "&apos;": "'", "analogs": "analogues
 # convert < to -LRB, etc
 rep = dict((re.escape(v), k) for k, v in stanford_coding.iteritems())
 pattern = re.compile("|".join(rep.keys()))
+
+
 def replace_abbreviations(text):
     return pattern.sub(lambda m: rep[re.escape(m.group(0))], text)
 
 
 class StanfordNERModel(SimpleTaggerModel):
-    RAM = "-Xmx14g"
-    RAM_TEST = "-Xmx4g"
+    RAM = config.stanford_ner_train_ram
+    RAM_TEST = config.stanford_ner_test_ram
     STANFORD_BASE = config.stanford_ner_dir
     STANFORD_NER = "{}/stanford-ner.jar".format(STANFORD_BASE)
     NER_PROP = "{}/base.prop".format(STANFORD_BASE)
