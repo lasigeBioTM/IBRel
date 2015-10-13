@@ -10,12 +10,12 @@ Framework for identifying biomedical entities
 * Relation extraction
     * [SVM-light-TK](http://disi.unitn.it/moschitti/Tree-Kernel.htm)
     * [Shallow Language Kernel](https://hlt-nlp.fbk.eu/technologies/jsre)
-* Local [ChEBI](https://www.ebi.ac.uk/chebi/) MySQL database
+* Local [ChEBI](https://www.ebi.ac.uk/chebi/) MySQL database if you choose set use_chebi as true
     * Required ChEBI tables: term, term_synonym, word2term3, word3, descriptor3, SSM_TermDesc, graph_path
 * requirements.txt - run `pip install -r requirements.txt`
 
 ## Configuration
-After setting up the dependencies, you have to run `python src/config.py` to set up some values.
+After setting up the dependencies, you have to run `python src/config/config.py` to set up some values.
 You can use the [CHEMDNER-patents sample data](http://www.biocreative.org/media/store/files/2015/chemdner_patents_sample_v02.tar.zip) to check if the system is working correctly.
 
 ## Usage
@@ -34,6 +34,10 @@ To test with this classifier on corpus2 and save the results to data/results1.pi
 To evaluate the results on the corpus2 gold standard:
 
     python src/evaluate.py evaluate corpus2 --results data/results1 --models models/class1
+
+To map the term to the ChEBI ontology:
+
+    python src/evaluate.py chebi corpus2 --results data/results1 --models models/class1
 
 If you just want to send text to previously trained classifiers and get results, use the server mode.
 Start the server with `python src/server.py` and input text with `python src/client`.
