@@ -275,6 +275,7 @@ def main():
     parser.add_argument("--rules", default=[], nargs='+', help="aditional post processing rules")
     parser.add_argument("--features", default=["chebi", "case", "number", "greek", "dashes", "commas", "length", "chemwords", "bow"],
                         nargs='+', help="aditional features for ensemble classifier")
+    parser.add_argument("--bceval", action="store_true", default=False, help="Run bc-evaluate after evaluation")
     options = parser.parse_args()
 
     numeric_level = getattr(logging, options.loglevel.upper(), None)
@@ -351,7 +352,7 @@ def main():
             #test_ensemble(results, )
         if options.action == "evaluate":
             get_results(results, options.models, goldset, ths, options.rules)
-            if "cem" in config.paths[options.goldstd]:
+            if options.bceval:
                 evaluation = run_chemdner_evaluation(config.paths[options.goldstd]["cem"],
                                                      options.results + ".tsv")
                 print evaluation

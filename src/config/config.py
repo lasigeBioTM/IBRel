@@ -68,7 +68,7 @@ paths = {
     'cemp_sample':{ # CHEMDNER 2015
                        'text': cpatents_sample_base + "chemdner_patents_sample_text.txt",
                        'annotations': cpatents_sample_base + "chemdner_cemp_gold_standard_sample.tsv",
-                       'cem': cpatents_sample_base,
+                       'cem': cpatents_sample_base + "chemdner_cemp_gold_standard_sample_eval.tsv",
                        'corpus': "data/chemdner_patents_sample_text.txt.pickle",
                        'format': "chemdner",
                       },
