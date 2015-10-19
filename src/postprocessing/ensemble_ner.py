@@ -11,25 +11,6 @@ import atexit
 
 from text.chemical_entity import chem_words
 
-bowdic = "data/bow_dic.pickle"
-
-if os.path.isfile(bowdic):
-    logging.info("loading bow...")
-    bow = pickle.load(open(bowdic, "rb"))
-    loadedbow = True
-    logging.info("loaded bow dictionary with %s entries", str(len(bow)))
-else:
-    bow = {}
-    loadedbow = False
-    logging.info("new bow dictionary")
-
-
-def exit_handler():
-    print 'Saving bow dictionary...!'
-    pickle.dump(bow, open(bowdic, "wb"))
-
-atexit.register(exit_handler)
-
 
 def word_case(word):
     if word.islower():
@@ -145,22 +126,6 @@ class EnsembleNER(object):
                             if w.lower() in chem_words:
                                 has_chemwords = 1
                         vector.append(has_chemwords)
-                    if "bow" in self.feature_names:
-                        for i in range(3,6):
-                            pre = 0
-                            if entity.text[:i] in bow:
-                                pre = bow[entity.text[:i]]
-                            else:
-                                pre = len(bow.keys())
-                                bow[entity.text[:i]] = pre
-                            vector.append(pre)
-                            pos = 0
-                            if entity.text[i:] in bow:
-                                pos = bow[entity.text[i:]]
-                            else:
-                                pos = len(bow.keys())
-                                bow[entity.text[i:]] = pos
-                            vector.append(pos)
 
                     # logging.debug("{} - {}".format(entity.text.encode("utf8"), vector))
                     #logging.info(entity.score)
