@@ -106,7 +106,8 @@ class Sentence(object):
                 if newtext not in kwargs["text"] and kwargs["text"] not in newtext:
                     return None
                 else:
-                    print tlist[0].start, tlist[-1].end, "|" + newtext + "|", "=>", "|" + kwargs["text"] + "|", start, end, self.sid, self.text
+                    logging.info(tlist[0].start, tlist[-1].end, "|" + newtext + "|", "=>", "|" + kwargs["text"] + "|",
+                                 start, end, self.sid, self.text)
             #     print "tokens found:", [t.text for t in tlist]
                 # sys.exit()
             # else:
