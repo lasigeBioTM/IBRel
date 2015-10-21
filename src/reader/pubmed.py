@@ -16,6 +16,7 @@ Get texts from PubMed
 class PubmedDocument(Document):
     def __init__(self, pmid, **kwargs):
         title, abstract, status = self.get_pubmed_abs(pmid)
+        self.abstract = abstract
         super(PubmedDocument, self).__init__(title + "\n" + abstract, ssplit=True, title=title,
                                              did="PMID" + pmid, **kwargs)
 

@@ -18,6 +18,7 @@ from reader.chemdner_corpus import ChemdnerCorpus
 from reader.gpro_corpus import GproCorpus
 from reader.ddi_corpus import DDICorpus
 from reader.chebi_corpus import ChebiCorpus
+from reader.pubmed_corpus import PubmedCorpus
 from text.corpus import Corpus
 from classification.ner.taggercollection import TaggerCollection
 from classification.ner.matcher import MatcherModel
@@ -206,7 +207,15 @@ considered when coadministering with megestrol acetate.''',
             corpus.load_corpus(corenlpserver)
             # since the path of this corpus is a directory, add the reference to save this corpus
             corpus.path += options.goldstd + ".txt"
-
+        elif corpus_format == "pubmed":
+            print("loading CoreNLP...")
+            corenlpserver = StanfordCoreNLP(corenlp_path=config.corenlp_dir,
+                                        properties=config.corenlp_dir + "default.properties")
+            # corenlpserver = ""
+            with open(corpus_path, 'r') as f:
+                pmids = [line.strip() for line in f if line.strip()]
+            corpus = PubmedCorpus(corpus_path, pmids)
+            corpus.load_corpus(corenlpserver)
         corpus.save()
         if corpus_ann and "test" not in options.goldstd: #add annotation if it is not a test set
             corpus.load_annotations(corpus_ann)

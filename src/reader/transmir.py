@@ -45,3 +45,5 @@ print "Number of Functions: {}".format(len(funcs))
 print "Number of PMIDs: {}".format(len(pmids))
 print "Number of miRNAs: {}".format(len(mirnas))
 print "Number of Entries: {}".format(len(entries))
+for p in pmids:
+    print p
