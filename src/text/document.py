@@ -30,15 +30,13 @@ class Document(object):
     """A document is constituted by one or more sentences. It should have an ID and
     title. s0, the first sentence, is always the title sentence."""
 
-    def __init__(self, text, process=False, doctype="biomedical", ssplit=False, **kwargs):
+    def __init__(self, text, doctype="biomedical", ssplit=False, **kwargs):
         self.text = text
         self.title = kwargs.get("title")
         self.sentences = kwargs.get("sentences", [])
         self.did = kwargs.get("did", "d0")
         if ssplit:
             self.sentence_tokenize(doctype)
-        if process:
-            self.process_document(doctype)
 
     def sentence_tokenize(self, doctype):
         """
