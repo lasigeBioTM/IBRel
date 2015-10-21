@@ -45,5 +45,11 @@ print "Number of Functions: {}".format(len(funcs))
 print "Number of PMIDs: {}".format(len(pmids))
 print "Number of miRNAs: {}".format(len(mirnas))
 print "Number of Entries: {}".format(len(entries))
-for p in pmids:
-    print p
+with open("corpora/transmir/transmir_pmids.txt", 'w') as f:
+    f.write('\n'.join(pmids))
+with open("corpora/transmir/transmir_tfs.txt", 'w') as f:
+    f.write('\n'.join(tfs))
+with open("corpora/transmir/transmir_mirnas.txt", 'w') as f:
+    f.write('\n'.join(mirnas))
+with open("corpora/transmir/transmir_diseases.txt", 'w') as f:
+    f.write('\n'.join(diseases))
