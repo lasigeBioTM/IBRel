@@ -283,6 +283,12 @@ considered when coadministering with megestrol acetate.''',
             model = MatcherModel(options.models)
         results = ResultsNER(options.models)
         results.corpus, results.entities = model.test(corpus)
+        allentities = set()
+        for e in results.entities:
+            allentities.add(results.entities[e].text)
+        with codecs.open(options.output[1] + ".txt", 'w', 'utf-8') as outfile:
+            outfile.write('\n'.join(allentities))
+
         results.save(options.output[1] + ".pickle")
     elif options.actions == "test_multiple":
         logging.info("testing with multiple classifiers... {}".format(' '.join(options.submodels)))

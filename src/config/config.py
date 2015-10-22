@@ -60,8 +60,15 @@ gpro_dev_base = "CHEMDNER-patents/gpro_development_set/"
 gpro_test_base = "CHEMDNER-patents/CHEMDNER_TEST_TEXT/"
 ddi_train_base = "DDICorpus/Train/All/"
 pubmed_test_base = "corpora/pubmed-test/"
+transmir_base = "corpora/transmir/"
 
 paths = {
+    'transmir': {
+                       'text': transmir_base + "transmir_pmids.txt",
+                       'annotations': transmir_base + "transmir_mirnas.txt",
+                       'corpus': "data/transmir_pmids.txt.pickle",
+                       'format': "pubmed"
+    },
     'pubmed_test': {
                        'text': pubmed_test_base + "pmids_test.txt",
                         'annotations': "",

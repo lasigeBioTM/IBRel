@@ -16,7 +16,7 @@ class MirnaMatcher(MatcherModel):
     def test(self, corpus):
         for n in self.names:
             # logging.info(n)
-            self.p.append(re.compile(r"(\A|\s)(" + re.escape(n) + r"\d\S*)(\s|\Z|\.)")) # , re.I))
+            self.p.append(re.compile(r"(\A|\s)(" + re.escape(n) + r"\w*)(\s|\Z|\.)")) # , re.I))
         # self.p = [re.compile(r"(\A|\s)(" + n + r")(\s|\Z|\.)", re.I) for n in self.names]
         logging.info("testing {} documents".format(len(corpus.documents)))
         did_count = 1
