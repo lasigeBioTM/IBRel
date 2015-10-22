@@ -1,4 +1,4 @@
-# read transmir database
+# read transmir database and generate corpus
 
 db_name = "data/transmir_v1.2.tsv"
 tfs = set()
@@ -27,16 +27,16 @@ with open(db_name, 'r') as dbfile:
                 pmids.add(p.strip())
             mirnas[mirname] = (func, [d for d in disease if d != "see HMDD (http://cmbi.bjmu.edu.cn/hmdd)"])
             entries[(tfname, mirname)] = (active, pmid)
-print "TF:"
-print tfs
-print "Diseases:"
-print diseases
-print "Functions:"
-print funcs
-print "PMIDs:"
-print pmids
-print "miRNAs:"
-print mirnas.keys()
+# print "TF:"
+# print tfs
+# print "Diseases:"
+# print diseases
+# print "Functions:"
+# print funcs
+# print "PMIDs:"
+# print pmids
+# print "miRNAs:"
+# print mirnas.keys()
 # print "Entries:"
 # print entries
 print "Number of TFs: {}".format(len(tfs))

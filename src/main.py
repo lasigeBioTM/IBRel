@@ -13,6 +13,7 @@ import datetime
 import time
 import codecs
 from corenlp import StanfordCoreNLP
+from classification.ner.mirna_matcher import MirnaMatcher
 
 from reader.chemdner_corpus import ChemdnerCorpus
 from reader.gpro_corpus import GproCorpus
@@ -276,7 +277,10 @@ considered when coadministering with megestrol acetate.''',
         final_results.lines = lines
         final_results.save(options.output[1] + ".pickle")
     elif options.actions == "test_matcher":
-        model = MatcherModel(options.models)
+        if "mirna" in options.models:
+            model = MirnaMatcher(options.models)
+        else:
+            model = MatcherModel(options.models)
         results = ResultsNER(options.models)
         results.corpus, results.entities = model.test(corpus)
         results.save(options.output[1] + ".pickle")
