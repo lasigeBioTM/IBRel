@@ -66,7 +66,7 @@ class MatcherModel(object):
             did_count += 1
         return corpus, elist
 
-    def tag_sentence(self, sentence):
+    def tag_sentence(self, sentence, subtype="chemical"):
         exclude_if = (partial_overlap_after, partial_overlap_before, contained_by, perfect_overlap)
         offsets = Offsets()
         for pattern in self.p:
@@ -76,7 +76,7 @@ class MatcherModel(object):
                 logging.info(match.group(2))
                 toadd = offsets.add_offset(offset, exclude_if)
                 if toadd:
-                    sentence.tag_entity(offset.start, offset.end, subtype="chemical", source=self.path)
+                    sentence.tag_entity(offset.start, offset.end, subtype, source=self.path)
 
     def tag_sentence_alt(self, sentence):
         exclude_if = (partial_overlap_after, partial_overlap_before, contained_by, perfect_overlap)
