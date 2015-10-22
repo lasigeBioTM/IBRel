@@ -121,6 +121,14 @@ class Document(object):
             totalchars += 1
         return totalchars
 
+    def get_unique_results(self, source, ths, rules):
+        entities = set()
+        for s in self.sentences:
+            if s.entities:
+                sentence_entities = s.entities.get_unique_entities(source, ths, rules)
+                entities.update(sentence_entities)
+        return entities
+
     def write_chemdner_results(self, source, outfile, ths={"chebi":0.0}, rules=[]):
         lines = []
         totalentities = 0

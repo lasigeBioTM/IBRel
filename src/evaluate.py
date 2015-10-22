@@ -18,112 +18,6 @@ from postprocessing.ensemble_ner import EnsembleNER
 from classification.results import ResultsNER
 
 
-def get_gold_ann_set(goldann="CHEMDNER/CHEMDNER_TEST_ANNOTATION/chemdner_ann_test_13-09-13.txt"):
-    """
-    Load the CHEMDNER annotations to a set
-    :param goldann: Path to CHEMDNER annotation file
-    :return: Set of gold standard annotations
-    """
-    # TODO: copy to chemdner:corpus
-    with codecs.open(goldann, 'r', 'utf-8') as goldfile:
-            gold = goldfile.readlines()
-    goldlist = []
-    for line in gold:
-        x = line.strip().split('\t')
-        #pmid, T/A, start, end
-        goldlist.append((x[0], x[1] + ":" + x[2] + ":" + x[3], '1'))
-    #print goldlist[0:2]
-    goldset = set(goldlist)
-    return goldset
-
-
-def compare_results(lines, goldset, corpus):
-    """
-    Compare system results with a gold standard
-    :param lines: system results
-    :param goldset: Set with the gold standard annotations
-    :param corpus: Reference corpus
-    :return: Lines to write into a report files, set of TPs, FPs and FNs
-    """
-    report = []
-    lines = [(l[0], l[1], "1") for l in lines]
-    lineset = set(lines)
-    tps = lineset & goldset
-    fps = lineset - goldset
-    fns = goldset - lineset
-    fpreport, fpwords = get_report(fps, corpus)
-    fnreport, fnwords = get_report(fns, corpus)
-    tpreport, tpwords = get_report(tps, corpus)
-    alldocs = set(fpreport.keys())
-    alldocs = alldocs.union(fnreport.keys())
-    alldocs = alldocs.union(tpreport.keys())
-    report.append("Common FPs")
-    fpcounter = collections.Counter(fpwords)
-    for w in fpcounter.most_common(10):
-        report.append(w[0] + ": " + str(w[1]))
-    report.append("Common FNs")
-    fncounter = collections.Counter(fnwords)
-    for w in fncounter.most_common(10):
-        report.append(w[0] + ": " + str(w[1]))
-
-    for d in list(alldocs):
-        report.append(d)
-        if d in tpreport:
-            for x in tpreport[d]:
-                report.append("TP:%s" % x)
-        if d in fpreport:
-            for x in fpreport[d]:
-                report.append("FP:%s" % x)
-        if d in fnreport:
-            for x in fnreport[d]:
-                report.append("FN:%s" % x)
-
-    return report, tps, fps, fns
-
-
-def get_report(results, corpus, restype="TP"):
-    """
-        Get more information from CHEMDNER results.
-        :return: Lines to write to a report file, word that appear in this set
-    """
-    report = {}
-    words = []
-    for x in results:
-        if x[0] not in corpus.documents:
-            logging.info("this doc is not in the corpus! %s" % x[0])
-            continue
-        doctext = corpus.documents[x[0]].text
-        stype, start, end = x[1].split(":")
-        start, end = int(start), int(end)
-        if stype == "T":
-            tokentext = corpus.documents[x[0]].title[start:end]
-        else:
-            tokentext = doctext[start:end]
-        words.append(tokentext)
-        if x[0] not in report:
-            report[x[0]] = []
-        line = x[0] + '\t' + x[1] + '\t' + tokentext
-        report[x[0]].append(line)
-    for d in report:
-        report[d].sort()
-    return report, words
-
-
-def run_chemdner_evaluation(goldstd, results, format=""):
-    """
-    Use the official BioCreative evaluation script (should be installed in the system)
-    :param goldstd: Gold standard file path
-    :param results: Results file path
-    :param: format option
-    :return: Output of the evaluation script
-    """
-    # TODO: copy to chemdner_corpus.py
-    cem_command = ["bc-evaluate", results, goldstd]
-    if format != "":
-        cem_command = cem_command[:1] + [format] + cem_command[1:]
-    r = check_output(cem_command)
-    return r
-
 def add_chebi_mappings(results, path, source, save=True):
     """
     Go through each identified entity and add ChEBI mapping
@@ -216,6 +110,161 @@ def add_ssm_score(results, path, source, measure, ontology, save=True):
         pickle.dump(results, open(path, "wb"))
     return results
 
+def get_gold_ann_set(goldann="CHEMDNER/CHEMDNER_TEST_ANNOTATION/chemdner_ann_test_13-09-13.txt"):
+    """
+    Load the CHEMDNER annotations to a set
+    :param goldann: Path to CHEMDNER annotation file
+    :return: Set of gold standard annotations
+    """
+    # TODO: copy to chemdner:corpus
+    with codecs.open(goldann, 'r', 'utf-8') as goldfile:
+            gold = goldfile.readlines()
+    goldlist = []
+    for line in gold:
+        x = line.strip().split('\t')
+        #pmid, T/A, start, end
+        goldlist.append((x[0], x[1] + ":" + x[2] + ":" + x[3], '1'))
+    #print goldlist[0:2]
+    goldset = set(goldlist)
+    return goldset
+
+
+def get_unique_gold_ann_set(goldann):
+    """
+    Load a gold standard consisting of a list of unique entities
+    :param goldann: path to annotation
+    :return: Set of gold standard annotations
+    """
+    with codecs.open(goldann, 'r', 'utf-8') as goldfile:
+        gold = [line.strip() for line in goldfile if line.strip()]
+    return gold
+
+
+def compare_results(lineset, goldset, corpus, getwords=True):
+    """
+    Compare system results with a gold standard
+    :param lines: system results
+    :param goldset: Set with the gold standard annotations
+    :param corpus: Reference corpus
+    :return: Lines to write into a report files, set of TPs, FPs and FNs
+    """
+    report = []
+    logging.debug(lineset)
+    logging.debug(goldset)
+    tps = lineset & goldset
+    fps = lineset - goldset
+    fns = goldset - lineset
+    fpreport, fpwords = get_report(fps, corpus, getwords=getwords)
+    fnreport, fnwords = get_report(fns, corpus, getwords=getwords)
+    tpreport, tpwords = get_report(tps, corpus, getwords=getwords)
+    alldocs = set(fpreport.keys())
+    alldocs = alldocs.union(fnreport.keys())
+    alldocs = alldocs.union(tpreport.keys())
+    if getwords:
+        report.append("Common FPs")
+        fpcounter = collections.Counter(fpwords)
+        for w in fpcounter.most_common(10):
+            report.append(w[0] + ": " + str(w[1]))
+        report.append("Common FNs")
+        fncounter = collections.Counter(fnwords)
+        for w in fncounter.most_common(10):
+            report.append(w[0] + ": " + str(w[1]))
+
+    for d in list(alldocs):
+        report.append(d)
+        if d in tpreport:
+            for x in tpreport[d]:
+                report.append("TP:%s" % x)
+        if d in fpreport:
+            for x in fpreport[d]:
+                report.append("FP:%s" % x)
+        if d in fnreport:
+            for x in fnreport[d]:
+                report.append("FN:%s" % x)
+
+    return report, tps, fps, fns
+
+
+def get_report(results, corpus, restype="TP", getwords=True):
+    """
+        Get more information from CHEMDNER results.
+        :return: Lines to write to a report file, word that appear in this set
+    """
+    report = {}
+    words = []
+    for x in results:
+        if x[0] == "":
+            did = "0"
+        else:
+            did = x[0]
+        if x[0] != "" and x[0] not in corpus.documents:
+            logging.info("this doc is not in the corpus! %s" % x[0])
+            continue
+        if getwords:
+            doctext = corpus.documents[x[0]].text
+            stype, start, end = x[1].split(":")
+            start, end = int(start), int(end)
+            if stype == "T":
+                tokentext = corpus.documents[x[0]].title[start:end]
+            else:
+                tokentext = doctext[start:end]
+            words.append(tokentext)
+        if did not in report:
+            report[did] = []
+        if getwords:
+            line = x[0] + '\t' + x[1] + '\t' + tokentext
+        else:
+            line = x[1]
+        report[did].append(line)
+    for d in report:
+        report[d].sort()
+    return report, words
+
+
+def run_chemdner_evaluation(goldstd, results, format=""):
+    """
+    Use the official BioCreative evaluation script (should be installed in the system)
+    :param goldstd: Gold standard file path
+    :param results: Results file path
+    :param: format option
+    :return: Output of the evaluation script
+    """
+    # TODO: copy to chemdner_corpus.py
+    cem_command = ["bc-evaluate", results, goldstd]
+    if format != "":
+        cem_command = cem_command[:1] + [format] + cem_command[1:]
+    r = check_output(cem_command)
+    return r
+
+
+def get_list_results(results, models, goldset, ths, rules):
+    """
+    Write results files considering only unique entities, as well as a report file with basic stats
+    :param results: ResultsNER object
+    :param models: Base model path
+    :param goldset: Set with gold standard annotations
+    :param ths: Validation thresholds
+    :param rules: Validation rules
+    """
+    print "saving results to {}".format(results.path + ".tsv")
+    allentities = results.corpus.get_unique_results(models, ths, rules)
+    with codecs.open(results.path + "_final.tsv", 'w', 'utf-8') as outfile:
+        outfile.write('\n'.join(allentities))
+    if goldset:
+        lineset = set([("", l.lower(), "1") for l in allentities])
+        goldset = set([("", g.lower(), "1") for g in goldset])
+        reportlines, tps, fps, fns = compare_results(lineset, goldset, results.corpus, getwords=False)
+        with codecs.open(results.path + "_report.txt", 'w', "utf-8") as reportfile:
+            reportfile.write("TPs: {!s}\nFPs: {!s}\n FNs: {!s}\n".format(len(tps), len(fps), len(fns)))
+            if len(tps) == 0:
+                precision = 0
+                recall = 0
+            else:
+                precision = len(tps)/(len(tps) + len(fps))
+                recall = len(tps)/(len(tps) + len(fns))
+            reportfile.write("Precision: {!s}\n Recall: {!s}\n".format(precision, recall))
+            for line in reportlines:
+                reportfile.write(line + '\n')
 
 def get_results(results, models, goldset, ths, rules):
     """
@@ -239,7 +288,9 @@ def get_results(results, models, goldset, ths, rules):
             else:
                 cpdfile.write("{}_{}\t1\t{}\t{}\n".format(l[0], l[1], i+1, l[2]*1.0/max_entities))
     if goldset:
-        reportlines, tps, fps, fns = compare_results(results.lines, goldset, results.corpus)
+        lines2 = [(l[0], l[1], "1") for l in results.lines]
+        lineset = set(lines2)
+        reportlines, tps, fps, fns = compare_results(lineset, goldset, results.corpus)
         with codecs.open(results.path + "_report.txt", 'w', "utf-8") as reportfile:
             reportfile.write("TPs: {!s}\nFPs: {!s}\n FNs: {!s}\n".format(len(tps), len(fps), len(fns)))
             if len(tps) == 0:
@@ -298,13 +349,13 @@ def main():
         add_chebi_mappings(results, options.results + ".pickle", options.models)
     # if options.action == "go":
     #    add_go_mappings(results, options.results + ".pickle", options.models)
-    if options.action == "ssm":
+    elif options.action == "ssm":
         if options.measure.endswith("go"):
             ontology = "go"
         else:
             ontology = "chebi"
         add_ssm_score(results, options.results + ".pickle", options.models, options.measure, ontology)
-    if options.action == "combine":
+    elif options.action == "combine":
         # add another set of annotations to each sentence, ending in combined
         # each entity from this dataset should have a unique ID and a recognized_by attribute
         results.load_corpus(options.goldstd)
@@ -312,30 +363,34 @@ def main():
         results.combine_results(options.models, options.models + "_combined")
         results.save(options.results + "_combined.pickle")
 
-    elif options.action in ("evaluate", "train_ensemble", "test_ensemble"):
+    elif options.action in ("evaluate", "evaluate_list", "train_ensemble", "test_ensemble"):
         if "test" not in options.goldstd:
             logging.info("loading gold standard %s" % config.paths[options.goldstd]["annotations"])
-            goldset = get_gold_ann_set(config.paths[options.goldstd]["annotations"])
+            if config.paths[options.goldstd]["format"] == "chemdner":
+                goldset = get_gold_ann_set(config.paths[options.goldstd]["annotations"])
+            elif config.paths[options.goldstd]["format"] == "pubmed":
+                goldset = get_unique_gold_ann_set(config.paths[options.goldstd]["annotations"])
         else:
             goldset = None
         logging.info("using thresholds: chebi > {!s} ssm > {!s}".format(options.chebi, options.ssm))
         results.load_corpus(options.goldstd)
         results.path = options.results
         ths = {"chebi": options.chebi, "ssm": options.ssm}
-        if len(options.submodels) > 1:
-            submodels = []
-            for s in options.submodels:
-                submodels += ['_'.join(options.models.split("_")[:-1]) + "_" + s + "_" + t for t in results.corpus.subtypes]
-        else:
-            submodels = ['_'.join(options.models.split("_")[:-1]) + "_" + t for t in results.corpus.subtypes]
-        logging.info("using these features: {}".format(' '.join(submodels)))
+        if "ensemble" in options.action:
+            if len(options.submodels) > 1:
+                submodels = []
+                for s in options.submodels:
+                    submodels += ['_'.join(options.models.split("_")[:-1]) + "_" + s + "_" + t for t in results.corpus.subtypes]
+            else:
+                submodels = ['_'.join(options.models.split("_")[:-1]) + "_" + t for t in results.corpus.subtypes]
+            logging.info("using these features: {}".format(' '.join(submodels)))
         if options.action == "train_ensemble":
             ensemble = EnsembleNER(options.ensemble, goldset, options.models, types=submodels,
                                    features=options.features)
             ensemble.generate_data(results)
             ensemble.train()
             ensemble.save()
-        if options.action == "test_ensemble":
+        elif options.action == "test_ensemble":
             ensemble = EnsembleNER(options.ensemble, [], options.models, types=submodels,
                                    features=options.features)
             ensemble.load()
@@ -350,12 +405,15 @@ def main():
                 print run_chemdner_evaluation(config.paths[options.goldstd]["cem"],
                                               ensemble_results.path + ".tsv")
             #test_ensemble(results, )
-        if options.action == "evaluate":
+        elif options.action == "evaluate":
             get_results(results, options.models, goldset, ths, options.rules)
             if options.bceval:
                 evaluation = run_chemdner_evaluation(config.paths[options.goldstd]["cem"],
                                                      options.results + ".tsv")
                 print evaluation
+        elif options.action == "evaluate_list": # ignore the spans, the gold standard is a list of unique entities
+            get_list_results(results, options.models, goldset, ths, options.rules)
+
     total_time = time.time() - start_time
     logging.info("Total time: %ss" % total_time)
 if __name__ == "__main__":
