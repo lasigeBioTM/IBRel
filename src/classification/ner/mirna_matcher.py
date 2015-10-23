@@ -16,7 +16,7 @@ class MirnaMatcher(MatcherModel):
     def test(self, corpus):
         for n in self.names:
             # logging.info(n)
-            self.p.append(re.compile(r"(\A|\s)(" + re.escape(n) + r"[\w-]*)(\s|\Z|\.)")) # , re.I))
+            self.p.append(re.compile(r"(\A|\s)(" + re.escape(n) + r"[\w-]*)(\s|\Z|\.|,)")) # , re.I))
         # self.p = [re.compile(r"(\A|\s)(" + n + r")(\s|\Z|\.)", re.I) for n in self.names]
         logging.info("testing {} documents".format(len(corpus.documents)))
         did_count = 1
@@ -25,7 +25,7 @@ class MirnaMatcher(MatcherModel):
             logging.info("document {0} {1}/{2}".format(did, did_count, len(corpus.documents)))
             for sentence in corpus.documents[did].sentences:
                 # sentence.entities.elist["matcher"] = \
-                self.tag_sentence(sentence, "mirna")
+                self.tag_sentence(sentence, "mirna", etype="mirna")
                 if self.path in sentence.entities.elist:
                     for entity in sentence.entities.elist[self.path]:
                         elist[entity.eid] = entity

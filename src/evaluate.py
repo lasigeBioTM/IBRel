@@ -349,6 +349,8 @@ def main():
         add_chebi_mappings(results, options.results + ".pickle", options.models)
     # if options.action == "go":
     #    add_go_mappings(results, options.results + ".pickle", options.models)
+    elif options.action == "mirna":
+        pass
     elif options.action == "ssm":
         if options.measure.endswith("go"):
             ontology = "go"

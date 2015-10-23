@@ -9,6 +9,7 @@ from classification.re.relations import Pairs
 from classification.re import ddi_kernels
 from classification.re import relations
 from text.chemical_entity import ChemdnerAnnotation
+from text.mirna_entity import MirnaEntity
 
 
 class Sentence(object):
@@ -87,7 +88,7 @@ class Sentence(object):
         # logging.debug(newtoken.text)
         return newtoken
 
-    def tag_entity(self, start, end, subtype, entity=None, totalchars=0, source="goldstandard", **kwargs):
+    def tag_entity(self, start, end, subtype="chemical", entity=None, totalchars=0, source="goldstandard", **kwargs):
         """Find the tokens that match this entity. start and end are relative to the sentence.
            Totalchars is the offset of the sentence on the document."""
         tlist = []
@@ -118,8 +119,11 @@ class Sentence(object):
                 eid = self.sid + ".e0"
             if entity:
                 self.entities.add_entity(entity, source)
-            else:
+            elif subtype == "chemical":
                 self.entities.add_entity(ChemdnerAnnotation(tlist, self.sid, text=newtext,
+                                         did=self.did, eid=eid, subtype=subtype), source)
+            elif subtype == "mirna":
+                self.entities.add_entity(MirnaEntity(tlist, self.sid, text=newtext,
                                          did=self.did, eid=eid, subtype=subtype), source)
 
             self.label_tokens(tlist, source, subtype)
