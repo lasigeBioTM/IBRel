@@ -43,7 +43,8 @@ class PubmedDocument(Document):
             title = root.find('.//ArticleTitle').text
             abstext = root.findall('.//AbstractText')
             if len(abstext) > 0:
-                abstext = abstext[0].text
+                abstext = [a.text for a in abstext]
+                abstext = '\n'.join(abstext)
             else:
                 print "Abstract not found"
                 abstext = ""
