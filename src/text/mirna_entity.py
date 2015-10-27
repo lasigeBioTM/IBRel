@@ -11,6 +11,7 @@ with open(config.stoplist, 'r') as stopfile:
         w = l.strip().lower()
         if w not in mirna_stopwords and len(w) > 1:
             mirna_stopwords.add(w)
+mirna_stopwords.discard("let")
 
 
 class MirnaEntity(Entity):
@@ -31,12 +32,14 @@ class MirnaEntity(Entity):
         """
         # logging.debug("using these rules: {}".format(rules))
         if "stopwords" in rules:
-            words = self.text.split(" ")
-            stop = False
-            for s in mirna_stopwords:
-                if any([s == w.lower() for w in words]):
+            words = self.text.split("-")
+            #stop = False
+            for i, w in enumerate(words):
+                if w.lower() in mirna_stopwords:
                     logging.debug("ignored stopword %s" % self.text)
-                    stop = True
-            if stop:
-                return False
+                    self.text = '-'.join(words[:i])
+                    self.dend -= len(words[i:])
+                    self.end -= len(words[i:])
+            #if stop:
+            #    return False
         return True

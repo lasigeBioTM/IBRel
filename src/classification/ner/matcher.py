@@ -70,6 +70,7 @@ class MatcherModel(object):
         exclude_if = (partial_overlap_after, partial_overlap_before, contained_by, perfect_overlap)
         offsets = Offsets()
         for pattern in self.p:
+            logging.debug(sentence.text)
             iterator = pattern.finditer(sentence.text)
             for match in iterator:
                 offset = Offset(*match.span(2))
