@@ -25,7 +25,7 @@ class MirnaMatcher(MatcherModel):
             logging.info("document {0} {1}/{2}".format(did, did_count, len(corpus.documents)))
             for sentence in corpus.documents[did].sentences:
                 # sentence.entities.elist["matcher"] = \
-                self.tag_sentence(sentence, "mirna", etype="mirna")
+                self.tag_sentence(sentence, "mirna")
                 if self.path in sentence.entities.elist:
                     for entity in sentence.entities.elist[self.path]:
                         elist[entity.eid] = entity

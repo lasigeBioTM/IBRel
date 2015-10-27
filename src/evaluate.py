@@ -149,8 +149,8 @@ def compare_results(lineset, goldset, corpus, getwords=True):
     :return: Lines to write into a report files, set of TPs, FPs and FNs
     """
     report = []
-    logging.debug(lineset)
-    logging.debug(goldset)
+    # logging.debug(lineset)
+    # logging.debug(goldset)
     tps = lineset & goldset
     fps = lineset - goldset
     fns = goldset - lineset
@@ -248,6 +248,7 @@ def get_list_results(results, models, goldset, ths, rules):
     """
     print "saving results to {}".format(results.path + ".tsv")
     allentities = results.corpus.get_unique_results(models, ths, rules)
+    print "{} unique entities".format(len(allentities))
     with codecs.open(results.path + "_final.tsv", 'w', 'utf-8') as outfile:
         outfile.write('\n'.join(allentities))
     if goldset:
