@@ -10,7 +10,7 @@ entries = {} # (tfname, mirname): active
 with open(db_name, 'r') as dbfile:
     for line in dbfile:
         tsv = line.strip().split("\t")
-        if tsv[-1] == "human":
+        if tsv[-1].lower() == "human":
             tfname = tsv[0]
             mirname = tsv[3]
             func = tsv[5].split(";")
