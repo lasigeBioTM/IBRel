@@ -260,10 +260,15 @@ def get_list_results(results, models, goldset, ths, rules):
             if len(tps) == 0:
                 precision = 0
                 recall = 0
+                fmeasure = 0
             else:
                 precision = len(tps)/(len(tps) + len(fps))
                 recall = len(tps)/(len(tps) + len(fns))
-            reportfile.write("Precision: {!s}\n Recall: {!s}\n".format(precision, recall))
+                fmeasure = (2*precision*recall)/(precision + recall)
+            reportfile.write("Precision: {!s}\nRecall: {!s}\n".format(precision, recall))
+            print "precision: {}".format(precision)
+            print "recall: {}".format(recall)
+            print "f-measure: {}".format(fmeasure)
             for line in reportlines:
                 reportfile.write(line + '\n')
 
