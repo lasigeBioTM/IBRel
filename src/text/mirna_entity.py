@@ -4,7 +4,8 @@ from config import config
 
 __author__ = 'Andre'
 
-mirna_stopwords = set(["mediated", "expressing", "deficient", "transfected", "dependent", "family"])
+mirna_stopwords = set(["mediated", "expressing", "deficient", "transfected", "dependent", "family", "specific", "null",
+                       "independent", "dependant", "overexpressing", "binding", "targets", "induced"])
 # words that are never part of chemical entities
 with open(config.stoplist, 'r') as stopfile:
     for l in stopfile:
@@ -31,8 +32,12 @@ class MirnaEntity(Entity):
         :return: True if entity does not fall into any of the rules, False if it does
         """
         # logging.debug("using these rules: {}".format(rules))
+        words = self.text.split("-")
+        if len(words) > 2 and len(words[-1]) > 1:
+            logging.info("big ending: {}".format(self.text))
+            self.text = '-'.join(words[:-1])
+            words = words[:-1]
         if "stopwords" in rules:
-            words = self.text.split("-")
             #stop = False
             for i, w in enumerate(words):
                 if w.lower() in mirna_stopwords:
@@ -42,4 +47,18 @@ class MirnaEntity(Entity):
                     self.end -= len(words[i:])
             #if stop:
             #    return False
+        if self.text.startswith("MicroRNA-") or self.text.startswith("microRNA-"):
+            self.text = "mir-" + "-".join(words[1:])
+        if self.text[-1].isdigit() and self.text[-2].isalpha(): #let-7a1 -> let-7a-1
+            self.text = self.text[:-1] + "-" + self.text[-1]
+        # if words[-1].isdigit() and words[-2].isdigit(): # mir-371-373 -> mir-371
+        #    self.text = "-".join(words[:-1])
+        words = self.text.split("-")
+        if len(words) > 2 and words[2].isalpha() and words[1].isdigit(): # mir-133-a-1 -> mir-133a-1
+            # logging.info(words)
+            self.text = words[0] + "-" + words[1] + words[2]
+            if len(words) > 3:
+                self.text += "-" + '-'.join(words[3:])
+            logging.info('-'.join(words) + " -> " + self.text)
+
         return True

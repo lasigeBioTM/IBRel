@@ -70,11 +70,11 @@ class MatcherModel(object):
         exclude_if = (partial_overlap_after, partial_overlap_before, contained_by, perfect_overlap)
         offsets = Offsets()
         for pattern in self.p:
-            logging.debug(sentence.text)
+            # logging.debug(sentence.text)
             iterator = pattern.finditer(sentence.text)
             for match in iterator:
                 offset = Offset(*match.span(2))
-                logging.info(match.group(2))
+                # logging.info(match.group(2))
                 toadd = offsets.add_offset(offset, exclude_if)
                 if toadd:
                     sentence.tag_entity(offset.start, offset.end, subtype, source=self.path)
