@@ -3,44 +3,59 @@
 import httplib
 #import xml.dom.minidom as minidom
 #import urllib
-import time, sys
+import logging
+import requests
+import time
+import sys
 import xml.etree.ElementTree as ET
-
+from text.document import Document
 """
 Get texts from PubMed
 """
-# TODO: Create a PubMedCorpus class - useful for transmir
 
-def get_pubmed_abs(pmid):
-    conn = httplib.HTTPConnection("eutils.ncbi.nlm.nih.gov")
-    conn.request("GET", '/entrez/eutils/efetch.fcgi?db=pubmed&id=%s&retmode=xml&rettype=xml' % pmid)
-    r1 = conn.getresponse()
-    #print "Request Status: " + str(r1.status) + " " + str(r1.reason)
-    response = r1.read()
-    # print response
-    title, abstract = parse_pubmed_xml(response)
-    return title, abstract, str(r1.status) + ' ' + str(r1.reason)
+class PubmedDocument(Document):
+    def __init__(self, pmid, **kwargs):
+        title, abstract, status = self.get_pubmed_abs(pmid)
+        self.abstract = abstract
+        super(PubmedDocument, self).__init__(title + "\n" + abstract, ssplit=True, title=title,
+                                             did="PMID" + pmid, **kwargs)
+
+    def get_pubmed_abs(self, pmid):
+        logging.info("gettting {}".format(pmid))
+        #conn = httplib.HTTPConnection("eutils.ncbi.nlm.nih.gov")
+        #conn.request("GET", '/entrez/eutils/efetch.fcgi?db=pubmed&id={}&retmode=xml&rettype=xml'.format(pmid))
+        payload = {"db": "pubmed", "id": pmid, "retmode": "xml", "rettype": "xml"}
+        r = requests.get('http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi', payload)
+        logging.debug("Request Status: " + str(r.status_code))
+        response = r.text
+
+        # logging.info(response)
+        title, abstract = self.parse_pubmed_xml(response)
+        return title, abstract, str(r.status_code)
 
     
-def parse_pubmed_xml(xml):
-    #print xml
-    if xml.strip() == '':
-        print "PMID not found"
-        sys.exit()
-    else:
-        root = ET.fromstring(xml)
-        title = root.findall('.//ArticleTitle').text
-        abstext = root.findall('.//AbstractText')
-        if len(abstext) > 0:
-            abstext = abstext[0].text
-        else:
-            print "Abstract not found"
+    def parse_pubmed_xml(self, xml):
+        if xml.strip() == '':
+            print "PMID not found"
             sys.exit()
-    return title, abstext
+        else:
+            root = ET.fromstring(xml.encode("utf-8"))
+            title = root.find('.//ArticleTitle').text
+            abstext = root.findall('.//AbstractText')
+            if len(abstext) > 0:
+                abstext = [a.text for a in abstext]
+                abstext = '\n'.join(abstext)
+            else:
+                print "Abstract not found"
+                abstext = ""
+                #print xml
+                #sys.exit()
+        return title, abstext
 
     
 def main():
-    print get_pubmed_abs(sys.argv[1])
+    pubmeddoc = PubmedDocument(sys.argv[1])
+    print pubmeddoc
     
 if __name__ == "__main__":
     main()
