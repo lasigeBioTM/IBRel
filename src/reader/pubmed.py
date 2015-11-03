@@ -8,6 +8,8 @@ import requests
 import time
 import sys
 import xml.etree.ElementTree as ET
+import os
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + '../..'))
 from text.document import Document
 """
 Get texts from PubMed
