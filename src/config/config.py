@@ -42,14 +42,14 @@ if use_chebi or use_go:
     import MySQLdb
 if use_chebi:
     chebi_conn = MySQLdb.connect(host=chebi_host,
-                         user=chebi_user,
-                         passwd=chebi_pw,
-                         db=chebi_db)
+                                 user=chebi_user,
+                                 passwd=chebi_pw,
+                                 db=chebi_db)
 if use_go:
     go_conn = MySQLdb.connect(host=go_host,
-                         user=go_user,
-                         passwd=go_pw,
-                         db=go_db)
+                              user=go_user,
+                              passwd=go_pw,
+                              db=go_db)
 
 
 chemdner_base = "CHEMDNER/"
@@ -61,46 +61,53 @@ gpro_test_base = "CHEMDNER-patents/CHEMDNER_TEST_TEXT/"
 ddi_train_base = "DDICorpus/Train/All/"
 pubmed_test_base = "corpora/pubmed-test/"
 transmir_base = "corpora/transmir/"
+genia_base = "corpora/GENIA_term_3.02/"
 
 paths = {
+    'genia': {
+        'text': genia_base + "GENIAcorpus3.02.xml",
+        'annotations': genia_base + "GENIAcorpus3.02.xml",
+        'corpus': "data/GENIAcorpus3.02.xml.pickle",
+        'format': "genia"
+    },
     'transmir': {
-                       'text': transmir_base + "transmir_pmids.txt",
-                       'annotations': transmir_base + "transmir_mirnas.txt",
-                       'corpus': "data/transmir_pmids.txt.pickle",
-                       'format': "pubmed"
+        'text': transmir_base + "transmir_pmids.txt",
+        'annotations': transmir_base + "transmir_mirnas.txt",
+        'corpus': "data/transmir_pmids.txt.pickle",
+        'format': "pubmed"
     },
     'pubmed_test': {
-                       'text': pubmed_test_base + "pmids_test.txt",
-                        'annotations': "",
-                       'corpus': "data/pmids_test.txt.pickle",
-                       'format': "pubmed"
+        'text': pubmed_test_base + "pmids_test.txt",
+        'annotations': "",
+        'corpus': "data/pmids_test.txt.pickle",
+        'format': "pubmed"
     },
     'chemdner_sample': { # CHEMDNER 2013
-                        'text': chemdner_sample_base + "chemdner_sample_abstracts.txt",
-                        'annotations': chemdner_sample_base + "chemdner_sample_annotations.txt",
-                        'cem': chemdner_sample_base + "chemdner_sample_cem_gold_standard.txt",
-                        'cdi': chemdner_sample_base + "chemdner_sample_cdi_gold_standard.txt",
-                        'corpus': "data/chemdner_sample_abstracts.txt.pickle",
-                       'format': "chemdner",
-                      },
+                         'text': chemdner_sample_base + "chemdner_sample_abstracts.txt",
+                         'annotations': chemdner_sample_base + "chemdner_sample_annotations.txt",
+                         'cem': chemdner_sample_base + "chemdner_sample_cem_gold_standard.txt",
+                         'cdi': chemdner_sample_base + "chemdner_sample_cdi_gold_standard.txt",
+                         'corpus': "data/chemdner_sample_abstracts.txt.pickle",
+                         'format': "chemdner",
+                         },
     'cemp_sample':{ # CHEMDNER 2015
-                       'text': cpatents_sample_base + "chemdner_patents_sample_text.txt",
-                       'annotations': cpatents_sample_base + "chemdner_cemp_gold_standard_sample.tsv",
-                       'cem': cpatents_sample_base + "chemdner_cemp_gold_standard_sample_eval.tsv",
-                       'corpus': "data/chemdner_patents_sample_text.txt.pickle",
-                       'format': "chemdner",
-                      },
+                    'text': cpatents_sample_base + "chemdner_patents_sample_text.txt",
+                    'annotations': cpatents_sample_base + "chemdner_cemp_gold_standard_sample.tsv",
+                    'cem': cpatents_sample_base + "chemdner_cemp_gold_standard_sample_eval.tsv",
+                    'corpus': "data/chemdner_patents_sample_text.txt.pickle",
+                    'format': "chemdner",
+                    },
     'gpro_dev':{ # CHEMDNER 2015 gene/protein NER
-            'text': gpro_dev_base + "gpro_patents_development_text.txt",
-            'annotations': gpro_dev_base + "chemdner_gpro_gold_standard_development.tsv",
-            'cem': gpro_dev_base + "chemdner_gpro_gold_standard_development_eval.tsv",
-            'corpus': "data/gpro_patents_development_text.txt.pickle",
-            'format': "gpro",
-    },
+                 'text': gpro_dev_base + "gpro_patents_development_text.txt",
+                 'annotations': gpro_dev_base + "chemdner_gpro_gold_standard_development.tsv",
+                 'cem': gpro_dev_base + "chemdner_gpro_gold_standard_development_eval.tsv",
+                 'corpus': "data/gpro_patents_development_text.txt.pickle",
+                 'format': "gpro",
+                 },
     'ddi_trainall':{ # DDI 2013 - drug-drug interactions
-        'text': ddi_train_base,
-        'annotations': ddi_train_base,
-        'corpus': "data/ddi_trainall.txt.pickle",
-        'format': "ddi",
-    },
+                     'text': ddi_train_base,
+                     'annotations': ddi_train_base,
+                     'corpus': "data/ddi_trainall.txt.pickle",
+                     'format': "ddi",
+                     },
 }
