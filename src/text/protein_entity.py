@@ -4,7 +4,7 @@ __author__ = 'Andre'
 
 
 class ProteinEntity(Entity):
-    def __init__(self, tokens, **kwargs):
+    def __init__(self, tokens, *args, **kwargs):
         # Entity.__init__(self, kwargs)
         super(ProteinEntity, self).__init__(tokens, **kwargs)
         self.type = "protein"

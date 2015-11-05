@@ -13,11 +13,14 @@ import datetime
 import time
 import codecs
 from corenlp import StanfordCoreNLP
+from classification.ner.mirna_matcher import MirnaMatcher
 
 from reader.chemdner_corpus import ChemdnerCorpus
+from reader.genia_corpus import GeniaCorpus
 from reader.gpro_corpus import GproCorpus
 from reader.ddi_corpus import DDICorpus
 from reader.chebi_corpus import ChebiCorpus
+from reader.pubmed_corpus import PubmedCorpus
 from text.corpus import Corpus
 from classification.ner.taggercollection import TaggerCollection
 from classification.ner.matcher import MatcherModel
@@ -150,6 +153,9 @@ considered when coadministering with megestrol acetate.''',
 
     # pre-processing options
     if options.actions == "load_corpus":
+        print("loading CoreNLP...")
+        corenlpserver = StanfordCoreNLP(corenlp_path=config.corenlp_dir,
+                                    properties=config.corenlp_dir + "default.properties")
         if corpus_format == "chemdner":
             corpus = ChemdnerCorpus(corpus_path)
             #corpus.save()
@@ -162,9 +168,6 @@ considered when coadministering with megestrol acetate.''',
                 corpus.documents.update(tcorpus.documents)
                 corpus.documents.update(dcorpus.documents)
             elif options.goldstd == "cemp_test_divide":
-                print("loading CoreNLP...")
-                corenlpserver = StanfordCoreNLP(corenlp_path=config.corenlp_dir,
-                                        properties=config.corenlp_dir + "default.properties")
                 logging.info("loading corpus %s" % corpus_path)
                 corpus.load_corpus(corenlpserver, process=False)
                 docs = corpus.documents.keys()
@@ -183,30 +186,29 @@ considered when coadministering with megestrol acetate.''',
                     sub_corpus.save()
 
             else:
-                print("loading CoreNLP...")
-                corenlpserver = StanfordCoreNLP(corenlp_path=config.corenlp_dir,
-                                        properties=config.corenlp_dir + "default.properties")
                 corpus.load_corpus(corenlpserver)
         elif corpus_format == "gpro":
             corpus = GproCorpus(corpus_path)
             corpus.load_corpus(None)
         elif corpus_format == "ddi":
             corpus = DDICorpus(corpus_path)
-            print("loading CoreNLP...")
-            corenlpserver = StanfordCoreNLP(corenlp_path=config.corenlp_dir,
-                                        properties=config.corenlp_dir + "default.properties")
             corpus.load_corpus(corenlpserver)
             # since the path of this corpus is a directory, add the reference to save this corpus
             corpus.path += options.goldstd + ".txt"
         elif corpus_format == "chebi":
             corpus = ChebiCorpus(corpus_path)
-            print("loading CoreNLP...")
-            corenlpserver = StanfordCoreNLP(corenlp_path=config.corenlp_dir,
-                                        properties=config.corenlp_dir + "default.properties")
             corpus.load_corpus(corenlpserver)
             # since the path of this corpus is a directory, add the reference to save this corpus
             corpus.path += options.goldstd + ".txt"
-
+        elif corpus_format == "pubmed":
+            # corenlpserver = ""
+            with open(corpus_path, 'r') as f:
+                pmids = [line.strip() for line in f if line.strip()]
+            corpus = PubmedCorpus(corpus_path, pmids)
+            corpus.load_corpus(corenlpserver)
+        elif corpus_format == "genia":
+            corpus = GeniaCorpus(corpus_path)
+            corpus.load_corpus(corenlpserver)
         corpus.save()
         if corpus_ann and "test" not in options.goldstd: #add annotation if it is not a test set
             corpus.load_annotations(corpus_ann)
@@ -218,6 +220,9 @@ considered when coadministering with megestrol acetate.''',
     if options.actions == "annotate": # re-add annotation to corpus
         logging.debug("loading annotations...")
         corpus.load_annotations(corpus_ann)
+        # for d in corpus.documents:
+        #    for s in corpus.documents[d].sentences:
+        #        print s.entities.elist
         corpus.save()
     elif options.actions == "write_goldstandard":
         model = BiasModel(options.output[1])
@@ -267,9 +272,18 @@ considered when coadministering with megestrol acetate.''',
         final_results.lines = lines
         final_results.save(options.output[1] + ".pickle")
     elif options.actions == "test_matcher":
-        model = MatcherModel(options.models)
+        if "mirna" in options.models:
+            model = MirnaMatcher(options.models)
+        else:
+            model = MatcherModel(options.models)
         results = ResultsNER(options.models)
         results.corpus, results.entities = model.test(corpus)
+        allentities = set()
+        for e in results.entities:
+            allentities.add(results.entities[e].text)
+        with codecs.open(options.output[1] + ".txt", 'w', 'utf-8') as outfile:
+            outfile.write('\n'.join(allentities))
+
         results.save(options.output[1] + ".pickle")
     elif options.actions == "test_multiple":
         logging.info("testing with multiple classifiers... {}".format(' '.join(options.submodels)))

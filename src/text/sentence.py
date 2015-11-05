@@ -2,6 +2,7 @@ import logging
 import sys
 from xml.etree import ElementTree as ET
 import re
+from text.protein_entity import ProteinEntity
 
 from token2 import Token2
 from entity import Entities
@@ -9,6 +10,7 @@ from classification.re.relations import Pairs
 from classification.re import ddi_kernels
 from classification.re import relations
 from text.chemical_entity import ChemdnerAnnotation
+from text.mirna_entity import MirnaEntity
 
 
 class Sentence(object):
@@ -87,7 +89,7 @@ class Sentence(object):
         # logging.debug(newtoken.text)
         return newtoken
 
-    def tag_entity(self, start, end, subtype, entity=None, totalchars=0, source="goldstandard", **kwargs):
+    def tag_entity(self, start, end, subtype="chemical", entity=None, totalchars=0, source="goldstandard", **kwargs):
         """Find the tokens that match this entity. start and end are relative to the sentence.
            Totalchars is the offset of the sentence on the document."""
         tlist = []
@@ -106,8 +108,9 @@ class Sentence(object):
                 if newtext not in kwargs["text"] and kwargs["text"] not in newtext:
                     return None
                 else:
-                    logging.info(tlist[0].start, tlist[-1].end, "|" + newtext + "|", "=>", "|" + kwargs["text"] + "|",
-                                 start, end, self.sid, self.text)
+                    logging.info("{}-{}|{}|=>|{}|{}-{}".format(tlist[0].start, tlist[-1].end, newtext, kwargs["text"],
+                                 start, end))
+                    logging.info("{} - {}".format(self.sid, self.text))
             #     print "tokens found:", [t.text for t in tlist]
                 # sys.exit()
             # else:
@@ -118,18 +121,24 @@ class Sentence(object):
                 eid = self.sid + ".e0"
             if entity:
                 self.entities.add_entity(entity, source)
-            else:
+            elif subtype == "chemical":
                 self.entities.add_entity(ChemdnerAnnotation(tlist, self.sid, text=newtext,
                                          did=self.did, eid=eid, subtype=subtype), source)
-
+            elif subtype == "mirna":
+                self.entities.add_entity(MirnaEntity(tlist, self.sid, text=newtext,
+                                         did=self.did, eid=eid, subtype=subtype), source)
+            elif subtype == "protein":
+                self.entities.add_entity(ProteinEntity(tlist, self.sid, text=newtext,
+                                         did=self.did, eid=eid, subtype=subtype), source)
             self.label_tokens(tlist, source, subtype)
             #logging.debug("added new entity to %s, now with %s entities" % (self.sid,
             #                                                                 len(self.entities.elist[source])))
             return eid
-        #else:
-        #    print "no tokens found:", start, end, kwargs.get("text"), self.text
-        #    print self.text[:start]
-            # [(t.start, t.end, t.text) for t in self.tokens]
+        else:
+            print "no tokens found:"
+            print start, end, kwargs.get("text")
+            print [(t.start, t.end, t.text) for t in self.tokens]
+            #
 
     def label_tokens(self, tlist, source, subtype="entity"):
         if len(tlist) == 1:
