@@ -3,10 +3,10 @@ Framework for identifying biomedical entities
 
 ## Dependencies:
 * Pre-processing:
-    * [Genia Sentence Splitter](http://www.nactem.ac.uk/y-matsu/geniass/)
+    * [Genia Sentence Splitter](http://www.nactem.ac.uk/y-matsu/geniass/) (requires ruby)
     * [Python wrapper for Stanford CoreNLP](https://bitbucket.org/torotoki/corenlp-python)
 * Term recognition
-    * [Stanford NER 3.5.X](http://nlp.stanford.edu/software/CRF-NER.shtml)
+    * [Stanford NER 3.5.1](http://nlp.stanford.edu/software/CRF-NER.shtml)
 * Relation extraction
     * [SVM-light-TK](http://disi.unitn.it/moschitti/Tree-Kernel.htm)
     * [Shallow Language Kernel](https://hlt-nlp.fbk.eu/technologies/jsre)
