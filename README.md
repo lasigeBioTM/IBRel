@@ -2,6 +2,7 @@
 Framework for identifying biomedical entities
 
 ## Dependencies:
+* Python 2.7 and Java 8
 * Pre-processing:
     * [Genia Sentence Splitter](http://www.nactem.ac.uk/y-matsu/geniass/) (requires ruby)
     * [Python wrapper for Stanford CoreNLP](https://bitbucket.org/torotoki/corenlp-python)
