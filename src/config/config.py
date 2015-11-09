@@ -62,8 +62,14 @@ ddi_train_base = "DDICorpus/Train/All/"
 pubmed_test_base = "corpora/pubmed-test/"
 transmir_base = "corpora/transmir/"
 genia_base = "corpora/GENIA_term_3.02/"
-
+genia_sample_base = "corpora/genia_sample/"
 paths = {
+    'genia_sample': {
+        'text': genia_sample_base + "genia_sample.xml",
+        'annotations': genia_sample_base + "genia_sample.xml",
+        'corpus': "data/genia_sample.xml.pickle",
+        'format': "genia"
+    },
     'genia': {
         'text': genia_base + "GENIAcorpus3.02.xml",
         'annotations': genia_base + "GENIAcorpus3.02.xml",
