@@ -46,25 +46,25 @@ class Sentence(object):
         for t in sentence['words']:
             # print t[0]
             if t[0]:
-                # separate "-" when between words with more than 4 chars
-                token_seq = re.split(r'-|/|\\|\+|\.', t[0])
+                # separate "-" when between words with more than 1 chars
+                token_seq = re.split(r'(\w+)(-|/|\\|\+|\.)(\w+)', t[0])
 
-                if len(token_seq) > 1 and all([len(elem) > 1 for elem in token_seq]):
-
+                if len(token_seq) > 1: # and all([len(elem) > 1 for elem in token_seq]):
+                    #logging.info("{}: {}".format(t[0], "&".join(token_seq)))
                     for its, ts in enumerate(token_seq):
-                        #print token_seq[:its]
-                        charoffset_begin = int(t[1]["CharacterOffsetBegin"])
-                        if token_seq[:its]:
-                            charoffset_begin += sum([len(x) for x in token_seq[:its]])
-                        charoffset_begin += its
-                        charoffset_end = len(ts) + charoffset_begin
-                        #logging.info(str(charoffset_begin) + ":" + str(charoffset_end))
-                        ts_props = {"CharacterOffsetBegin": charoffset_begin,
-                                    "CharacterOffsetEnd": charoffset_end,
-                                    "PartOfSpeech": t[1]["PartOfSpeech"],
-                                    "NamedEntityTag": t[1]["NamedEntityTag"],
-                                    "Lemma": t[1]["Lemma"]}
-                        self.create_newtoken(ts, ts_props)
+                        if ts.strip() != "":
+                            charoffset_begin = int(t[1]["CharacterOffsetBegin"])
+                            if token_seq[:its]: # not the first token
+                                charoffset_begin += sum([len(x) for x in token_seq[:its]])
+                            # charoffset_begin += its
+                            charoffset_end = len(ts) + charoffset_begin
+                            #logging.info(str(charoffset_begin) + ":" + str(charoffset_end))
+                            ts_props = {"CharacterOffsetBegin": charoffset_begin,
+                                        "CharacterOffsetEnd": charoffset_end,
+                                        "PartOfSpeech": t[1]["PartOfSpeech"],
+                                        "NamedEntityTag": t[1]["NamedEntityTag"],
+                                        "Lemma": t[1]["Lemma"]}
+                            self.create_newtoken(ts, ts_props)
 
                 else:
                     self.create_newtoken(t[0], t[1])
