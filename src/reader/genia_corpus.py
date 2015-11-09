@@ -48,6 +48,8 @@ class GeniaCorpus(Corpus):
 
     def load_annotations(self, ann_dir):
         time_per_abs = []
+        skipped = 0
+        notskipped = 0
         soup = BeautifulSoup(codecs.open(self.path, 'r', "utf-8"), 'html.parser')
         docs = soup.find_all("article")
         all_entities = {}
@@ -61,14 +63,19 @@ class GeniaCorpus(Corpus):
                 sentities = s.find_all("cons")
                 lastindex = 0
                 for ei, e in enumerate(sentities):
-                    # print e.index(), e.get_text(), stext[e.index():e.index()+3]
                     estart = stext.find(e.text, lastindex)
                     eend = estart + len(e.text)
                     etext = stext[estart:eend]
+                    # print etext, stext[estart:eend]
                     sems = e.get("sem")
-                    if sems is not None and sems.split(" ") > 1: # parent cons, skip
+                    if sems is not None and len(sems.split(" ")) > 1: # parent cons, skip
+                        skipped += 1
+                        print "skipped", sems, sems.split(" ")
                         continue
-                    if sems is None: # get the sem of parent
+                    if sems is None: # get the sem of parent - but for now slip
+                        # skipped += 1
+                        # print "skipped", sems
+                        continue
                         sems = e.parent.get("sem")
                         sems = sems.split(" ")
                         sems = sems[1:]
@@ -80,15 +87,18 @@ class GeniaCorpus(Corpus):
                             continue
                         sem = sems[i]
                     else:
-                        sem = sems[0]
+                        sem = sems
+                    # print sem
                     if sem.endswith(")"):
                         sem = sem[:-1]
                     if sem.startswith("("):
                         sem = sem[1:]
                     eid = sid + ".e" + str(ei)
-                    if sem.startswith("G#protein"):
+                    if sem.startswith("G#DNA"):
                         this_sentence.tag_entity(estart, eend, "protein",
                                                      text=e.text)
+                        # print e.text
+                        notskipped += 1
 
                     t = sem.split("_")[0]
                     if t not in all_entities:
@@ -107,6 +117,7 @@ class GeniaCorpus(Corpus):
         #        print e, all_entities[e]
         for s in all_entities:
             print s, len(all_entities[s])
+        print skipped, notskipped
 
 
 
