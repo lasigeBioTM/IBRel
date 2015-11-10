@@ -90,6 +90,24 @@ class Entities(object):
         #    logging.info("Repeated entity! %s", entity.eid)
         self.elist[esource].append(entity)
 
+    def get_unique_entities(self, source, ths, rules):
+        entities = set()
+        offsets = Offsets()
+        for s in self.elist:
+            if s.startswith(source):
+                for e in self.elist[s]:
+                    val = e.validate(ths, rules)
+                    if not val:
+                        continue
+                    eid_offset = Offset(e.dstart, e.dend, text=e.text, sid=e.sid)
+                    exclude = [perfect_overlap]
+                    if "contained_by" in rules:
+                        exclude.append(contained_by)
+                    toadd, v, alt = offsets.add_offset(eid_offset, exclude_if=exclude)
+                    if toadd:
+                        entities.add(e.text)
+        return entities
+
     def write_chemdner_results(self, source, outfile, ths={"ssm":0.0}, rules=[], totalentities=0):
         """
         Write results that can be evaluated with the BioCreative evaluation script
