@@ -94,7 +94,7 @@ class GeniaCorpus(Corpus):
                     if sem.startswith("("):
                         sem = sem[1:]
                     eid = sid + ".e" + str(ei)
-                    if sem.startswith("G#DNA"):
+                    if sem.startswith("G#protein"):
                         this_sentence.tag_entity(estart, eend, "protein",
                                                      text=e.text)
                         # print e.text

@@ -63,7 +63,12 @@ pubmed_test_base = "corpora/pubmed-test/"
 transmir_base = "corpora/transmir/"
 genia_base = "corpora/GENIA_term_3.02/"
 genia_sample_base = "corpora/genia_sample/"
-paths = {
+paths = {'transmir_tfs':{
+        'text': transmir_base + "transmir_pmids.txt",
+        'annotations': transmir_base + "transmir_tfs.txt",
+        'corpus': "data/transmir_pmids.txt.pickle",
+        'format': "pubmed"
+    },
     'genia_sample': {
         'text': genia_sample_base + "genia_sample.xml",
         'annotations': genia_sample_base + "genia_sample.xml",
