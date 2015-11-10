@@ -9,7 +9,7 @@ import atexit
 from socket import error as SocketError
 import errno
 
-from text.entity import ProteinEntity
+from text.protein_entity import ProteinEntity
 from text.offset import Offsets, Offset
 from classification.results import ResultsNER
 from text.chemical_entity import ChemdnerAnnotation
