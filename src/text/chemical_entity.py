@@ -163,9 +163,9 @@ with open(config.stoplist, 'r') as stopfile:
 
 class ChemicalEntity(Entity):
     """Chemical entities"""
-    def __init__(self, tokens, **kwargs):
+    def __init__(self, tokens, *args, **kwargs):
         # Entity.__init__(self, kwargs)
-        super(ChemicalEntity, self).__init__(tokens, **kwargs)
+        super(ChemicalEntity, self).__init__(tokens, *args, **kwargs)
         self.type = "chemical"
         self.subtype = kwargs.get("subtype")
         self.chebi_id = None
@@ -238,7 +238,7 @@ class ChemicalEntity(Entity):
 
 class ChemdnerAnnotation(ChemicalEntity):
     """Chemical entity annotated on the CHEMDNER corpus"""
-    def __init__(self, tokens, sid, **kwargs):
+    def __init__(self, tokens, sid, *args, **kwargs):
         # ChemicalEntity.__init__(self, kwargs)
-        super(ChemdnerAnnotation, self).__init__(tokens, **kwargs)
+        super(ChemdnerAnnotation, self).__init__(tokens, *args, **kwargs)
         self.sid = sid

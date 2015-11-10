@@ -1,4 +1,6 @@
 from __future__ import division, absolute_import, unicode_literals
+
+import logging
 import xml.etree.ElementTree as ET
 
 from text.offset import Offset, Offsets, perfect_overlap, contained_by
@@ -7,10 +9,11 @@ from text.offset import Offset, Offsets, perfect_overlap, contained_by
 class Entity(object):
     """Base entity class"""
 
-    def __init__(self, tokens, **kwargs):
+    def __init__(self, tokens, *args, **kwargs):
         self.type = kwargs.get('e_type', None)
         self.text = kwargs.get("text", None)
         self.did = kwargs.get("did", None)
+        self.sid = kwargs.get("sid", None)
         self.eid = kwargs.get("eid")
         self.tokens = tokens
         self.start = tokens[0].start
@@ -20,7 +23,9 @@ class Entity(object):
         self.recognized_by = []
         self.subentities = []
         self.score = kwargs.get("score", 0)
-        #logging.info("created entity {} with score {}".format(self.text, self.score))
+        # logging.info("created entity {} with score {}".format(self.text, self.score))
+        # print "entity", args, kwargs
+
 
     def __str__(self):
         output = self.text + " relative to sentence:" + str(self.start) + ":" + str(self.end)
@@ -72,7 +77,7 @@ class Entity(object):
 class Entities(object):
     """Group of entities related to a text"""
 
-    def __init__(self, **kwargs):
+    def __init__(self, *args, **kwargs):
         self.elist = {}
         self.sid = kwargs.get("sid")
         self.did = kwargs.get("did")
