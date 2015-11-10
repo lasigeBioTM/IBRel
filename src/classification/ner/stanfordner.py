@@ -9,6 +9,7 @@ import atexit
 from socket import error as SocketError
 import errno
 
+from text.entity import ProteinEntity
 from text.offset import Offsets, Offset
 from classification.results import ResultsNER
 from text.chemical_entity import ChemdnerAnnotation
@@ -136,7 +137,7 @@ class StanfordNERModel(SimpleTaggerModel):
                 #logging.debug([(t.start, t.end, t.text) for t in sentence.tokens])
                 continue
             if e.tag.startswith("S"):
-                single_entity = ChemdnerAnnotation(tokens=tokens,
+                single_entity = self.create_entity(tokens=tokens,
                                                       sid=sentence.sid, did=sentence.did,
                                                       text=e.text, score=1)
                 eid = sentence.tag_entity(start=e.start, end=e.end, subtype="chem",
@@ -145,20 +146,20 @@ class StanfordNERModel(SimpleTaggerModel):
                 results.entities[eid] = single_entity # deepcopy
                 #logging.info("new single entity: {}".format(single_entity))
             elif e.tag.startswith("B"):
-                new_entity = ChemdnerAnnotation(tokens=tokens,
+                new_entity = self.create_entity(tokens=tokens,
                                                    sid=sentence.sid, did=sentence.did,
                                                    text=e.text, score=1)
             elif e.tag.startswith("I"):
                 if not new_entity:
                     logging.info("starting with inside...")
-                    new_entity = ChemdnerAnnotation(tokens=tokens,
+                    new_entity = self.create_entity(tokens=tokens,
                                                    sid=sentence.sid, did=sentence.did,
                                                    text=e.text, score=1)
                 else:
                     new_entity.tokens += tokens
             elif e.tag.startswith("E"):
                 if not new_entity:
-                    new_entity = ChemdnerAnnotation(tokens=tokens,
+                    new_entity = self.create_entity(tokens=tokens,
                                                sid=sentence.sid, did=sentence.did,
                                                text=e.text,
                                                score=1)
@@ -179,6 +180,22 @@ class StanfordNERModel(SimpleTaggerModel):
                 new_entity = None
                 #logging.debug("completed entity:{}".format(results.entities[eid]))
         return results
+
+    def create_entity(self, tokens, sid, did, text, score):
+        """
+        Create a new entity based on the type of model
+        :param tokens: list of Tokens
+        :param sid: ID of the sentence
+        :param did: ID of the document
+        :param text: string
+        :param score:
+        :return: entity
+        """
+        if "chem" in self.path:
+            e = ChemdnerAnnotation(tokens=tokens, sid=sid, did=did, text=text, score=score)
+        elif "prot" in self.path:
+            e = ProteinEntity(tokens=tokens, sid=sid, did=did, text=text, score=score)
+        return e
 
     def get_offsets_for_tag(self, data, tag):
         #data = "<ROOT>{}</ROOT>".format(data)
