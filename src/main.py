@@ -34,7 +34,7 @@ if config.use_chebi:
 from evaluate import get_results, run_chemdner_evaluation, get_gold_ann_set
 
 
-def run_crossvalidation(goldstd, corpus, model, cv):
+def run_crossvalidation_types(goldstd, corpus, model, cv):
     doclist = corpus.documents.keys()
     random.shuffle(doclist)
     size = int(len(doclist)/cv)
@@ -47,6 +47,7 @@ def run_crossvalidation(goldstd, corpus, model, cv):
         print 'CV{} - test set: {}; train set: {}'.format(nlist, len(testids), len(trainids))
         train_corpus = Corpus(corpus.path, documents={did: corpus.documents[did] for did in trainids})
         test_corpus = Corpus(corpus.path, documents={did: corpus.documents[did] for did in testids})
+        corpus.subtypes = []  # TEMPORARY!!!!
         train_corpus.subtypes = corpus.subtypes
         test_corpus.subtypes = corpus.subtypes
         basemodel = model + "_cv{}".format(nlist)
@@ -88,6 +89,61 @@ def run_crossvalidation(goldstd, corpus, model, cv):
     print "precision: average={} all={}".format(pavg, '|'.join(p))
     print "recall: average={}  all={}".format(ravg, '|'.join(r))
 
+def run_crossvalidation(goldstd, corpus, model, cv):
+    doclist = corpus.documents.keys()
+    random.shuffle(doclist)
+    size = int(len(doclist)/cv)
+    sublists = chunks(doclist, size)
+    p, r = [], []
+    for nlist in range(cv):
+        testids = sublists[nlist]
+        trainids = list(itertools.chain.from_iterable(sublists[:nlist]))
+        trainids += list(itertools.chain.from_iterable(sublists[nlist+1:]))
+        print 'CV{} - test set: {}; train set: {}'.format(nlist, len(testids), len(trainids))
+        logging.debug(str(trainids))
+        logging.debug(str(testids))
+        train_corpus = Corpus(corpus.path, documents={did: corpus.documents[did] for did in trainids})
+        test_corpus = Corpus(corpus.path, documents={did: corpus.documents[did] for did in testids})
+        basemodel = model + "_cv{}".format(nlist)
+        logging.debug('CV{} - test set: {}; train set: {}'.format(nlist, len(test_corpus.documents), len(train_corpus.documents)))
+        '''for d in train_corpus.documents:
+            for s in train_corpus.documents[d].sentences:
+                print len([t.tags.get("goldstandard") for t in s.tokens if t.tags.get("goldstandard") != "other"])
+        sys.exit()'''
+        # train
+        logging.info('CV{} - TRAIN'.format(nlist))
+        model = StanfordNERModel(basemodel)
+        model.load_data(train_corpus, feature_extractors.keys())
+        model.train()
+
+        # test
+        logging.info('CV{} - TEST'.format(nlist))
+        model = StanfordNERModel(basemodel)
+        model.load_tagger()
+        model.load_data(test_corpus, feature_extractors.keys(), mode="test")
+        final_results = model.test(test_corpus)
+        final_results.basepath = basemodel + "_results"
+
+        # validate
+        if config.use_chebi:
+            logging.info('CV{} - VALIDATE'.format(nlist))
+            final_results = add_chebi_mappings(final_results, basemodel)
+            final_results = add_ssm_score(final_results, basemodel)
+            final_results.combine_results(basemodel, basemodel + "_combined")
+
+        # evaluate
+        logging.info('CV{} - EVALUATE'.format(nlist))
+        goldset = get_gold_ann_set(config.paths[goldstd]["annotations"])
+        get_results(final_results, basemodel + "_combined", goldset, {})
+        # evaluation = run_chemdner_evaluation(config.paths[goldstd]["cem"], basemodel + "_results.txt", "-t")
+        # values = evaluation.split("\n")[1].split('\t')
+        # p.append(float(values[13])) # index of micro precision
+        # r.append(float(values[14])) # index of micro recall
+        # logging.info("precision: {} recall:{}".format(str(values[13]), str(values[14])))
+    pavg = sum(p)/cv
+    ravg = sum(r)/cv
+    print "precision: average={} all={}".format(pavg, '|'.join(p))
+    print "recall: average={}  all={}".format(ravg, '|'.join(r))
 
 def chunks(l, n):
     """ return list of n sized sublists of l

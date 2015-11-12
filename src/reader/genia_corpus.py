@@ -14,7 +14,7 @@ from text.sentence import Sentence
 class GeniaCorpus(Corpus):
     def __init__(self, corpusdir, **kwargs):
         super(GeniaCorpus, self).__init__(corpusdir, **kwargs)
-        # self.subtypes = ["IDENTIFIER", "MULTIPLE", "FAMILY", "FORMULA", "SYSTEMATIC", "ABBREVIATION", "TRIVIAL"]
+        self.subtypes = ["protein", "DNA"]
 
     def load_corpus(self, corenlpserver, process=True):
         time_per_abs = []

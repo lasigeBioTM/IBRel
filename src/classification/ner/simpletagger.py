@@ -131,8 +131,8 @@ class SimpleTaggerModel(Model):
                             tokenfeatures, tokenlabel = self.generate_features(sentence, i, flist)
                             savecorpus = True
                             sentence.tokens[i].features[fname] = tokenfeatures[:]
-                        if tokenlabel != "other":
-                             logging.debug("%s %s" % (tokenfeatures, tokenlabel))
+                        # if tokenlabel != "other":
+                        #      logging.debug("%s %s" % (tokenfeatures, tokenlabel))
                         sentencefeatures.append(tokenfeatures)
                         sentencelabels.append(tokenlabel)
                         sentencetokens.append(sentence.tokens[i])

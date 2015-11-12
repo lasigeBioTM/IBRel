@@ -70,8 +70,16 @@ class StanfordNERModel(SimpleTaggerModel):
     def train(self):
         self.write_prop()
         self.save_corpus_to_sbilou()
-        process = Popen(self.PARAMS)
-        process.communicate()
+        logging.info("Training model with StanfordNER")
+        process = Popen(self.PARAMS, stdout=PIPE, stderr=PIPE)
+        # process.communicate()
+        while True:
+            output = process.stdout.readline()
+            if output == '' and process.poll() is not None:
+                break
+            if output:
+                logging.info(output.strip())
+        rc = process.poll()
         logging.info("model " + self.path +'.ser.gz trained')
         Popen(["jar", "-uf", self.STANFORD_NER, "{}.ser.gz".format(self.path)]).communicate()
         logging.info("saved model file to {}".format(self.STANFORD_NER))
@@ -80,11 +88,11 @@ class StanfordNERModel(SimpleTaggerModel):
         self.tagger = ner.SocketNER("localhost", port, output_format='inlineXML')
         tagged_sentences = []
         logging.info("sending sentences to tagger {}...".format(self.path))
-        for isent, sentence in enumerate(self.sids):
+        for isent, sid in enumerate(self.sids):
             #out = self.tagger.tag_text(replace_abbreviations(" ".join([t.text for t in self.tokens[isent]])))
             #out = self.tagger.tag_text(self.sentences[isent])
             text = self.sentences[isent]
-            #logging.debug("tagging: {}/{}".format(isent, len(self.sids)))
+            #logging.info("tagging: {}/{} - {}={}".format(isent, len(self.sids), sid, did))
             try:
                 out = self.tagger.tag_text(text)
                 #logging.debug("results:{}".format(out))
