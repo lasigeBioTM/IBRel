@@ -142,6 +142,14 @@ class Document(object):
                 totalentities = res[1]
         return lines
 
+    def get_offsets(self, esources, ths, rules):
+        offsets = []
+        for s in self.sentences:
+            if s.entities:
+                offsets = s.entities.get_offsets(esources, ths, rules)
+        return offsets
+
+
     def write_bioc_results(self, parent, source, ths={}):
         bioc_document = ET.SubElement(parent, "document")
         bioc_id = ET.SubElement(bioc_document, "id")

@@ -61,5 +61,6 @@ class ProteinEntity(Entity):
         if "codeonly" in rules:
             if self.tf_regex.match(self.text) is None:
                 return False
-        self.text = self.text.replace("-", "")
+        if "fixdash" in rules:
+            self.text = self.text.replace("-", "")
         return True

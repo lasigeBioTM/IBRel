@@ -55,6 +55,8 @@ class GeniaCorpus(Corpus):
         all_entities = {}
         for doc in docs:
             did = "GENIA" + doc.articleinfo.bibliomisc.text.split(":")[1]
+            title = doc.title.find_all("sentence")
+            # TODO: title also has annotations...
             sentences = doc.abstract.find_all("sentence")
             for si, s in enumerate(sentences):
                 stext = s.get_text()
@@ -107,17 +109,9 @@ class GeniaCorpus(Corpus):
                     #if sem is not None and sem.startswith("G#protein"):
                     #    print e.text, "|", etext, eindex, stext[0:20]
                     lastindex = estart
-        with open("corpora/transmir/transmir_tfs.txt", 'r') as gs:
-            tfs = gs.readlines()
-        tfs = [t.strip().lower() for t in tfs]
-        # print tfs
-        # print all_entities.keys()
-        #for e in all_entities:
-        #    if e.lower() in tfs:
-        #        print e, all_entities[e]
         for s in all_entities:
             print s, len(all_entities[s])
-        print skipped, notskipped
+
 
 
 

@@ -9,6 +9,7 @@ import sys
 from subprocess import Popen, PIPE, check_output
 import collections
 from operator import itemgetter
+from bs4 import BeautifulSoup
 
 from config import config
 if config.use_chebi:
@@ -110,7 +111,16 @@ def add_ssm_score(results, path, source, measure, ontology, save=True):
         pickle.dump(results, open(path, "wb"))
     return results
 
-def get_gold_ann_set(goldann="CHEMDNER/CHEMDNER_TEST_ANNOTATION/chemdner_ann_test_13-09-13.txt"):
+def get_gold_ann_set(corpus_type, gold_path):
+    if corpus_type == "chemdner":
+        goldset = get_chemdner_gold_ann_set(gold_path)
+    elif corpus_type == "pubmed":
+        goldset = get_unique_gold_ann_set(gold_path)
+    elif corpus_type == "genia":
+        goldset = get_genia_gold_ann_set(gold_path)
+    return goldset
+
+def get_chemdner_gold_ann_set(goldann="CHEMDNER/CHEMDNER_TEST_ANNOTATION/chemdner_ann_test_13-09-13.txt"):
     """
     Load the CHEMDNER annotations to a set
     :param goldann: Path to CHEMDNER annotation file
@@ -121,12 +131,37 @@ def get_gold_ann_set(goldann="CHEMDNER/CHEMDNER_TEST_ANNOTATION/chemdner_ann_tes
             gold = goldfile.readlines()
     goldlist = []
     for line in gold:
-        x = line.strip().split('\t')
         #pmid, T/A, start, end
+        x = line.strip().split('\t')
         goldlist.append((x[0], x[1] + ":" + x[2] + ":" + x[3], '1'))
     #print goldlist[0:2]
     goldset = set(goldlist)
     return goldset
+
+def get_genia_gold_ann_set(goldann):
+    gold_offsets = set()
+    soup = BeautifulSoup(codecs.open(goldann, 'r', "utf-8"), 'html.parser')
+    docs = soup.find_all("article")
+    all_entities = {}
+    for doc in docs:
+        did = "GENIA" + doc.articleinfo.bibliomisc.text.split(":")[1]
+        title = doc.title.sentence.get_text()
+        doc_text = title + " "
+        doc_offset = 0
+        sentences = doc.abstract.find_all("sentence")
+        for si, s in enumerate(sentences):
+            stext = s.get_text()
+            sentities = s.find_all("cons")
+            lastindex = 0
+            for ei, e in enumerate(sentities):
+                estart = stext.find(e.text, lastindex) + doc_offset # relative to document
+                eend = estart + len(e.text)
+                # etext = doc_text[estart:eend]
+                # logging.info("gold annotation: {}".format(e.text))
+                gold_offsets.add((did, estart, eend, e.text))
+            doc_text += stext + " "
+            doc_offset = len(doc_text)
+    return gold_offsets
 
 
 def get_unique_gold_ann_set(goldann):
@@ -140,20 +175,21 @@ def get_unique_gold_ann_set(goldann):
     return gold
 
 
-def compare_results(lineset, goldset, corpus, getwords=True):
+def compare_results(offsets, goldoffsets, corpus, getwords=True):
     """
     Compare system results with a gold standard
-    :param lines: system results
-    :param goldset: Set with the gold standard annotations
+    :param offsets: system results, offset tuples (did, start, end, text)
+    :param goldoffsets: Set with the gold standard annotations (did, start, end [, text])
     :param corpus: Reference corpus
     :return: Lines to write into a report files, set of TPs, FPs and FNs
     """
+    #TODO: check if size of offsets and goldoffsets tuples is the same
     report = []
-    # logging.debug(lineset)
-    # logging.debug(goldset)
-    tps = lineset & goldset
-    fps = lineset - goldset
-    fns = goldset - lineset
+    # logging.info(offsets)
+    # logging.info(goldoffsets)
+    tps = offsets & goldoffsets
+    fps = offsets - goldoffsets
+    fns = goldoffsets - offsets
     fpreport, fpwords = get_report(fps, corpus, getwords=getwords)
     fnreport, fnwords = get_report(fns, corpus, getwords=getwords)
     tpreport, tpwords = get_report(tps, corpus, getwords=getwords)
@@ -190,31 +226,33 @@ def get_report(results, corpus, restype="TP", getwords=True):
         Get more information from CHEMDNER results.
         :return: Lines to write to a report file, word that appear in this set
     """
+    # TODO: use only offset tuples (did, start, end, text)
     report = {}
     words = []
-    for x in results:
-        if x[0] == "":
+    for t in results:
+        if t[0] == "":
             did = "0"
         else:
-            did = x[0]
-        if x[0] != "" and x[0] not in corpus.documents:
-            logging.info("this doc is not in the corpus! %s" % x[0])
+            did = t[0]
+        if t[0] != "" and t[0] not in corpus.documents:
+            logging.info("this doc is not in the corpus! %s" % t[0])
             continue
         if getwords:
-            doctext = corpus.documents[x[0]].text
-            stype, start, end = x[1].split(":")
-            start, end = int(start), int(end)
-            if stype == "T":
-                tokentext = corpus.documents[x[0]].title[start:end]
-            else:
-                tokentext = doctext[start:end]
+            # doctext = corpus.documents[x[0]].text
+            start, end = t[1], t[2]
+            start, end = str(start), str(end)
+            # if stype == "T":
+            #     tokentext = corpus.documents[x[0]].title[start:end]
+            # else:
+                # tokentext = doctext[start:end]
+            tokentext = t[3]
             words.append(tokentext)
         if did not in report:
             report[did] = []
         if getwords:
-            line = x[0] + '\t' + x[1] + '\t' + tokentext
+            line = did + '\t' + start + ":" + end + '\t' + tokentext
         else:
-            line = x[1]
+            line = start + ":" + end
         report[did].append(line)
     for d in report:
         report[d].sort()
@@ -272,20 +310,43 @@ def get_list_results(results, models, goldset, ths, rules):
             for line in reportlines:
                 reportfile.write(line + '\n')
 
-def get_results(results, models, goldset, ths, rules):
+
+def get_results(results, models, gold_offsets, ths, rules):
     """
-    Write results files for CHEMDNER CEMP and CPD tasks, as well as a report file with basic stats
+    Write a report file with basic stats
     :param results: ResultsNER object
     :param models: Base model path
     :param goldset: Set with gold standard annotations
     :param ths: Validation thresholds
     :param rules: Validation rules
     """
-    # TODO: Separate CHEMDNER specific files from general report file
+    offsets = results.corpus.get_offsets([models], ths, rules)
+    for o in offsets:
+        if o[0] not in results.corpus.documents:
+            print "DID not found! {}".format(o[0])
+            sys.exit()
+    reportlines, tps, fps, fns = compare_results(set(offsets), gold_offsets, results.corpus, getwords=True)
+    with codecs.open(results.path + "_report.txt", 'w', "utf-8") as reportfile:
+        reportfile.write("TPs: {!s}\nFPs: {!s}\n FNs: {!s}\n".format(len(tps), len(fps), len(fns)))
+        if len(tps) == 0:
+            precision = 0
+            recall = 0
+        else:
+            precision = len(tps)/(len(tps) + len(fps))
+            recall = len(tps)/(len(tps) + len(fns))
+        reportfile.write("Precision: {!s}\n Recall: {!s}\n".format(precision, recall))
+        for line in reportlines:
+            reportfile.write(line + '\n')
+    print "Precision: {}".format(precision)
+    print "Recall: {}".format(recall)
+    return precision, recall
+
+
+def write_chemdner_files(results, models, goldset, ths, rules):
+    """ results files for CHEMDNER CEMP and CPD tasks"""
     print "saving results to {}".format(results.path + ".tsv")
     with codecs.open(results.path + ".tsv", 'w', 'utf-8') as outfile:
-        lines, cpdlines, max_entities = results.corpus.write_chemdner_results(models, outfile, ths, rules)
-    results.lines = lines
+        cpdlines, max_entities = results.corpus.write_chemdner_results(models, outfile, ths, rules)
     cpdlines = sorted(cpdlines, key=itemgetter(2))
     with open(results.path + "_cpd.tsv", "w") as cpdfile:
         for i, l in enumerate(cpdlines):
@@ -293,21 +354,6 @@ def get_results(results, models, goldset, ths, rules):
                 cpdfile.write("{}_{}\t0\t{}\t1\n".format(l[0], l[1], i+1))
             else:
                 cpdfile.write("{}_{}\t1\t{}\t{}\n".format(l[0], l[1], i+1, l[2]*1.0/max_entities))
-    if goldset:
-        lines2 = [(l[0], l[1], "1") for l in results.lines]
-        lineset = set(lines2)
-        reportlines, tps, fps, fns = compare_results(lineset, goldset, results.corpus)
-        with codecs.open(results.path + "_report.txt", 'w', "utf-8") as reportfile:
-            reportfile.write("TPs: {!s}\nFPs: {!s}\n FNs: {!s}\n".format(len(tps), len(fps), len(fns)))
-            if len(tps) == 0:
-                precision = 0
-                recall = 0
-            else:
-                precision = len(tps)/(len(tps) + len(fps))
-                recall = len(tps)/(len(tps) + len(fns))
-            reportfile.write("Precision: {!s}\n Recall: {!s}\n".format(precision, recall))
-            for line in reportlines:
-                reportfile.write(line + '\n')
 
 
 def main():
@@ -374,10 +420,8 @@ def main():
     elif options.action in ("evaluate", "evaluate_list", "train_ensemble", "test_ensemble"):
         if "test" not in options.goldstd:
             logging.info("loading gold standard %s" % config.paths[options.goldstd]["annotations"])
-            if config.paths[options.goldstd]["format"] == "chemdner":
-                goldset = get_gold_ann_set(config.paths[options.goldstd]["annotations"])
-            elif config.paths[options.goldstd]["format"] == "pubmed":
-                goldset = get_unique_gold_ann_set(config.paths[options.goldstd]["annotations"])
+            goldset = get_gold_ann_set(config.paths[options.goldstd]["format"],
+                                       config.paths[options.goldstd]["annotations"])
         else:
             goldset = None
         logging.info("using thresholds: chebi > {!s} ssm > {!s}".format(options.chebi, options.ssm))
@@ -416,6 +460,7 @@ def main():
         if options.action == "evaluate":
             get_results(results, options.models, goldset, ths, options.rules)
             if options.bceval:
+                write_chemdner_files(results, options.models, goldset, ths, options.rules)
                 evaluation = run_chemdner_evaluation(config.paths[options.goldstd]["cem"],
                                                      options.results + ".tsv")
                 print evaluation
