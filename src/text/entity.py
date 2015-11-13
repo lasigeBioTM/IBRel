@@ -166,9 +166,9 @@ class Entities(object):
                         toadd, v, alt = offsets.add_offset(eid_offset, exclude_if=exclude)
                         if toadd:
                             spans.append((e.dstart, e.dend, e.text))
-                            logging.info("added {}".format(e.text))
-                        else:
-                            logging.info("did not add {}".format(e.text))
+                            # logging.info("added {}".format(e.text))
+                        # else:
+                            # logging.info("did not add {}".format(e.text))
         return spans
 
 

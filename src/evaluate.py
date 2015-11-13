@@ -156,9 +156,20 @@ def get_genia_gold_ann_set(goldann):
             for ei, e in enumerate(sentities):
                 estart = stext.find(e.text, lastindex) + doc_offset # relative to document
                 eend = estart + len(e.text)
+                sems = e.get("sem")
+                if sems is None or len(sems.split(" ")) > 1: # parent cons, skip
+                    continue
+                sem = sems
+                # print sem
+                if sem.endswith(")"):
+                    sem = sem[:-1]
+                if sem.startswith("("):
+                    sem = sem[1:]
+                if sem.startswith("G#protein"):
+                    gold_offsets.add((did, estart, eend, e.text))
                 # etext = doc_text[estart:eend]
                 # logging.info("gold annotation: {}".format(e.text))
-                gold_offsets.add((did, estart, eend, e.text))
+
             doc_text += stext + " "
             doc_offset = len(doc_text)
     return gold_offsets
