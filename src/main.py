@@ -112,33 +112,38 @@ def run_crossvalidation(goldstd, corpus, model, cv):
         sys.exit()'''
         # train
         logging.info('CV{} - TRAIN'.format(nlist))
-        model = StanfordNERModel(basemodel)
-        model.load_data(train_corpus, feature_extractors.keys())
-        model.train()
+        train_model = StanfordNERModel(basemodel)
+        train_model.load_data(train_corpus, feature_extractors.keys())
+        train_model.train()
 
         # test
         logging.info('CV{} - TEST'.format(nlist))
-        model = StanfordNERModel(basemodel)
-        model.load_tagger()
-        model.load_data(test_corpus, feature_extractors.keys(), mode="test")
-        final_results = model.test(test_corpus)
+        test_model = StanfordNERModel(basemodel)
+        test_model.load_tagger()
+        test_model.load_data(test_corpus, feature_extractors.keys(), mode="test")
+        final_results = test_model.test(test_corpus)
         final_results.basepath = basemodel + "_results"
+        final_results.path = basemodel
 
         # validate
         if config.use_chebi:
             logging.info('CV{} - VALIDATE'.format(nlist))
             final_results = add_chebi_mappings(final_results, basemodel)
             final_results = add_ssm_score(final_results, basemodel)
-            final_results.combine_results(basemodel, basemodel + "_combined")
+            final_results.combine_results(basemodel, basemodel)
 
         # evaluate
         logging.info('CV{} - EVALUATE'.format(nlist))
-        goldset = get_gold_ann_set(config.paths[goldstd]["annotations"])
-        get_results(final_results, basemodel + "_combined", goldset, {})
+        test_goldset = set()
+        goldset = get_gold_ann_set(config.paths[goldstd]["format"], config.paths[goldstd]["annotations"])
+        for g in goldset:
+            if g[0] in testids:
+                test_goldset.add(g)
+        precision, recall = get_results(final_results, basemodel, test_goldset, {}, [])
         # evaluation = run_chemdner_evaluation(config.paths[goldstd]["cem"], basemodel + "_results.txt", "-t")
         # values = evaluation.split("\n")[1].split('\t')
-        # p.append(float(values[13])) # index of micro precision
-        # r.append(float(values[14])) # index of micro recall
+        p.append(precision)
+        r.append(recall)
         # logging.info("precision: {} recall:{}".format(str(values[13]), str(values[14])))
     pavg = sum(p)/cv
     ravg = sum(r)/cv
@@ -364,7 +369,7 @@ considered when coadministering with megestrol acetate.''',
         final_results.save(options.output[1] + ".pickle")
 
     elif options.actions == "crossvalidation":
-        cv = 10 # fixed 10-fold CV
+        cv = 5 # fixed 10-fold CV
         run_crossvalidation(options.goldstd, corpus, options.models, cv)
 
     total_time = time.time() - start_time

@@ -61,7 +61,23 @@ class Corpus(object):
             if hasa > max_entities:
                 max_entities = hasa
             # print max_entities
-        return lines, cpdlines, max_entities
+        return cpdlines, max_entities
+
+    def get_offsets(self, esources, ths, rules):
+        """
+        Retrieve the offsets of entities found with the models in source to evaluate
+        :param esources:
+        :return: List of tuple : (did, start, end, text)
+        """
+        offsets = {} # {did1: [(0,5), (10,14)], did2: []...}
+        for did in self.documents:
+            offsets[did] = self.documents[did].get_offsets(esources, ths, rules)
+        offsets_list = []
+        for did in offsets:
+            for o in offsets[did]:
+                offsets_list.append((did, o[0], o[1], o[2]))
+        return offsets_list
+
 
     def find_chemdner_result(self, res):
         """
