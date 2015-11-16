@@ -70,7 +70,7 @@ class GeniaCorpus(Corpus):
                     etext = stext[estart:eend]
                     # print etext, stext[estart:eend]
                     sems = e.get("sem")
-                    if sems is not None and len(sems.split(" ")) > 1: # parent cons, skip
+                    '''if sems is not None and len(sems.split(" ")) > 1: # parent cons, skip
                         skipped += 1
                         print "skipped", sems, sems.split(" ")
                         continue
@@ -95,10 +95,20 @@ class GeniaCorpus(Corpus):
                         sem = sem[:-1]
                     if sem.startswith("("):
                         sem = sem[1:]
-                    eid = sid + ".e" + str(ei)
+                    eid = sid + ".e" + str(ei)'''
+                    if sems is None or len(sems.split(" ")) > 1: # parent cons, skip
+                        continue
+                    sem = sems
+                    # print sem
+                    if sem.endswith(")"):
+                        sem = sem[:-1]
+                    if sem.startswith("("):
+                        sem = sem[1:]
                     if sem.startswith("G#protein"):
-                        this_sentence.tag_entity(estart, eend, "protein",
+                        eid = this_sentence.tag_entity(estart, eend, "protein",
                                                      text=e.text)
+                        if eid is None:
+                            print "did not add this entity: {}".format(e.text)
                         # print e.text
                         notskipped += 1
 

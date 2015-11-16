@@ -104,6 +104,9 @@ def run_crossvalidation(goldstd, corpus, model, cv):
         logging.debug(str(testids))
         train_corpus = Corpus(corpus.path, documents={did: corpus.documents[did] for did in trainids})
         test_corpus = Corpus(corpus.path, documents={did: corpus.documents[did] for did in testids})
+        test_entities = len(test_corpus.get_all_entities("goldstandard"))
+        train_entities = len(train_corpus.get_all_entities("goldstandard"))
+        logging.info("test set entities: {}; train set entities: {}".format(test_entities, train_entities))
         basemodel = model + "_cv{}".format(nlist)
         logging.debug('CV{} - test set: {}; train set: {}'.format(nlist, len(test_corpus.documents), len(train_corpus.documents)))
         '''for d in train_corpus.documents:

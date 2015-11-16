@@ -146,29 +146,29 @@ class Entities(object):
                         rank += 1
         return lines, rank
 
-    def get_offsets(self, esources, ths, rules):
+    def get_offsets(self, esource, ths, rules):
         spans = []
         offsets = Offsets()
         for s in self.elist:
             # logging.info("{}".format(s))
-            for es in esources:
-                # logging.info("esource: {}".format(es))
-                if s.startswith(es):
-                    # logging.info("using {}".format(s))
-                    for e in self.elist[s]:
-                        val = e.validate(ths, rules)
-                        if not val:
-                            continue
-                        eid_offset = Offset(e.dstart, e.dend, text=e.text, sid=e.sid)
-                        exclude = [perfect_overlap]
-                        if "contained_by" in rules:
-                            exclude.append(contained_by)
-                        toadd, v, alt = offsets.add_offset(eid_offset, exclude_if=exclude)
-                        if toadd:
-                            spans.append((e.dstart, e.dend, e.text))
-                            # logging.info("added {}".format(e.text))
-                        # else:
-                            # logging.info("did not add {}".format(e.text))
+            # logging.info("esource: {}".format(es))
+            if s.startswith(esource):
+                # logging.info("using {}".format(s))
+                for e in self.elist[s]:
+                    val = e.validate(ths, rules)
+                    if not val:
+                        logging.info("excluded {}".format(e.text))
+                        continue
+                    eid_offset = Offset(e.dstart, e.dend, text=e.text, sid=e.sid)
+                    exclude = [perfect_overlap]
+                    if "contained_by" in rules:
+                        exclude.append(contained_by)
+                    toadd, v, alt = offsets.add_offset(eid_offset, exclude_if=exclude)
+                    if toadd:
+                        spans.append((e.dstart, e.dend, e.text))
+                        # logging.info("added {}".format(e.text))
+                    else:
+                        logging.info("did not add {}".format(e.text))
         return spans
 
 

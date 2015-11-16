@@ -331,11 +331,12 @@ def get_results(results, models, gold_offsets, ths, rules):
     :param ths: Validation thresholds
     :param rules: Validation rules
     """
-    offsets = results.corpus.get_offsets([models], ths, rules)
+    offsets = results.corpus.get_offsets(models, ths, rules)
     for o in offsets:
         if o[0] not in results.corpus.documents:
             print "DID not found! {}".format(o[0])
             sys.exit()
+    # logging.info("system entities: {}; gold entities: {}".format(len(offsets), len(gold_offsets)))
     reportlines, tps, fps, fns = compare_results(set(offsets), gold_offsets, results.corpus, getwords=True)
     with codecs.open(results.path + "_report.txt", 'w', "utf-8") as reportfile:
         reportfile.write("TPs: {!s}\nFPs: {!s}\n FNs: {!s}\n".format(len(tps), len(fps), len(fns)))

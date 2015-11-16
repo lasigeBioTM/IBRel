@@ -63,7 +63,7 @@ class Corpus(object):
             # print max_entities
         return cpdlines, max_entities
 
-    def get_offsets(self, esources, ths, rules):
+    def get_offsets(self, esource, ths, rules):
         """
         Retrieve the offsets of entities found with the models in source to evaluate
         :param esources:
@@ -71,7 +71,7 @@ class Corpus(object):
         """
         offsets = {} # {did1: [(0,5), (10,14)], did2: []...}
         for did in self.documents:
-            offsets[did] = self.documents[did].get_offsets(esources, ths, rules)
+            offsets[did] = self.documents[did].get_offsets(esource, ths, rules)
         offsets_list = []
         for did in offsets:
             for o in offsets[did]:

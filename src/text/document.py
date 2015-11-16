@@ -142,11 +142,11 @@ class Document(object):
                 totalentities = res[1]
         return lines
 
-    def get_offsets(self, esources, ths, rules):
+    def get_offsets(self, esource, ths, rules):
         offsets = []
         for s in self.sentences:
             if s.entities:
-                offsets = s.entities.get_offsets(esources, ths, rules)
+                offsets += s.entities.get_offsets(esource, ths, rules)
         return offsets
 
 
