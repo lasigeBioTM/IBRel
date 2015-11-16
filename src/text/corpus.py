@@ -100,3 +100,11 @@ class Corpus(object):
             sys.exit()
         entity = sentence.entities.find_entity(start - sentence.offset, end - sentence.offset)
         return tokens, sentence, entity
+
+    def get_all_entities(self, source):
+        entities = []
+        for d in self.documents:
+            for s in self.documents[d].sentences:
+                for e in s.entities.elist:
+                    entities.append(e)
+        return entities
