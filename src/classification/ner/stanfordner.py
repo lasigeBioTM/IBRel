@@ -189,22 +189,6 @@ class StanfordNERModel(SimpleTaggerModel):
                 #logging.debug("completed entity:{}".format(results.entities[eid]))
         return results
 
-    def create_entity(self, tokens, sid, did, text, score):
-        """
-        Create a new entity based on the type of model
-        :param tokens: list of Tokens
-        :param sid: ID of the sentence
-        :param did: ID of the document
-        :param text: string
-        :param score:
-        :return: entity
-        """
-        if "chem" in self.path:
-            e = ChemdnerAnnotation(tokens=tokens, sid=sid, did=did, text=text, score=score)
-        elif "prot" in self.path:
-            e = ProteinEntity(tokens=tokens, sid=sid, did=did, text=text, score=score)
-        return e
-
     def get_offsets_for_tag(self, data, tag):
         #data = "<ROOT>{}</ROOT>".format(data)
         #print data
@@ -239,30 +223,3 @@ class StanfordNERModel(SimpleTaggerModel):
         #logging.info(out)
         #print 'Success!!'
         atexit.register(self.kill_process)
-
-    def save_corpus_to_sbilou(self, entity_type="CHEMICAL"):
-        """
-        Saves the data that was loaded into simple tagger format to a file compatible with Stanford NER
-        :param entity_type:
-        :return:
-        """
-        logging.info("saving loaded corpus to Stanford NER format...")
-        lines = []
-        for isent, sentence in enumerate(self.sids):
-            for it, l in enumerate(self.labels[isent]):
-                if l == "other":
-                    label = "O"
-                elif l == "start":
-                    label = "B-{}".format(entity_type)
-                elif l == "end":
-                    label = "E-{}".format(entity_type)
-                elif l == "middle":
-                    label = "I-{}".format(entity_type)
-                elif l == "single":
-                    label = "S-{}".format(entity_type)
-                #label += "_" + entity_type
-                lines.append("{0}\t{1}\n".format(self.tokens[isent][it].text, label))
-            lines.append("\n")
-        with codecs.open("{}.bilou".format(self.path), "w", "utf-8") as output:
-            output.write("".join(lines))
-        logging.info("done")

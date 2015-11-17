@@ -1,8 +1,10 @@
+import codecs
 import logging
 import unicodedata
 from classification.model import Model
-from text.chemical_entity import element_base
+from text.chemical_entity import element_base, ChemdnerAnnotation
 from text.chemical_entity import amino_acids
+from text.protein_entity import ProteinEntity
 
 feature_extractors = {# "text": lambda x, i: x.tokens[i].text,
                       "prefix3": lambda x, i: x.tokens[i].text[:3],
@@ -190,6 +192,50 @@ class SimpleTaggerModel(Model):
         #     logging.debug("{} {}".format(sentence.tokens[i], label))
         #logging.debug(features)
         return features, label
+
+    def save_corpus_to_sbilou(self, entity_type="CHEMICAL"):
+        """
+        Saves the data that was loaded into simple tagger format to a file compatible with Stanford NER
+        :param entity_type:
+        :return:
+        """
+        logging.info("saving loaded corpus to Stanford NER format...")
+        lines = []
+        for isent, sentence in enumerate(self.sids):
+            for it, l in enumerate(self.labels[isent]):
+                if l == "other":
+                    label = "O"
+                elif l == "start":
+                    label = "B-{}".format(entity_type)
+                elif l == "end":
+                    label = "E-{}".format(entity_type)
+                elif l == "middle":
+                    label = "I-{}".format(entity_type)
+                elif l == "single":
+                    label = "S-{}".format(entity_type)
+                #label += "_" + entity_type
+                lines.append("{0}\t{1}\n".format(self.tokens[isent][it].text, label))
+            lines.append("\n")
+        with codecs.open("{}.bilou".format(self.path), "w", "utf-8") as output:
+            output.write("".join(lines))
+        logging.info("done")
+
+
+    def create_entity(self, tokens, sid, did, text, score):
+        """
+        Create a new entity based on the type of model
+        :param tokens: list of Tokens
+        :param sid: ID of the sentence
+        :param did: ID of the document
+        :param text: string
+        :param score:
+        :return: entity
+        """
+        if "chem" in self.path:
+            e = ChemdnerAnnotation(tokens=tokens, sid=sid, did=did, text=text, score=score)
+        elif "prot" in self.path:
+            e = ProteinEntity(tokens=tokens, sid=sid, did=did, text=text, score=score)
+        return e
 
 
 class BiasModel(SimpleTaggerModel):
