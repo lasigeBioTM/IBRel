@@ -121,6 +121,7 @@ class Sentence(object):
                 eid = self.sid + ".e0"
             if entity:
                 self.entities.add_entity(entity, source)
+                subtype = entity.type
             elif subtype == "chemical":
                 self.entities.add_entity(ChemdnerAnnotation(tlist, self.sid, text=newtext,
                                          did=self.did, eid=eid, subtype=subtype), source)
