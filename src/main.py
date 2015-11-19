@@ -13,6 +13,8 @@ import datetime
 import time
 import codecs
 from corenlp import StanfordCoreNLP
+
+from classification.ner.crfsuitener import CrfSuiteModel
 from classification.ner.mirna_matcher import MirnaMatcher
 
 from reader.chemdner_corpus import ChemdnerCorpus
@@ -115,13 +117,15 @@ def run_crossvalidation(goldstd, corpus, model, cv):
         sys.exit()'''
         # train
         logging.info('CV{} - TRAIN'.format(nlist))
-        train_model = StanfordNERModel(basemodel)
+        # train_model = StanfordNERModel(basemodel)
+        train_model = CrfSuiteModel(basemodel)
         train_model.load_data(train_corpus, feature_extractors.keys())
         train_model.train()
 
         # test
         logging.info('CV{} - TEST'.format(nlist))
-        test_model = StanfordNERModel(basemodel)
+        # test_model = StanfordNERModel(basemodel)
+        test_model = CrfSuiteModel(basemodel)
         test_model.load_tagger()
         test_model.load_data(test_corpus, feature_extractors.keys(), mode="test")
         final_results = test_model.test(test_corpus)
@@ -299,7 +303,8 @@ considered when coadministering with megestrol acetate.''',
 
     # training
     elif options.actions == "train":
-        model = StanfordNERModel(options.models)
+        # model = StanfordNERModel(options.models)
+        model = CrfSuiteModel(options.models)
         model.load_data(corpus, feature_extractors.keys())
         model.train()
     elif options.actions == "train_matcher": # Train a simple classifier based on string matching
@@ -327,7 +332,8 @@ considered when coadministering with megestrol acetate.''',
             # save the results to an object that can be read again, and log files to debug
             final_results = allresults.combine_results()
         else:
-            model = StanfordNERModel(options.models)
+            # model = StanfordNERModel(options.models)
+            model = CrfSuiteModel(options.models)
             model.load_tagger()
             model.load_data(corpus, feature_extractors.keys(), mode="test")
             final_results = model.test(corpus)
