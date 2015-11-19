@@ -8,20 +8,91 @@ from text.protein_entity import ProteinEntity
 
 feature_extractors = {# "text": lambda x, i: x.tokens[i].text,
                       "prefix3": lambda x, i: x.tokens[i].text[:3],
+                      "prevprefix3": lambda x, i: prev_prefix(x, i, 3),
+                      "nextprefix3": lambda x, i: next_prefix(x, i, 3),
                       "suffix3": lambda x, i: x.tokens[i].text[-3:],
+                      "prevsuffix3": lambda x, i: prev_suffix(x, i, 3),
+                      "nextsuffix3": lambda x, i: next_suffix(x, i, 3),
                       "prefix2": lambda x, i: x.tokens[i].text[:2],
                       "suffix2": lambda x, i: x.tokens[i].text[-2:],
+                      "prefix4": lambda x, i: x.tokens[i].text[:4],
+                      "suffix4": lambda x, i: x.tokens[i].text[-4:],
                       "hasnumber": lambda x, i: str(any(c.isdigit() for c in x.tokens[i].text)),
                       "case": lambda x, i: word_case(x.tokens[i].text),
-                      # "stem": lambda x, i: x.tokens[i].stem,
+                      "prevcase": lambda x, i: prev_case(x, i),
+                      "nextcase": lambda x, i: next_case(x, i),
+                      "lemma": lambda x, i: x.tokens[i].lemma,
+                      "prevlemma": lambda x, i: prev_lemma(x,i),
+                      "nextlemma": lambda x, i: next_lemma(x,i),
                       "postag": lambda x, i: x.tokens[i].pos,
+                      "prevpostag": lambda x, i: prev_pos(x,i),
+                      "nextpostag": lambda x, i: next_pos(x,i),
                       "wordclass": lambda x, i: wordclass(x.tokens[i].text),
                       "simplewordclass": lambda x, i: simplewordclass(x.tokens[i].text),
-                      "greek": lambda x, i: str(has_greek_symbol(x.tokens[i].text)),
-                      "aminoacid": lambda x, i: str(any(w in amino_acids for w in x.tokens[i].text.split('-'))),
-                      "periodictable": lambda x, i: str(x.tokens[i].text in element_base.keys() or x.tokens[i].text.title() in zip(*element_base.values())[0]), # this should probably be its own function ffs
+                      # "greek": lambda x, i: str(has_greek_symbol(x.tokens[i].text)),
+                      # "aminoacid": lambda x, i: str(any(w in amino_acids for w in x.tokens[i].text.split('-'))),
+                      # "periodictable": lambda x, i: str(x.tokens[i].text in element_base.keys() or x.tokens[i].text.title() in zip(*element_base.values())[0]), # this should probably be its own function ffs
                       }
 
+def prev_suffix(sentence, i, size):
+    if i == 0:
+        return "BOS"
+    else:
+        return sentence.tokens[i-1].text[-size:]
+
+def next_suffix(sentence, i, size):
+    if i == len(sentence.tokens) - 1:
+        return "EOS"
+    else:
+        return sentence.tokens[i+1].text[-size:]
+
+def prev_prefix(sentence, i, size):
+    if i == 0:
+        return "BOS"
+    else:
+        return sentence.tokens[i-1].text[:size]
+
+def next_prefix(sentence, i, size):
+    if i == len(sentence.tokens) - 1:
+        return "EOS"
+    else:
+        return sentence.tokens[i+1].text[:size]
+
+def prev_case(sentence, i):
+    if i == 0:
+        return "BOS"
+    else:
+        return word_case(sentence.tokens[i-1].text)
+
+def next_case(sentence, i):
+    if i == len(sentence.tokens) - 1:
+        return "EOS"
+    else:
+        return word_case(sentence.tokens[i+1].text)
+
+def prev_lemma(sentence, i):
+    if i == 0:
+        return "BOS"
+    else:
+        return sentence.tokens[i-1].lemma
+
+def next_lemma(sentence, i):
+    if i == len(sentence.tokens) - 1:
+        return "EOS"
+    else:
+        return sentence.tokens[i+1].lemma
+
+def prev_pos(sentence, i):
+    if i == 0:
+        return "BOS"
+    else:
+        return sentence.tokens[i-1].pos
+
+def next_pos(sentence, i):
+    if i == len(sentence.tokens) - 1:
+        return "EOS"
+    else:
+        return sentence.tokens[i+1].pos
 
 def word_case(word):
     if word.islower():
