@@ -37,7 +37,6 @@ with open("settings.json") as settings:
     stanford_ner_test_ram = vals["stanford_ner_test_ram"]
     stoplist = vals["stoplist"]
 
-
 if use_chebi or use_go:
     import MySQLdb
 if use_chebi:
@@ -63,7 +62,35 @@ pubmed_test_base = "corpora/pubmed-test/"
 transmir_base = "corpora/transmir/"
 genia_base = "corpora/GENIA_term_3.02/"
 genia_sample_base = "corpora/genia_sample/"
-paths = {'transmir_tfs':{
+mirnacorpus_base = "corpora/miRNACorpus/"
+mirtex_base = "corpora/miRTex/"
+
+paths = {
+    'miRNACorpus_train':{
+        'text': mirnacorpus_base + "miRNA-Train-Corpus.xml",
+        'annotations': mirnacorpus_base + "miRNA-Train-Corpus.xml",
+        'corpus': "data/miRNACorpus-Train-Corpus.xml.pickle",
+        'format': "ddi"
+    },
+    'miRNACorpus_test':{
+        'text': mirnacorpus_base + "miRNA-Test-Corpus.xml",
+        'annotations': mirnacorpus_base + "miRNA-Test-Corpus.xml",
+        'corpus': "data/miRNACorpus-Test-Corpus.xml.pickle",
+        'format': "ddi"
+    },
+    'miRTex_dev':{
+        'text': mirtex_base + "development/",
+        'annotations': mirtex_base + "development/",
+        'corpus': "data/miRTex-development.pickle",
+        'format': "mirtex"
+    },
+    'miRTex_test':{
+        'text': mirtex_base + "test/",
+        'annotations': mirtex_base + "test/",
+        'corpus': "data/miRTex-test.pickle",
+        'format': "mirtex"
+    },
+    'transmir_tfs':{
         'text': transmir_base + "transmir_pmids.txt",
         'annotations': transmir_base + "transmir_tfs.txt",
         'corpus': "data/transmir_pmids.txt.pickle",
