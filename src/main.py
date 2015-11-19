@@ -91,7 +91,7 @@ def run_crossvalidation_types(goldstd, corpus, model, cv):
     print "precision: average={} all={}".format(pavg, '|'.join(p))
     print "recall: average={}  all={}".format(ravg, '|'.join(r))
 
-def run_crossvalidation(goldstd, corpus, model, cv):
+def run_crossvalidation(goldstd, corpus, model, cv, crf):
     doclist = corpus.documents.keys()
     random.shuffle(doclist)
     size = int(len(doclist)/cv)
@@ -118,14 +118,20 @@ def run_crossvalidation(goldstd, corpus, model, cv):
         # train
         logging.info('CV{} - TRAIN'.format(nlist))
         # train_model = StanfordNERModel(basemodel)
-        train_model = CrfSuiteModel(basemodel)
+        if crf == "stanford":
+            train_model = StanfordNERModel(basemodel)
+        elif crf == "crfsuite":
+            train_model = CrfSuiteModel(basemodel)
         train_model.load_data(train_corpus, feature_extractors.keys())
         train_model.train()
 
         # test
         logging.info('CV{} - TEST'.format(nlist))
         # test_model = StanfordNERModel(basemodel)
-        test_model = CrfSuiteModel(basemodel)
+        if crf == "stanford":
+            test_model = StanfordNERModel(basemodel)
+        elif crf == "crfsuite":
+            test_model = CrfSuiteModel(basemodel)
         test_model.load_tagger()
         test_model.load_data(test_corpus, feature_extractors.keys(), mode="test")
         final_results = test_model.test(test_corpus)
@@ -191,6 +197,8 @@ considered when coadministering with megestrol acetate.''',
                       help="True if the input has <entity> tags.")
     parser.add_argument("-o", "--output", "--format", dest="output",
                         nargs=2, help="format path; output formats: xml, html, tsv, text, chemdner.")
+    parser.add_argument("--crf", dest="crf", help="CRF implementation", default="stanford",
+                        choices=["stanford", "crfsuite"])
     parser.add_argument("--log", action="store", dest="loglevel", default="WARNING", help="Log level")
     options = parser.parse_args()
 
@@ -303,8 +311,10 @@ considered when coadministering with megestrol acetate.''',
 
     # training
     elif options.actions == "train":
-        # model = StanfordNERModel(options.models)
-        model = CrfSuiteModel(options.models)
+        if options.crf == "stanford":
+            model = StanfordNERModel(options.models)
+        elif options.crf == "crfsuite":
+            model = CrfSuiteModel(options.models)
         model.load_data(corpus, feature_extractors.keys())
         model.train()
     elif options.actions == "train_matcher": # Train a simple classifier based on string matching
@@ -332,8 +342,10 @@ considered when coadministering with megestrol acetate.''',
             # save the results to an object that can be read again, and log files to debug
             final_results = allresults.combine_results()
         else:
-            # model = StanfordNERModel(options.models)
-            model = CrfSuiteModel(options.models)
+            if options.crf == "stanford":
+                model = StanfordNERModel(options.models)
+            elif options.crf == "crfsuite":
+                model = CrfSuiteModel(options.models)
             model.load_tagger()
             model.load_data(corpus, feature_extractors.keys(), mode="test")
             final_results = model.test(corpus)
@@ -379,7 +391,7 @@ considered when coadministering with megestrol acetate.''',
 
     elif options.actions == "crossvalidation":
         cv = 5 # fixed 10-fold CV
-        run_crossvalidation(options.goldstd, corpus, options.models, cv)
+        run_crossvalidation(options.goldstd, corpus, options.models, cv, options.crf)
 
     total_time = time.time() - start_time
     logging.info("Total time: %ss" % total_time)
