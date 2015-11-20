@@ -13,11 +13,11 @@ class CrfSuiteModel(SimpleTaggerModel):
 
     def train(self):
         logging.info("Training model with CRFsuite")
-        self.trainer = pycrfsuite.Trainer(verbose=True)
+        self.trainer = pycrfsuite.Trainer(verbose=False)
         for xseq, yseq in zip(self.data, self.labels):
             self.trainer.append(xseq, yseq)
         self.trainer.set_params({
-            'c1': 2.0,   # coefficient for L1 penalty
+            'c1': 1.0,   # coefficient for L1 penalty
              # 'c2': 1e-3,  # coefficient for L2 penalty
             # 'c2': 2,
             'max_iterations': 500,  # stop earlier

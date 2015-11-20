@@ -28,11 +28,28 @@ feature_extractors = {# "text": lambda x, i: x.tokens[i].text,
                       "prevpostag": lambda x, i: prev_pos(x,i),
                       "nextpostag": lambda x, i: next_pos(x,i),
                       "wordclass": lambda x, i: wordclass(x.tokens[i].text),
+                      "prevwordclass": lambda x, i: prev_wordclass(x, i),
+                      "nextwordclass": lambda x, i: next_wordclass(x, i),
                       "simplewordclass": lambda x, i: simplewordclass(x.tokens[i].text),
                       # "greek": lambda x, i: str(has_greek_symbol(x.tokens[i].text)),
                       # "aminoacid": lambda x, i: str(any(w in amino_acids for w in x.tokens[i].text.split('-'))),
                       # "periodictable": lambda x, i: str(x.tokens[i].text in element_base.keys() or x.tokens[i].text.title() in zip(*element_base.values())[0]), # this should probably be its own function ffs
                       }
+
+def word_in_dictionary(word, dictionary):
+    pass
+
+def prev_wordclass(sentence, i):
+    if i == 0:
+        return "BOS"
+    else:
+        return wordclass(sentence.tokens[i-1].text)
+
+def next_wordclass(sentence, i):
+    if i == len(sentence.tokens) - 1:
+        return "EOS"
+    else:
+        return wordclass(sentence.tokens[i+1].text)
 
 def prev_suffix(sentence, i, size):
     if i == 0:
