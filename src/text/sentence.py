@@ -110,7 +110,7 @@ class Sentence(object):
                 else:
                     logging.info("{}-{}|{}|=>|{}|{}-{}".format(tlist[0].start, tlist[-1].end, newtext, kwargs["text"],
                                  start, end))
-                    logging.info("{} - {}".format(self.sid, self.text))
+                    # logging.info("{} - {}".format(self.sid, self.text))
             #     print "tokens found:", [t.text for t in tlist]
                 # sys.exit()
             # else:
@@ -125,12 +125,14 @@ class Sentence(object):
             elif subtype == "chemical":
                 self.entities.add_entity(ChemdnerAnnotation(tlist, self.sid, text=newtext,
                                          did=self.did, eid=eid, subtype=subtype), source)
-            elif subtype == "mirna":
+            elif subtype == "mirna" or "mirna" in subtype.lower():
                 self.entities.add_entity(MirnaEntity(tlist, self.sid, text=newtext,
                                          did=self.did, eid=eid, subtype=subtype), source)
-            elif subtype == "protein":
+            elif subtype == "protein" or "protein" in subtype.lower():
                 self.entities.add_entity(ProteinEntity(tlist, self.sid, text=newtext,
                                          did=self.did, eid=eid, subtype=subtype), source)
+            else:
+                print subtype
             self.label_tokens(tlist, source, subtype)
             #logging.debug("added new entity to %s, now with %s entities" % (self.sid,
             #                                                                 len(self.entities.elist[source])))

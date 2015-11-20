@@ -10,6 +10,7 @@ from subprocess import Popen, PIPE, check_output
 import collections
 from operator import itemgetter
 from bs4 import BeautifulSoup
+import xml.etree.ElementTree as ET
 
 from config import config
 if config.use_chebi:
@@ -118,7 +119,40 @@ def get_gold_ann_set(corpus_type, gold_path):
         goldset = get_unique_gold_ann_set(gold_path)
     elif corpus_type == "genia":
         goldset = get_genia_gold_ann_set(gold_path)
+    elif corpus_type == "ddi-mirna":
+        goldset = get_ddi_mirna_gold_ann_set(gold_path)
     return goldset
+
+
+def get_ddi_mirna_gold_ann_set(goldpath):
+    logging.info("loading gold standard... {}".format(goldpath))
+    gold_offsets = set()
+    with open(goldpath, 'r') as xml:
+        #parse DDI corpus file
+        t = time.time()
+        root = ET.fromstring(xml.read())
+        for doc in root.findall("document"):
+            did = doc.get('id')
+            doctext = ""
+            for sentence in doc.findall('sentence'):
+                sentence_text = sentence.get('text')
+                sentence_text = sentence_text.replace('\r\n', '  ')
+                for entity in sentence.findall('entity'):
+                    entity_offset = entity.get('charOffset')
+                    if ";" in entity_offset:
+                        continue
+                    offsets = entity_offset.split("-")
+                    start, end = int(offsets[0]) + len(doctext), int(offsets[1]) + len(doctext) + 1
+                    entity_type = entity.get("type")
+                    #print this_sentence.text[offsets[0]:offsets[-1]], entity.get("text")
+                    #if "protein" in entity_type.lower() or "mirna" in entity_type.lower():
+                    if entity_type == "Specific_miRNAs":
+                        gold_offsets.add((did, start, end, entity.get("text")))
+
+                doctext += " " + sentence_text # generate the full text of this document
+    # logging.debug(gold_offsets)
+    # logging.debug(len(gold_offsets))
+    return gold_offsets
 
 def get_chemdner_gold_ann_set(goldann="CHEMDNER/CHEMDNER_TEST_ANNOTATION/chemdner_ann_test_13-09-13.txt"):
     """
@@ -332,6 +366,7 @@ def get_results(results, models, gold_offsets, ths, rules):
     :param rules: Validation rules
     """
     offsets = results.corpus.get_offsets(models, ths, rules)
+    # logging.debug(offsets)
     for o in offsets:
         if o[0] not in results.corpus.documents:
             print "DID not found! {}".format(o[0])
@@ -430,12 +465,10 @@ def main():
         results.save(options.results + "_combined.pickle")
 
     elif options.action in ("evaluate", "evaluate_list", "train_ensemble", "test_ensemble"):
-        if "test" not in options.goldstd:
-            logging.info("loading gold standard %s" % config.paths[options.goldstd]["annotations"])
-            goldset = get_gold_ann_set(config.paths[options.goldstd]["format"],
-                                       config.paths[options.goldstd]["annotations"])
-        else:
-            goldset = None
+
+        logging.info("loading gold standard %s" % config.paths[options.goldstd]["annotations"])
+        goldset = get_gold_ann_set(config.paths[options.goldstd]["format"],
+                                   config.paths[options.goldstd]["annotations"])
         logging.info("using thresholds: chebi > {!s} ssm > {!s}".format(options.chebi, options.ssm))
         results.load_corpus(options.goldstd)
         results.path = options.results

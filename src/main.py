@@ -22,6 +22,7 @@ from reader.genia_corpus import GeniaCorpus
 from reader.gpro_corpus import GproCorpus
 from reader.ddi_corpus import DDICorpus
 from reader.chebi_corpus import ChebiCorpus
+from reader.mirna_corpus import MirnaCorpus
 from reader.pubmed_corpus import PubmedCorpus
 from text.corpus import Corpus
 from classification.ner.taggercollection import TaggerCollection
@@ -162,6 +163,8 @@ def run_crossvalidation(goldstd, corpus, model, cv, crf):
     ravg = sum(r)/cv
     print "precision: average={} all={}".format(str(pavg), '|'.join([str(pp) for pp in p]))
     print "recall: average={}  all={}".format(str(ravg), '|'.join([str(rr) for rr in r]))
+    precision, recall = get_results(final_results, model, test_goldset, {}, [])
+    print precision, recall
 
 def chunks(l, n):
     """ return list of n sized sublists of l
@@ -284,6 +287,9 @@ considered when coadministering with megestrol acetate.''',
             corpus.load_corpus(corenlpserver)
         elif corpus_format == "genia":
             corpus = GeniaCorpus(corpus_path)
+            corpus.load_corpus(corenlpserver)
+        elif corpus_format == "ddi-mirna":
+            corpus = MirnaCorpus(corpus_path)
             corpus.load_corpus(corenlpserver)
         corpus.save()
         if corpus_ann and "test" not in options.goldstd: #add annotation if it is not a test set
