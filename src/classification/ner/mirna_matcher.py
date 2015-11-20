@@ -23,7 +23,7 @@ class MirnaMatcher(MatcherModel):
             # include the prefix and then words or dashes
             # end with whitespace, end of string, dot, comma or )
             self.p.append(re.compile(r"(\(|\A|\s)(" + re.escape(n) + r"[\w-]*)(\s|\Z|\.|,|\)|/)")) # , re.I))
-            self.p.append(re.compile(r"(\(|\A|\s)(" + re.escape(n) + r"[\w-]*[" + "|".join(self.separators) + r"\w" + r"]*)(\Z|\.|\)|/)"))
+            # self.p.append(re.compile(r"(\(|\A|\s)(" + re.escape(n) + r"[\w-]*[" + "|".join(self.separators) + r"\w" + r"]*)(\Z|\.|\)|/)"))
         # self.p = [re.compile(r"(\A|\s)(" + n + r")(\s|\Z|\.)", re.I) for n in self.names]
         logging.info("testing {} documents".format(len(corpus.documents)))
         logging.debug("with these patterns:")

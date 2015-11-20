@@ -69,14 +69,14 @@ paths = {
     'miRNACorpus_train':{
         'text': mirnacorpus_base + "miRNA-Train-Corpus.xml",
         'annotations': mirnacorpus_base + "miRNA-Train-Corpus.xml",
-        'corpus': "data/miRNACorpus-Train-Corpus.xml.pickle",
-        'format': "ddi"
+        'corpus': "data/miRNA-Train-Corpus.xml.pickle",
+        'format': "ddi-mirna"
     },
     'miRNACorpus_test':{
         'text': mirnacorpus_base + "miRNA-Test-Corpus.xml",
         'annotations': mirnacorpus_base + "miRNA-Test-Corpus.xml",
-        'corpus': "data/miRNACorpus-Test-Corpus.xml.pickle",
-        'format': "ddi"
+        'corpus': "data/miRNA-Test-Corpus.xml.pickle",
+        'format': "ddi-mirna"
     },
     'miRTex_dev':{
         'text': mirtex_base + "development/",
