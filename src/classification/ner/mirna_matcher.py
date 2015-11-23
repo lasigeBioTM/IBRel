@@ -11,7 +11,8 @@ class MirnaMatcher(MatcherModel):
     """
     def __init__(self, path, **kwargs):
         super(MirnaMatcher, self).__init__(path, **kwargs)
-        self.names = set(["mir-", "let-", "miR-", "hsa-", "microRNA-", "MicroRNA-", "miR", "mir", "miR"])
+        self.names = set(["mir", "let", "miR", "hsa", "microRNA", "MicroRNA", "miR", "mir", "miR", "lin", "MiR",
+                          "miRNA", "hsa-miR", "miRNA", "Let", "pre-miR", "premiR", "Hsa-miR", "Mir"])
         # these expressions may be used to refer to multiple miRNAs
         #self.separators = set(["/",r"\s", r",\s", r"\sand\s", "-", r"\sand\s"])
 
@@ -22,7 +23,7 @@ class MirnaMatcher(MatcherModel):
             # start with (, start of string or whitespace
             # include the prefix and then words or dashes
             # end with whitespace, end of string, dot, comma or )
-            self.p.append(re.compile(r"(\(|\A|\s)(" + re.escape(n) + r"[\w-]*)(\s|\Z|\.|,|\)|/)")) # , re.I))
+            self.p.append(re.compile(r"(\(|\A|\s|Ad-|pEGFP-)(" + n + r"[\s-]?\d{1,3}?-?[a-z]?/?\d{0,3}?)(\s|\Z|\.|,|-[a-z]{3,}|\))")) # , re.I))
             # self.p.append(re.compile(r"(\(|\A|\s)(" + re.escape(n) + r"[\w-]*[" + "|".join(self.separators) + r"\w" + r"]*)(\Z|\.|\)|/)"))
         # self.p = [re.compile(r"(\A|\s)(" + n + r")(\s|\Z|\.)", re.I) for n in self.names]
         logging.info("testing {} documents".format(len(corpus.documents)))
