@@ -95,11 +95,14 @@ class Sentence(object):
         tlist = []
         #logging.debug("lets tag this entity")
         # print self.tokens
+        nextword = ""
         for t in self.tokens:
             # discard tokens that intersect the entity for now
             # print t.start, t.end, t.text
             if t.start >= start and t.end <= end:
                 tlist.append(t)
+            elif t.start == end+1:
+                nextword = t.text
         if tlist:
             newtext = self.text[tlist[0].start:tlist[-1].end]
             if entity:
@@ -127,7 +130,7 @@ class Sentence(object):
                                          did=self.did, eid=eid, subtype=subtype), source)
             elif subtype == "mirna" or "mirna" in subtype.lower():
                 self.entities.add_entity(MirnaEntity(tlist, self.sid, text=newtext,
-                                         did=self.did, eid=eid, subtype=subtype), source)
+                                         did=self.did, eid=eid, subtype=subtype, nextword=nextword), source)
             elif subtype == "protein" or "protein" in subtype.lower():
                 self.entities.add_entity(ProteinEntity(tlist, self.sid, text=newtext,
                                          did=self.did, eid=eid, subtype=subtype), source)

@@ -7,7 +7,8 @@ __author__ = 'Andre'
 mirna_stopwords = set(["mediated", "expressing", "deficient", "transfected", "dependent", "family", "specific", "null",
                        "independent", "dependant", "overexpressing", "binding", "targets", "induced"])
                        # "mirna", "mirnas", "mir", "hsa-mir"])
-# words that are never part of chemical entities
+
+mirna_nextstopwords = set(["inhibitor"])
 with open(config.stoplist, 'r') as stopfile:
     for l in stopfile:
         w = l.strip().lower()
@@ -25,8 +26,9 @@ class MirnaEntity(Entity):
         self.mirna_acc = None
         self.mirna_name = 0
         self.sid = kwargs.get("sid")
+        self.nextword = kwargs.get("nextword")
 
-    def validate(self, ths, rules):
+    def validate(self, ths, rules, *args, **kwargs):
         """
         Use rules to validate if the entity was correctly identified
         :param rules:
@@ -34,13 +36,13 @@ class MirnaEntity(Entity):
         """
         # logging.debug("using these rules: {}".format(rules))
         words = self.text.split("-")
-        if len(words) > 2 and len(words[-1]) > 1:
+        '''if len(words) > 2 and len(words[-1]) > 3:
             logging.info("big ending: {}".format(self.text))
             self.text = '-'.join(words[:-1])
             words = words[:-1]
-            return False
+            return False'''
         if "stopwords" in rules:
-            if self.text.lower() in ["mirna", "mirnas", "mir", "hsa-mir"]:
+            if self.text.lower() in ["mirna", "mirnas", "mir", "hsa-mir", "microrna", ]:
                 logging.debug("ignored stopword %s" % self.text)
                 return False
             stop = False
@@ -51,6 +53,10 @@ class MirnaEntity(Entity):
                     self.dend -= len(words[i:])
                     self.end -= len(words[i:])
                     # stop = True
+        if "nextstopword" in rules:
+            if self.nextword in mirna_nextstopwords:
+                logging.debug("ignored next stop word: {} {}".format(self.text, self.nextword))
+                return False
 
         # if self.text.startswith("MicroRNA-") or self.text.startswith("microRNA-"):
         #    self.text = "mir-" + "-".join(words[1:])
