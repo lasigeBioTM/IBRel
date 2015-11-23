@@ -181,7 +181,7 @@ class ChemicalEntity(Entity):
         dic["ssm_entity"] = self.ssm_best_ID
         return dic
 
-    def validate(self, ths, rules):
+    def validate(self, ths, rules, *args, **kwargs):
         """
         Use rules to validate if the entity was correctly identified
         :param rules:
