@@ -6,6 +6,7 @@ import codecs
 import logging
 import time
 import sys
+import os
 from subprocess import Popen, PIPE, check_output
 import collections
 from operator import itemgetter
@@ -121,8 +122,25 @@ def get_gold_ann_set(corpus_type, gold_path):
         goldset = get_genia_gold_ann_set(gold_path)
     elif corpus_type == "ddi-mirna":
         goldset = get_ddi_mirna_gold_ann_set(gold_path)
+    elif corpus_type == "mirtex":
+        goldset = get_mirtex_gold_ann_set(gold_path)
     return goldset
 
+def get_mirtex_gold_ann_set(goldpath):
+    logging.info("loading gold standard... {}".format(goldpath))
+    annfiles = [goldpath + '/' + f for f in os.listdir(goldpath) if f.endswith('.ann')]
+    gold_offsets = set()
+    for current, f in enumerate(annfiles):
+            did = f.split(".")[0]
+            with open(f, 'r') as txt:
+                for line in txt:
+                    if line.startswith("T"):
+                        tid, ann, etext = line.strip().split("\t")
+                        etype, dstart, dend = ann.split(" ")
+                        if etype == "MiRNA":
+                            dstart, dend = int(dstart), int(dend)
+                            gold_offsets.add((did, dstart, dend, etext))
+    return gold_offsets
 
 def get_ddi_mirna_gold_ann_set(goldpath):
     logging.info("loading gold standard... {}".format(goldpath))

@@ -81,13 +81,13 @@ paths = {
     'miRTex_dev':{
         'text': mirtex_base + "development/",
         'annotations': mirtex_base + "development/",
-        'corpus': "data/miRTex-development.pickle",
+        'corpus': "data/miRTex-development.txt.pickle",
         'format': "mirtex"
     },
     'miRTex_test':{
         'text': mirtex_base + "test/",
         'annotations': mirtex_base + "test/",
-        'corpus': "data/miRTex-test.pickle",
+        'corpus': "data/miRTex-test.txt.pickle",
         'format': "mirtex"
     },
     'transmir_tfs':{

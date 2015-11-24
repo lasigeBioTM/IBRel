@@ -23,6 +23,7 @@ from reader.gpro_corpus import GproCorpus
 from reader.ddi_corpus import DDICorpus
 from reader.chebi_corpus import ChebiCorpus
 from reader.mirna_corpus import MirnaCorpus
+from reader.mirtext_corpus import MirtexCorpus
 from reader.pubmed_corpus import PubmedCorpus
 from text.corpus import Corpus
 from classification.ner.taggercollection import TaggerCollection
@@ -291,6 +292,10 @@ considered when coadministering with megestrol acetate.''',
         elif corpus_format == "ddi-mirna":
             corpus = MirnaCorpus(corpus_path)
             corpus.load_corpus(corenlpserver)
+        elif corpus_format == "mirtex":
+            corpus = MirtexCorpus(corpus_path)
+            corpus.load_corpus(corenlpserver)
+            corpus.path = ".".join(config.paths[options.goldstd]["corpus"].split(".")[:-1])
         corpus.save()
         if corpus_ann and "test" not in options.goldstd: #add annotation if it is not a test set
             corpus.load_annotations(corpus_ann)
