@@ -303,7 +303,10 @@ class SimpleTaggerModel(Model):
                 elif l == "single":
                     label = "S-{}".format(entity_type)
                 #label += "_" + entity_type
-                lines.append("{0}\t{1}\n".format(self.tokens[isent][it].text, label))
+                try:
+                    lines.append("{0}\t{1}\n".format(self.tokens[isent][it].text, label))
+                except UnicodeEncodeError: #fml
+                    lines.append(u"{0}\t{1}\n".format(self.tokens[isent][it].text, label))
             lines.append("\n")
         with codecs.open("{}.bilou".format(self.path), "w", "utf-8") as output:
             output.write("".join(lines))
