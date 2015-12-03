@@ -392,6 +392,7 @@ def get_results(results, models, gold_offsets, ths, rules):
     # logging.info("system entities: {}; gold entities: {}".format(len(offsets), len(gold_offsets)))
     reportlines, tps, fps, fns = compare_results(set(offsets), gold_offsets, results.corpus, getwords=True)
     with codecs.open(results.path + "_report.txt", 'w', "utf-8") as reportfile:
+        print "writing report to {}_report.txt".format(results.path)
         reportfile.write("TPs: {!s}\nFPs: {!s}\n FNs: {!s}\n".format(len(tps), len(fps), len(fns)))
         if len(tps) == 0:
             precision = 0

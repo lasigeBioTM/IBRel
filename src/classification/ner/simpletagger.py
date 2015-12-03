@@ -4,6 +4,7 @@ import unicodedata
 from classification.model import Model
 from text.chemical_entity import element_base, ChemdnerAnnotation
 from text.chemical_entity import amino_acids
+from text.mirna_entity import MirnaEntity
 from text.protein_entity import ProteinEntity
 
 feature_extractors = {# "text": lambda x, i: x.tokens[i].text,
@@ -323,6 +324,8 @@ class SimpleTaggerModel(Model):
             e = ChemdnerAnnotation(tokens=tokens, sid=sid, did=did, text=text, score=score)
         elif "prot" in self.path:
             e = ProteinEntity(tokens=tokens, sid=sid, did=did, text=text, score=score)
+        elif "mirna" in self.path:
+            e = MirnaEntity(tokens=tokens, sid=sid, did=did, text=text, score=score)
         return e
 
 

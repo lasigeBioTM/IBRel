@@ -71,7 +71,7 @@ class MirnaCorpus(Corpus):
                 if "goldstandard" in s.entities.elist:
                     del s.entities.elist["goldstandard"]
         time_per_abs = []
-        logging.info("loading annotations...")
+        logging.info("loading miRNA annotations...")
         with open(ann_dir, 'r') as xml:
             #parse DDI corpus file
             t = time.time()
@@ -95,6 +95,6 @@ class MirnaCorpus(Corpus):
                         entity_type = entity.get("type")
                         #print this_sentence.text[offsets[0]:offsets[-1]], entity.get("text")
                         #if "protein" in entity_type.lower() or "mirna" in entity_type.lower():
-                        if entity_type == "Specific miRNAs":
+                        if entity_type == "Specific_miRNAs":
                             this_sentence.tag_entity(offsets[0], offsets[-1], entity_type,
                                                      text=entity.get("text"))
