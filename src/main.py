@@ -201,6 +201,7 @@ considered when coadministering with megestrol acetate.''',
                       help="True if the input has <entity> tags.")
     parser.add_argument("-o", "--output", "--format", dest="output",
                         nargs=2, help="format path; output formats: xml, html, tsv, text, chemdner.")
+    parser.add_argument("--entitytype", dest="etype", help="type of entities to be considered", default="all")
     parser.add_argument("--crf", dest="crf", help="CRF implementation", default="stanford",
                         choices=["stanford", "crfsuite"])
     parser.add_argument("--log", action="store", dest="loglevel", default="WARNING", help="Log level")
@@ -298,7 +299,7 @@ considered when coadministering with megestrol acetate.''',
             corpus.path = ".".join(config.paths[options.goldstd]["corpus"].split(".")[:-1])
         corpus.save()
         if corpus_ann and "test" not in options.goldstd: #add annotation if it is not a test set
-            corpus.load_annotations(corpus_ann)
+            corpus.load_annotations(corpus_ann, options.etype)
             corpus.save()
     else: # options other than processing a corpus, i.e. load the corpus directly from a pickle file
         logging.info("loading corpus %s" % corpus_path)
@@ -306,7 +307,7 @@ considered when coadministering with megestrol acetate.''',
 
     if options.actions == "annotate": # re-add annotation to corpus
         logging.debug("loading annotations...")
-        corpus.load_annotations(corpus_ann)
+        corpus.load_annotations(corpus_ann, options.etype)
         # for d in corpus.documents:
         #    for s in corpus.documents[d].sentences:
         #        print s.entities.elist

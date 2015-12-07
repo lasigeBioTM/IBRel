@@ -38,7 +38,7 @@ class ChemdnerCorpus(Corpus):
         abs_avg = sum(time_per_abs)*1.0/len(time_per_abs)
         logging.info("average time per abstract: %ss" % abs_avg)
 
-    def load_annotations(self, ann_dir):
+    def load_annotations(self, ann_dir, entitytype="chemical"):
         # total_lines = sum(1 for line in open(ann_dir))
         # n_lines = 1
         logging.info("Cleaning previous annotations...")
@@ -46,6 +46,8 @@ class ChemdnerCorpus(Corpus):
             for s in self.documents[pmid].sentences:
                 if "goldstandard" in s.entities.elist:
                     del s.entities.elist["goldstandard"]
+                if entitytype != "all" and "goldstandard_" + entitytype in s.entities.elist:
+                    del s.entities.elist["goldstandard_" + entitytype]
         logging.info("loading annotations file...")
         with codecs.open(ann_dir, 'r', "utf-8") as inputfile:
             for line in inputfile:
@@ -53,7 +55,8 @@ class ChemdnerCorpus(Corpus):
                 pmid, doct, start, end, text, chemt = line.strip().split('\t')
                 #pmid = "PMID" + pmid
                 if pmid in self.documents:
-                    self.documents[pmid].tag_chemdner_entity(int(start), int(end),
+                    if entitytype == "all" or entitytype == "chemical" or entitytype == chemt:
+                        self.documents[pmid].tag_chemdner_entity(int(start), int(end),
                                                              chemt, text=text, doct=doct)
                 else:
                     logging.info("%s not found!" % pmid)

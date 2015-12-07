@@ -83,12 +83,18 @@ class Entities(object):
         self.did = kwargs.get("did")
 
     def add_entity(self, entity, esource):
+        """
+        Add an entity to this entity group, indexed to esource
+        """
         if esource not in self.elist:
             self.elist[esource] = []
+        if esource + "_" + entity.type not in self.elist:
+            self.elist[esource + "_" + entity.type] = []
             # logging.debug("created new entry %s for %s" % (esource, self.sid))
         #if entity in self.elist[esource]:
         #    logging.info("Repeated entity! %s", entity.eid)
         self.elist[esource].append(entity)
+        self.elist[esource + "_" + entity.type].append(entity)
 
     def get_unique_entities(self, source, ths, rules):
         entities = set()

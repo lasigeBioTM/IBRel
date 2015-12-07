@@ -42,12 +42,14 @@ class MirtexCorpus(Corpus):
         abs_avg = sum(time_per_abs)*1.0/len(time_per_abs)
         logging.info("average time per abstract: %ss" % abs_avg)
 
-    def load_annotations(self, ann_dir):
+    def load_annotations(self, ann_dir, etype):
         logging.info("Cleaning previous annotations...")
         for pmid in self.documents:
             for s in self.documents[pmid].sentences:
                 if "goldstandard" in s.entities.elist:
                     del s.entities.elist["goldstandard"]
+                if etype != "all" and "goldstandard_" + etype in s.entities.elist:
+                    del s.entities.elist["goldstandard_" + etype]
         annfiles = [ann_dir + '/' + f for f in os.listdir(ann_dir) if f.endswith('.ann')]
         total = len(annfiles)
         time_per_abs = []
@@ -59,14 +61,18 @@ class MirtexCorpus(Corpus):
                     # print line
                     if line.startswith("T"):
                         tid, ann, etext = line.strip().split("\t")
-                        etype, dstart, dend = ann.split(" ")
-                        if etype == "MiRNA":
+                        entity_type, dstart, dend = ann.split(" ")
+                        if entity_type == "MiRNA":
+                            entity_type = "mirna"
+                        elif entity_type == "Gene":
+                            entity_type = "protein"
+                        if etype == "all" or (etype != "all" and etype == entity_type):
                             dstart, dend = int(dstart), int(dend)
-                        sentence = self.documents[did].find_sentence_containing(dstart, dend, chemdner=False)
-                        if sentence is not None:
-                            # e[0] and e[1] are relative to the document, so subtract sentence offset
-                            start = dstart - sentence.offset
-                            end = dend - sentence.offset
-                            sentence.tag_entity(start, end, etype.lower(), text=etext)
-                        else:
-                            print "could not find sentence for this span: {}-{}".format(dstart, dend)
+                            sentence = self.documents[did].find_sentence_containing(dstart, dend, chemdner=False)
+                            if sentence is not None:
+                                # e[0] and e[1] are relative to the document, so subtract sentence offset
+                                start = dstart - sentence.offset
+                                end = dend - sentence.offset
+                                sentence.tag_entity(start, end, entity_type, text=etext)
+                            else:
+                                print "could not find sentence for this span: {}-{}".format(dstart, dend)

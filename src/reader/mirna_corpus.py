@@ -64,12 +64,14 @@ class MirnaCorpus(Corpus):
             #sys.exit()
         return offsets
 
-    def load_annotations(self, ann_dir):
+    def load_annotations(self, ann_dir, etype):
         logging.info("Cleaning previous annotations...")
         for pmid in self.documents:
             for s in self.documents[pmid].sentences:
                 if "goldstandard" in s.entities.elist:
                     del s.entities.elist["goldstandard"]
+                if etype != "all" and "goldstandard_" + etype in s.entities.elist:
+                    del s.entities.elist["goldstandard_" + etype]
         time_per_abs = []
         logging.info("loading miRNA annotations...")
         with open(ann_dir, 'r') as xml:
@@ -93,8 +95,12 @@ class MirnaCorpus(Corpus):
                         entity_offset = entity.get('charOffset')
                         offsets = self.getOffsets(entity_offset)
                         entity_type = entity.get("type")
+                        if entity_type == "Specific_miRNAs":
+                            entity_type = "mirna"
+                        elif entity_type == "Genes/Proteins":
+                            entity_type == "protein"
                         #print this_sentence.text[offsets[0]:offsets[-1]], entity.get("text")
                         #if "protein" in entity_type.lower() or "mirna" in entity_type.lower():
-                        if entity_type == "Specific_miRNAs":
+                        if etype == "all" or (etype != "all" and etype == entity_type):
                             this_sentence.tag_entity(offsets[0], offsets[-1], entity_type,
                                                      text=entity.get("text"))

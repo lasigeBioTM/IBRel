@@ -46,7 +46,7 @@ class GeniaCorpus(Corpus):
         abs_avg = sum(time_per_abs)*1.0/len(time_per_abs)
         logging.info("average time per abstract: %ss" % abs_avg)
 
-    def load_annotations(self, ann_dir):
+    def load_annotations(self, ann_dir, etype):
         time_per_abs = []
         skipped = 0
         notskipped = 0
@@ -105,7 +105,11 @@ class GeniaCorpus(Corpus):
                     if sem.startswith("("):
                         sem = sem[1:]
                     if sem.startswith("G#protein"):
-                        eid = this_sentence.tag_entity(estart, eend, "protein",
+                        entity_type = "protein"
+                    if sem.startswith("G#DNA"):
+                        entity_type = "protein"
+                    if etype == "all" or (etype != "all" and entity_type == etype):
+                        eid = this_sentence.tag_entity(estart, eend, entity_type,
                                                      text=e.text)
                         if eid is None:
                             print "did not add this entity: {}".format(e.text)

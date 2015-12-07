@@ -93,7 +93,6 @@ class Sentence(object):
         """Find the tokens that match this entity. start and end are relative to the sentence.
            Totalchars is the offset of the sentence on the document."""
         tlist = []
-        #logging.debug("lets tag this entity")
         # print self.tokens
         nextword = ""
         for t in self.tokens:
@@ -135,7 +134,7 @@ class Sentence(object):
                 self.entities.add_entity(ProteinEntity(tlist, self.sid, text=newtext,
                                          did=self.did, eid=eid, subtype=subtype), source)
             else:
-                print subtype
+                logging.info("{} - {} - {}".format(tlist, subtype, "not added"))
             self.label_tokens(tlist, source, subtype)
             #logging.debug("added new entity to %s, now with %s entities" % (self.sid,
             #                                                                 len(self.entities.elist[source])))

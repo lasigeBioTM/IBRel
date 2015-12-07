@@ -23,7 +23,7 @@ class GproCorpus(ChemdnerCorpus):
         corpus = pickle.load(open(cemp_path, 'rb'))
         self.documents = corpus.documents
 
-    def load_annotations(self, ann_dir):
+    def load_annotations(self, ann_dir, etype="protein"):
         logging.info("Cleaning previous annotations...")
         for pmid in self.documents:
             for s in self.documents[pmid].sentences:

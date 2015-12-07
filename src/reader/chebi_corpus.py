@@ -82,7 +82,7 @@ class ChebiCorpus(Corpus):
         abs_avg = sum(time_per_abs)*1.0/len(time_per_abs)
         logging.info("average time per abstract: %ss" % abs_avg)
 
-    def load_annotations(self, ann_dir):
+    def load_annotations(self, ann_dir, entitytype="chemical"):
         docs = self.get_docs(ann_dir)
         total = len(docs)
         current = 0

@@ -72,12 +72,14 @@ class DDICorpus(Corpus):
             #sys.exit()
         return offsets
 
-    def load_annotations(self, ann_dir):
+    def load_annotations(self, ann_dir, etype):
         logging.info("Cleaning previous annotations...")
         for pmid in self.documents:
             for s in self.documents[pmid].sentences:
                 if "goldstandard" in s.entities.elist:
                     del s.entities.elist["goldstandard"]
+                if "goldstandard_" + etype in s.entities.elist:
+                    del s.entities.elist["goldstandard_" + etype]
         trainfiles = [ann_dir + '/' + f for f in os.listdir(ann_dir) if f.endswith('.xml')]
         total = len(trainfiles)
         current = 0
@@ -105,6 +107,7 @@ class DDICorpus(Corpus):
                         eid = entity.get('id')
                         entity_offset = entity.get('charOffset')
                         offsets = self.getOffsets(entity_offset)
-                        #print this_sentence.text[offsets[0]:offsets[-1]], entity.get("text")
-                        this_sentence.tag_entity(offsets[0], offsets[-1], entity.get("type"),
+                        entity_type = entity.get("type")
+                        if etype == "chemical" or etype == "all" or (etype != "all" and etype == entity_type):
+                            this_sentence.tag_entity(offsets[0], offsets[-1], entity_type,
                                                  text=entity.get("text"))
