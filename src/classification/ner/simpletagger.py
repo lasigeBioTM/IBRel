@@ -217,9 +217,12 @@ class SimpleTaggerModel(Model):
                         if fname in sentence.tokens[i].features:
                             tokenfeatures = sentence.tokens[i].features[fname]
                             #logging.info("loaded features from corpus: %s" % tokenfeatures)
-                            tokenlabel = sentence.tokens[i].tags.get("goldstandard", "other")
+                            if subtype == "all":
+                                tokenlabel = sentence.tokens[i].tags.get("goldstandard", "other")
+                            else:
+                                tokenlabel = sentence.tokens[i].tags.get("goldstandard_" + subtype, "other")
                         else:
-                            tokenfeatures, tokenlabel = self.generate_features(sentence, i, flist)
+                            tokenfeatures, tokenlabel = self.generate_features(sentence, i, flist, subtype)
                             savecorpus = True
                             sentence.tokens[i].features[fname] = tokenfeatures[:]
                         # if tokenlabel != "other":
@@ -262,13 +265,16 @@ class SimpleTaggerModel(Model):
             self.sentences = basemodel.sentences[:]
         logging.info("copied %s for model %s" % (len(self.data), t))
 
-    def generate_features(self, sentence, i, flist):
+    def generate_features(self, sentence, i, flist, subtype):
         """
             Features is dictionary mapping of featurename:value.
             Label is the correct label of the token. It is always other if
             the text is not annotated.
         """
-        label = sentence.tokens[i].tags.get("goldstandard", "other")
+        if subtype == "all":
+            label = sentence.tokens[i].tags.get("goldstandard", "other")
+        else:
+            label = sentence.tokens[i].tags.get("goldstandard_" + subtype, "other")
         features = []
         for f in flist:
             if f not in sentence.tokens[i].features:
