@@ -307,6 +307,7 @@ considered when coadministering with megestrol acetate.''',
 
     if options.actions == "annotate": # re-add annotation to corpus
         logging.debug("loading annotations...")
+        corpus.clear_annotations(options.etype)
         corpus.load_annotations(corpus_ann, options.etype)
         # for d in corpus.documents:
         #    for s in corpus.documents[d].sentences:
@@ -327,7 +328,7 @@ considered when coadministering with megestrol acetate.''',
             model = StanfordNERModel(options.models)
         elif options.crf == "crfsuite":
             model = CrfSuiteModel(options.models)
-        model.load_data(corpus, feature_extractors.keys())
+        model.load_data(corpus, feature_extractors.keys(), options.etype)
         model.train()
     elif options.actions == "train_matcher": # Train a simple classifier based on string matching
         model = MatcherModel(options.models)

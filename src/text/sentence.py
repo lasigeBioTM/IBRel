@@ -110,8 +110,8 @@ class Sentence(object):
                 if newtext not in kwargs["text"] and kwargs["text"] not in newtext:
                     return None
                 else:
-                    logging.info("{}-{}|{}|=>|{}|{}-{}".format(tlist[0].start, tlist[-1].end, newtext, kwargs["text"],
-                                 start, end))
+                    logging.info(u"{}-{}|{}|=>|{}|{}-{}".format(tlist[0].start, tlist[-1].end, newtext,
+                                                               kwargs["text"], start, end))
                     # logging.info("{} - {}".format(self.sid, self.text))
             #     print "tokens found:", [t.text for t in tlist]
                 # sys.exit()
@@ -136,8 +136,8 @@ class Sentence(object):
             else:
                 logging.info("{} - {} - {}".format(tlist, subtype, "not added"))
             self.label_tokens(tlist, source, subtype)
-            #logging.debug("added new entity to %s, now with %s entities" % (self.sid,
-            #                                                                 len(self.entities.elist[source])))
+            logging.debug("added new entity to %s, now with %s entities" % (self.sid,
+                                                                             len(self.entities.elist[source])))
             return eid
         else:
             print "no tokens found:"

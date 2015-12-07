@@ -41,13 +41,6 @@ class ChemdnerCorpus(Corpus):
     def load_annotations(self, ann_dir, entitytype="chemical"):
         # total_lines = sum(1 for line in open(ann_dir))
         # n_lines = 1
-        logging.info("Cleaning previous annotations...")
-        for pmid in self.documents:
-            for s in self.documents[pmid].sentences:
-                if "goldstandard" in s.entities.elist:
-                    del s.entities.elist["goldstandard"]
-                if entitytype != "all" and "goldstandard_" + entitytype in s.entities.elist:
-                    del s.entities.elist["goldstandard_" + entitytype]
         logging.info("loading annotations file...")
         with codecs.open(ann_dir, 'r', "utf-8") as inputfile:
             for line in inputfile:

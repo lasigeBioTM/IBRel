@@ -24,11 +24,6 @@ class GproCorpus(ChemdnerCorpus):
         self.documents = corpus.documents
 
     def load_annotations(self, ann_dir, etype="protein"):
-        logging.info("Cleaning previous annotations...")
-        for pmid in self.documents:
-            for s in self.documents[pmid].sentences:
-                if "goldstandard" in s.entities.elist:
-                    del s.entities.elist["goldstandard"]
         logging.info("loading annotations file {}...".format(ann_dir))
         with codecs.open(ann_dir, 'r', "utf-8") as inputfile:
             for line in inputfile:

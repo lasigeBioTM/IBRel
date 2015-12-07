@@ -74,12 +74,6 @@ class DDICorpus(Corpus):
 
     def load_annotations(self, ann_dir, etype):
         logging.info("Cleaning previous annotations...")
-        for pmid in self.documents:
-            for s in self.documents[pmid].sentences:
-                if "goldstandard" in s.entities.elist:
-                    del s.entities.elist["goldstandard"]
-                if "goldstandard_" + etype in s.entities.elist:
-                    del s.entities.elist["goldstandard_" + etype]
         trainfiles = [ann_dir + '/' + f for f in os.listdir(ann_dir) if f.endswith('.xml')]
         total = len(trainfiles)
         current = 0

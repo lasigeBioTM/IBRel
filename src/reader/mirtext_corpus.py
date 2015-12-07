@@ -43,13 +43,6 @@ class MirtexCorpus(Corpus):
         logging.info("average time per abstract: %ss" % abs_avg)
 
     def load_annotations(self, ann_dir, etype):
-        logging.info("Cleaning previous annotations...")
-        for pmid in self.documents:
-            for s in self.documents[pmid].sentences:
-                if "goldstandard" in s.entities.elist:
-                    del s.entities.elist["goldstandard"]
-                if etype != "all" and "goldstandard_" + etype in s.entities.elist:
-                    del s.entities.elist["goldstandard_" + etype]
         annfiles = [ann_dir + '/' + f for f in os.listdir(ann_dir) if f.endswith('.ann')]
         total = len(annfiles)
         time_per_abs = []

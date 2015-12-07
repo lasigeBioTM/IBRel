@@ -108,3 +108,19 @@ class Corpus(object):
                 for e in s.entities.elist:
                     entities.append(e)
         return entities
+
+    def clear_annotations(self, entitytype="all"):
+        logging.info("Cleaning previous annotations...")
+        for pmid in self.documents:
+            for s in self.documents[pmid].sentences:
+                if "goldstandard" in s.entities.elist:
+                    del s.entities.elist["goldstandard"]
+                if entitytype != "all" and "goldstandard_" + entitytype in s.entities.elist:
+                    del s.entities.elist["goldstandard_" + entitytype]
+                for t in s.tokens:
+                    if "goldstandard" in t.tags:
+                        del t.tags["goldstandard"]
+                        del t.tags["goldstandard_subtype"]
+                    if entitytype != "all" and "goldstandard_" + entitytype in t.tags:
+                        del t.tags["goldstandard_" + entitytype]
+
