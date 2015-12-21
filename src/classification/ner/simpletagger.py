@@ -245,7 +245,7 @@ class SimpleTaggerModel(Model):
         # save data back to corpus to improve performance
         #if subtype == "all" and savecorpus:
         #    corpus.save()
-        logging.info("used %s for model %s" % (nsentences, subtype))
+        logging.info("used %s sentences for model %s" % (nsentences, subtype))
 
     def copy_data(self, basemodel, t="all"):
         #logging.debug(self.subtypes)

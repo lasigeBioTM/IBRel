@@ -329,7 +329,7 @@ considered when coadministering with megestrol acetate.''',
         elif options.crf == "crfsuite":
             model = CrfSuiteModel(options.models)
         model.load_data(corpus, feature_extractors.keys(), options.etype)
-        model.train()
+        model.train(options.etype)
     elif options.actions == "train_matcher": # Train a simple classifier based on string matching
         model = MatcherModel(options.models)
         model.train(corpus)
@@ -361,7 +361,7 @@ considered when coadministering with megestrol acetate.''',
                 model = CrfSuiteModel(options.models)
             model.load_tagger()
             model.load_data(corpus, feature_extractors.keys(), mode="test")
-            final_results = model.test(corpus)
+            final_results = model.test(corpus, options.etype)
         with codecs.open(options.output[1] + ".txt", 'w', 'utf-8') as outfile:
             lines = final_results.corpus.write_chemdner_results(options.models, outfile)
         final_results.lines = lines

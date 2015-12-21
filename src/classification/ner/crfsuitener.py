@@ -11,7 +11,7 @@ class CrfSuiteModel(SimpleTaggerModel):
     def __init__(self, path, **kwargs):
         super(CrfSuiteModel, self).__init__(path, **kwargs)
 
-    def train(self):
+    def train(self, entitytype):
         logging.info("Training model with CRFsuite")
         self.trainer = pycrfsuite.Trainer(verbose=False)
         for xseq, yseq in zip(self.data, self.labels):
@@ -35,7 +35,7 @@ class CrfSuiteModel(SimpleTaggerModel):
         self.tagger = pycrfsuite.Tagger()
         self.tagger.open(self.path + ".model")
 
-    def test(self, corpus):
+    def test(self, corpus, entitytype):
         logging.info("Testing with %s" % self.path + ".model")
         #self.predicted = [tagger.tag(xseq) for xseq in self.data]
         for xseq in self.data:

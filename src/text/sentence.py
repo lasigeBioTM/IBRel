@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 import logging
 import sys
 from xml.etree import ElementTree as ET
@@ -136,7 +137,7 @@ class Sentence(object):
             else:
                 logging.info("{} - {} - {}".format(tlist, subtype, "not added"))
             self.label_tokens(tlist, source, subtype)
-            logging.debug("added new entity to %s, now with %s entities" % (self.sid,
+            logging.debug("added {} to {}, now with {} entities".format(newtext, self.sid,
                                                                              len(self.entities.elist[source])))
             return eid
         else:
@@ -149,16 +150,20 @@ class Sentence(object):
         if len(tlist) == 1:
             tlist[0].tags[source] = "single"
             tlist[0].tags[source + "_subtype"] = subtype
+            tlist[0].tags[source + "_" + subtype] = "single"
         else:
             for t in range(len(tlist)):
                 if t == 0:
                     tlist[t].tags[source] = "start"
+                    tlist[t].tags[source + "_" + subtype] = "start"
                     tlist[t].tags[source + "_subtype"] = subtype
                 elif t == len(tlist) - 1:
                     tlist[t].tags[source] = "end"
+                    tlist[t].tags[source + "_" + subtype] = "end"
                     tlist[t].tags[source + "_subtype"] = subtype
                 else:
                     tlist[t].tags[source] = "middle"
+                    tlist[t].tags[source + "_" + subtype] = "middle"
                     tlist[t].tags[source + "_subtype"] = subtype
         #logging.debug([t.tags for t in self.tokens])
 
