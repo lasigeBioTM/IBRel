@@ -39,7 +39,7 @@ class StanfordNERModel(SimpleTaggerModel):
               "-readerAndWriter", "edu.stanford.nlp.sequences.CoNLLDocumentReaderAndWriter"]
     logging.info(PARAMS)
     TEST_SENT = "Structure-activity relationships have been investigated for inhibition of DNA-dependent protein kinase (DNA-PK) and ATM kinase by a series of pyran-2-ones, pyran-4-ones, thiopyran-4-ones, and pyridin-4-ones."
-    XML_PATTERN = re.compile(r'<([A-Z-]+?)>(.+?)</\1>')
+    XML_PATTERN = re.compile(r'<([\w-]+?)>(.+?)</\1>')
     CLEAN_XML = re.compile(r'<[^>]*>')
 
     def __init__(self, path, **kwargs):
@@ -81,7 +81,7 @@ class StanfordNERModel(SimpleTaggerModel):
                 logging.info(output.strip())
         rc = process.poll()
         logging.info("model " + self.path +'.ser.gz trained')
-        Popen(["jar", "-uf", self.STANFORD_NER, "{}.ser.gz".format(self.path)]).communicate()
+        # Popen(["jar", "-uf", self.STANFORD_NER, "{}.ser.gz".format(self.path)]).communicate()
         logging.info("saved model file to {}".format(self.STANFORD_NER))
 
     def test(self, corpus, entitytype, port=9191):
@@ -124,7 +124,6 @@ class StanfordNERModel(SimpleTaggerModel):
         # entities is a list of Offsets that correspond to part to entities (S, B, I, E)
         entities = self.get_offsets_for_tag(out, self.XML_PATTERN)
         sentence = results.corpus.documents['.'.join(sid.split('.')[:-1])].get_sentence(sid)
-
         if sentence is None:
             print sid
             print "not found!"
@@ -196,7 +195,7 @@ class StanfordNERModel(SimpleTaggerModel):
         matches = tag.finditer(data)
         for match in matches:
             text = match.group(2)
-            #logging.info("found {}-{} ({})".format(text, match.group(1), tag.pattern))
+            # logging.info("found {}-{} ({})".format(text, match.group(1), tag.pattern))
             start = len(self.CLEAN_XML.sub('', data[:match.start(2)]))
             end = start + len(text)
             entities.append(Offset(start, end, text=text, tag=match.group(1)))
@@ -207,8 +206,8 @@ class StanfordNERModel(SimpleTaggerModel):
         Start the server process with the classifier
         :return:
         """
-        ner_args = ["java", self.RAM_TEST, "-Dfile.encoding=UTF-8", "-cp", self.STANFORD_NER, "edu.stanford.nlp.ie.NERServer", "-port", str(port),
-                    "-loadClassifier", self.path + ".ser.gz", "-outputFormat", "inlineXML"]
+        ner_args = ["java", self.RAM_TEST, "-Dfile.encoding=UTF-8", "-cp", self.STANFORD_NER, "edu.stanford.nlp.ie.NERServer",
+                    "-port", str(port), "-loadClassifier", self.path + ".ser.gz", "-outputFormat", "inlineXML"]
         logging.info(' '.join(ner_args))
         logging.info("Starting the server for {}...".format(self.path))
         self.process = Popen(ner_args, stdin = PIPE, stdout = PIPE, stderr = PIPE, shell=False)

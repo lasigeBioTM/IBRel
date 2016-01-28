@@ -165,7 +165,7 @@ def get_ddi_mirna_gold_ann_set(goldpath):
                     #print this_sentence.text[offsets[0]:offsets[-1]], entity.get("text")
                     #if "protein" in entity_type.lower() or "mirna" in entity_type.lower():
                     if entity_type == "Specific_miRNAs":
-                        gold_offsets.add((did, start, end, entity.get("text")))
+                        gold_offsets.add((did, start, end, entity.get("text").replace("-", " ")))
 
                 doctext += " " + sentence_text # generate the full text of this document
     # logging.debug(gold_offsets)
@@ -315,7 +315,8 @@ def get_report(results, corpus, restype="TP", getwords=True):
         if getwords:
             line = did + '\t' + start + ":" + end + '\t' + tokentext
         else:
-            line = start + ":" + end
+            #line = start + ":" + end
+            line = ""
         report[did].append(line)
     for d in report:
         report[d].sort()

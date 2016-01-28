@@ -34,6 +34,7 @@ class MirnaCorpus(Corpus):
                     #logging.info(sid)
                     text = sentence.get('text')
                     text = text.replace('\r\n', '  ')
+                    text = text.replace("-", " ")
                     doctext += " " + text # generate the full text of this document
                     this_sentence = Sentence(text, offset=doc_offset, sid=sid, did=did)
                     doc_offset = len(doctext)
@@ -96,4 +97,4 @@ class MirnaCorpus(Corpus):
                         #if "protein" in entity_type.lower() or "mirna" in entity_type.lower():
                         if etype == "all" or (etype != "all" and etype == entity_type):
                             this_sentence.tag_entity(offsets[0], offsets[-1], entity_type,
-                                                     text=entity.get("text"))
+                                                     text=entity.get("text").replace("-", " "))
