@@ -11,6 +11,38 @@ END_TAG = "end"
 MIDDLE_TAG = "middle"
 OTHER_TAG = "other"
 
+class ResultsRE(object):
+    def __init__(self, name):
+        self.pairs = {}
+        self.name = name
+        self.corpus = None
+        self.document_pairs = {}
+
+    def save(self, path):
+        # no need to save the whole corpus, only the entities of each sentence are necessary
+        # because the full corpus is already saved on a diferent pickle
+        logging.info("Saving results to {}".format(path))
+        reduced_corpus = {}
+        for did in self.corpus.documents:
+            self.document_pairs[did] = self.corpus.documents[did].pairs
+            reduced_corpus[did] = {}
+            for sentence in self.corpus.documents[did].sentences:
+                reduced_corpus[did][sentence.sid] = sentence.entities
+        self.corpus = reduced_corpus
+        pickle.dump(self, open(path, "wb"))
+
+    def load_corpus(self, goldstd):
+        logging.info("loading corpus %s" % config.paths[goldstd]["corpus"])
+        corpus = pickle.load(open(config.paths[goldstd]["corpus"]))
+
+        for did in corpus.documents:
+            for sentence in corpus.documents[did].sentences:
+                sentence.entities = self.corpus[did][sentence.sid]
+                #for entity in sentence.entities.elist[options.models]:
+                #    print entity.chebi_score,
+
+        self.corpus = corpus
+
 class ResultsNER(object):
     """Store a set of entities related to a corpus or input text """
     def __init__(self, name):

@@ -120,6 +120,39 @@ paths = {
         'corpus': "data/pmids_test.txt.pickle",
         'format': "pubmed"
     },
+    'thymedata_dev':{
+        'text': "corpora/thymedata-1.1.0/text/Dev/",
+        'annotations': "corpora/thymedata-1.1.0/coloncancer/Dev/",
+        'corpus': "data/coloncancer_dev.txt.pickle",
+        'format': "tempeval"
+    },
+
+    'thymedata_sample':{
+        'text': "corpora/thymedata-1.1.0/text/sample/",
+        'annotations': "corpora/thymedata-1.1.0/sample/",
+        'corpus': "data/thymedata_sample.txt.pickle",
+        'format': "tempeval"
+    },
+    'thymedata_train':{
+        'text': "corpora/thymedata-1.1.0/text/Train/",
+        'annotations': "corpora/thymedata-1.1.0/coloncancer/Train/",
+        'corpus': "data/coloncancer_train.txt.pickle",
+        'format': "tempeval"
+    },
+
+        'thymedata_traindev':{
+        'text': "corpora/thymedata-1.1.0/text/TrainDev/",
+        'annotations': "corpora/thymedata-1.1.0/coloncancer/TrainDev/",
+        'corpus': "data/coloncancer_traindev.txt.pickle",
+        'format': "tempeval"
+    },
+    'thymedata_test':{
+        'text': "corpora/thymedata-1.1.0/text/test/",
+        'annotations': "corpora/thymedata-1.1.0/coloncancer/test/",
+        'corpus': "data/coloncancer_test.txt.pickle",
+        'format': "tempeval"
+    },
+
     'chemdner_sample': { # CHEMDNER 2013
                          'text': chemdner_sample_base + "chemdner_sample_abstracts.txt",
                          'annotations': chemdner_sample_base + "chemdner_sample_annotations.txt",

@@ -1,5 +1,6 @@
 import codecs
 import time
+import sys
 import logging
 
 from text.corpus import Corpus
@@ -11,6 +12,14 @@ class ChemdnerCorpus(Corpus):
     def __init__(self, corpusdir, **kwargs):
         super(ChemdnerCorpus, self).__init__(corpusdir, **kwargs)
         self.subtypes = ["IDENTIFIER", "MULTIPLE", "FAMILY", "FORMULA", "SYSTEMATIC", "ABBREVIATION", "TRIVIAL"]
+
+    def progress(self, count, total, suffix=''):
+        #TODO: generalize to other corpus
+        bar_len = 60
+        filled_len = int(round(bar_len * count / float(total)))
+        percents = round(100.0 * count / float(total), 1)
+        bar = '=' * filled_len + '-' * (bar_len - filled_len)
+        sys.stdout.write('[%s] %s%s ...%s\r' % (bar, percents, '%', suffix))
 
     def load_corpus(self, corenlpserver, process=True):
         """Load the CHEMDNER corpus file on the dir element"""
@@ -32,6 +41,13 @@ class ChemdnerCorpus(Corpus):
                     newdoc.process_document(corenlpserver, "biomedical")
                 self.documents[newdoc.did] = newdoc
                 n_lines += 1
+
+                #percent = (n_lines*100)/total_lines
+                actual = str(n_lines)+"/"+str(total_lines)
+                #print '\r[{0}] {1}% - {2}'.format('|'*(percent), percent,actual)
+                self.progress(n_lines,total_lines, actual)
+
+
                 abs_time = time.time() - t
                 time_per_abs.append(abs_time)
                 logging.info("%s sentences, %ss processing time" % (len(newdoc.sentences), abs_time))

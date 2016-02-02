@@ -1,5 +1,5 @@
 import logging
-
+import re
 from text.entity import Entity
 from config import config
 
@@ -153,6 +153,10 @@ for e in element_base:
     chem_words.add(e.lower())
     chem_words.add(element_base[e][0].lower())
 
+with open("TermList.txt") as termlist:
+    for l in termlist:
+        chem_words.add(l.strip().lower())
+
 # words that are never part of chemical entities
 with open(config.stoplist, 'r') as stopfile:
     for l in stopfile:
@@ -188,6 +192,7 @@ class ChemicalEntity(Entity):
         :return: True if entity does not fall into any of the rules, False if it does
         """
         if "stopwords" in rules:
+            # todo: use regex
             words = self.text.split(" ")
             stop = False
             for s in chem_stopwords:

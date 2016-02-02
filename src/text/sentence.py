@@ -12,6 +12,9 @@ from classification.re import ddi_kernels
 from classification.re import relations
 from text.chemical_entity import ChemdnerAnnotation
 from text.mirna_entity import MirnaEntity
+from text.event_entity import EventEntity
+from text.time_entity import TimeEntity
+from text.tlink import TLink
 
 
 class Sentence(object):
@@ -91,7 +94,16 @@ class Sentence(object):
         # logging.debug(newtoken.text)
         return newtoken
 
-    def tag_entity(self, start, end, subtype="chemical", entity=None, totalchars=0, source="goldstandard", **kwargs):
+    def add_relation(self, entity1, entity2, subtype, source="goldstandard", **kwargs):
+        if self.pairs.pairs.get(source):
+            pid = self.sid + ".p" + str(len(self.pairs.pairs[source]))
+        else:
+            pid = self.sid + ".p0"
+        if subtype == "tlink":
+            self.pairs.add_pair(TLink(entity1, entity2, original_id=kwargs.get("original_id"),
+                                     did=self.did, pid=pid, rtype=subtype), source)
+
+    def tag_entity(self, start, end, subtype, entity=None, totalchars=0, source="goldstandard", **kwargs):
         """Find the tokens that match this entity. start and end are relative to the sentence.
            Totalchars is the offset of the sentence on the document."""
         tlist = []
@@ -110,11 +122,11 @@ class Sentence(object):
                 entity.text = newtext
             if "text" in kwargs and newtext != kwargs["text"]:
                 if newtext not in kwargs["text"] and kwargs["text"] not in newtext:
+                    print "not added, text does not match", newtext, kwargs["text"]
                     return None
                 else:
-                    logging.info(u"{}-{}|{}|=>|{}|{}-{}".format(tlist[0].start, tlist[-1].end, newtext,
-                                                               kwargs["text"], start, end))
-                    # logging.info("{} - {}".format(self.sid, self.text))
+                    logging.info("{} {} |{}|=>|{}| {} {} {} {}".format(tlist[0].start, tlist[-1].end, newtext, kwargs["text"],
+                                 start, end, self.sid, self.text))
             #     print "tokens found:", [t.text for t in tlist]
                 # sys.exit()
             # else:
@@ -135,8 +147,14 @@ class Sentence(object):
             elif subtype == "protein" or "protein" in subtype.lower():
                 self.entities.add_entity(ProteinEntity(tlist, self.sid, text=newtext,
                                          did=self.did, eid=eid, subtype=subtype), source)
-            else:
-                logging.info("{} - {} - {}".format(tlist, subtype, "not added"))
+            elif subtype == "event":
+                 self.entities.add_entity(EventEntity(tlist, self.sid, text=newtext,
+                                         did=self.did, eid=eid, subtype=subtype,
+                                                      original_id=kwargs.get("original_id")), source)
+            elif subtype in ("timex3", "sectiontime", "doctime"):
+                 self.entities.add_entity(TimeEntity(tlist, self.sid, text=newtext,
+                                         did=self.did, eid=eid, subtype=subtype,
+                                                      original_id=kwargs.get("original_id")), source)
             self.label_tokens(tlist, source, subtype)
             logging.debug("added {} to {}, now with {} entities".format(newtext, self.sid,
                                                                              len(self.entities.elist[source])))
@@ -145,7 +163,6 @@ class Sentence(object):
             print "no tokens found:"
             print start, end, kwargs.get("text")
             print [(t.start, t.end, t.text) for t in self.tokens]
-            #
 
     def label_tokens(self, tlist, source, subtype="entity"):
         if len(tlist) == 1:

@@ -38,6 +38,7 @@ feature_extractors = {# "text": lambda x, i: x.tokens[i].text,
                       }
 
 def word_in_dictionary(word, dictionary):
+    # TODO:
     pass
 
 def prev_wordclass(sentence, i):
@@ -186,7 +187,7 @@ class SimpleTaggerModel(Model):
         self.trainer = None
         self.sentences = []
 
-    def load_data(self, corpus, flist, subtype="all", mode="train"):
+    def load_data(self, corpus, flist, subtype="all", mode="train", doctype="all"):
         """
             Load the data from the corpus to the format required by crfsuite.
             Generate the following variables:
@@ -201,11 +202,19 @@ class SimpleTaggerModel(Model):
         didx = 0
         savecorpus = False # do not save the corpus if no new features are generated
         for did in corpus.documents:
+            if doctype != "all" and doctype not in did:
+                continue
             logging.debug("processing doc %s/%s" % (didx, len(corpus.documents)))
             for si, sentence in enumerate(corpus.documents[did].sentences):
                 # skip if no entities in this sentence
+                if sentence.sid in corpus.documents[did].invalid_sids:
+                    logging.debug("Invalid sentence: {} - {}".format(sentence.sid, sentence.text))
+                    continue
+                if sentence.sid in corpus.documents[did].title_sids:
+                    logging.debug("Title sentence: {} - {}".format(sentence.sid, sentence.text))
+                    continue
                 if mode == "train" and "goldstandard" not in sentence.entities.elist:
-                    logging.debug("Skipped sentence without entities")
+                    logging.debug("Skipped sentence without entities: {}".format(sentence.sid))
                     continue
                 sentencefeatures = []
                 sentencelabels = []

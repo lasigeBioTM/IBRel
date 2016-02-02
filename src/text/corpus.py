@@ -13,16 +13,16 @@ class Corpus(object):
         self.documents = kwargs.get("documents", {})
         #logging.debug("Created corpus with {} documents".format(len(self.documents)))
 
-    def save(self, *args):
+    def save(self, savedir, *args):
         """Save corpus object to a pickle file"""
         # TODO: compare with previous version and ask if it should rewrite
         logging.info("saving corpus...")
-        if not args:
-            path = "data/" + self.path.split('/')[-1] + ".pickle"
-        else:
-            path = args[0]
-        pickle.dump(self, open(path, "wb"))
-        logging.info("saved corpus to " + path)
+        #if not args:
+        #    path = "data/" + self.path.split('/')[-1] + ".pickle"
+        #else:
+        #    path = args[0]
+        pickle.dump(self, open(savedir, "wb"))
+        logging.info("saved corpus to " + savedir)
 
     def get_unique_results(self, source, ths, rules):
         allentities = set()
@@ -61,7 +61,7 @@ class Corpus(object):
             if hasa > max_entities:
                 max_entities = hasa
             # print max_entities
-        return cpdlines, max_entities
+        return lines, cpdlines, max_entities
 
     def get_offsets(self, esource, ths, rules):
         """

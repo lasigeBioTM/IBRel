@@ -1,8 +1,7 @@
 from __future__ import division, absolute_import, unicode_literals
 
-import logging
 import xml.etree.ElementTree as ET
-
+import logging
 from text.offset import Offset, Offsets, perfect_overlap, contained_by
 
 
@@ -28,9 +27,9 @@ class Entity(object):
 
 
     def __str__(self):
-        output = self.text + " relative to sentence:" + str(self.start) + ":" + str(self.end)
-        output += " relative to document:" + str(self.dstart) + ":" + str(self.dend) + " => "
-        output += ' '.join([t.text for t in self.tokens])
+        output = "{}, s-offset: {}:{}, d-offset: {}:{}, tokens: {}, type: {}, subtype: {}".format(self.text, self.start, self.end,
+                                                                                        self.dstart, self.dend,
+                                                                                        ' '.join([t.text for t in self.tokens])
         return output
 
     def write_chemdner_line(self, outfile, rank=1):
@@ -77,8 +76,8 @@ class Entity(object):
 class Entities(object):
     """Group of entities related to a text"""
 
-    def __init__(self, *args, **kwargs):
-        self.elist = {}
+    def __init__(self, **kwargs):
+        self.elist = {"goldstandard":[]}
         self.sid = kwargs.get("sid")
         self.did = kwargs.get("did")
 
@@ -152,34 +151,6 @@ class Entities(object):
                         rank += 1
         return lines, rank
 
-    def get_offsets(self, esource, ths, rules):
-        spans = []
-        offsets = Offsets()
-        for s in self.elist:
-            # logging.info("{}".format(s))
-            # logging.info("esource: {}".format(es))
-            if s.startswith(esource):
-                # logging.info("using {}".format(s))
-                for e in self.elist[s]:
-                    val = e.validate(ths, rules)
-                    if not val:
-                        logging.info("excluded {}".format(e.text))
-                        continue
-                    eid_offset = Offset(e.dstart, e.dend, text=e.text, sid=e.sid)
-                    exclude = [perfect_overlap]
-                    if "contained_by" in rules:
-                        exclude.append(contained_by)
-                    toadd, v, alt = offsets.add_offset(eid_offset, exclude_if=exclude)
-                    if toadd:
-                        spans.append((e.dstart, e.dend, e.text))
-                        # logging.info("added {}".format(e.text))
-                    else:
-                        logging.info("did not add {}".format(e.text))
-        return spans
-
-
-
-
     def get_results(self, esource):
         return self.elist.get(esource)
 
@@ -229,3 +200,28 @@ class Entities(object):
                         combined[next_eid] = e
                         #logging.info("new entity: {0}-{1}".format(s.split("_")[-1], combined[next_eid].text))
         self.elist[name] = combined.values()
+
+    def get_offsets(self, esource, ths, rules):
+        spans = []
+        offsets = Offsets()
+        for s in self.elist:
+            # logging.info("{}".format(s))
+            # logging.info("esource: {}".format(es))
+            if s.startswith(esource):
+                # logging.info("using {}".format(s))
+                for e in self.elist[s]:
+                    val = e.validate(ths, rules)
+                    if not val:
+                        logging.info("excluded {}".format(e.text))
+                        continue
+                    eid_offset = Offset(e.dstart, e.dend, text=e.text, sid=e.sid)
+                    exclude = [perfect_overlap]
+                    if "contained_by" in rules:
+                        exclude.append(contained_by)
+                    toadd, v, alt = offsets.add_offset(eid_offset, exclude_if=exclude)
+                    if toadd:
+                        spans.append((e.dstart, e.dend, e.text))
+                        # logging.info("added {}".format(e.text))
+                    else:
+                        logging.info("did not add {}".format(e.text))
+        return spans
