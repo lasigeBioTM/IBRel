@@ -27,13 +27,21 @@ class MatcherModel(object):
         pickle.dump(self.names, open(self.path, "wb"))
         logging.info("saved to {}".format(self.path))
 
+    def train_list(self, listpath):
+        with open(listpath, "r") as listfile:
+            for l in listfile:
+                self.names.add(l.strip().lower())
+        logging.info("Created set of {} entity names".format(len(self.names)))
+        pickle.dump(self.names, open(self.path, "wb"))
+        logging.info("saved to {}".format(self.path))
+
     def test(self, corpus):
         logging.info("loading names...")
         self.names = pickle.load(open(self.path, "rb"))
         logging.info("compiling regex...")
         for n in self.names:
             # logging.info(n)
-            self.p.append(re.compile(r"(\A|\s)(" + re.escape(n) + r")(\s|\Z|\.)")) # , re.I))
+            self.p.append(re.compile(r"(\A|\s)(" + re.escape(n) + r")(\s|\Z|\.|,)", re.I))
         # self.p = [re.compile(r"(\A|\s)(" + n + r")(\s|\Z|\.)", re.I) for n in self.names]
         logging.info("testing {} documents".format(len(corpus.documents)))
         did_count = 1

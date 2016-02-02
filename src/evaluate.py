@@ -2,6 +2,9 @@
 from __future__ import division, unicode_literals
 import argparse
 import cPickle as pickle
+import random
+from xml.dom import minidom
+
 import codecs
 import logging
 import time
@@ -20,6 +23,7 @@ if config.use_chebi:
 from postprocessing.ensemble_ner import EnsembleNER
 from classification.results import ResultsNER
 
+from reader.tempEval_corpus import TempEvalCorpus
 
 def add_chebi_mappings(results, path, source, save=True):
     """
@@ -113,9 +117,11 @@ def add_ssm_score(results, path, source, measure, ontology, save=True):
         pickle.dump(results, open(path, "wb"))
     return results
 
-def get_gold_ann_set(corpus_type, gold_path):
+def get_gold_ann_set(corpus_type, gold_path, entity_type, text_path):
     if corpus_type == "chemdner":
         goldset = get_chemdner_gold_ann_set(gold_path)
+    elif corpus_type == "tempeval":
+        goldset = get_thymedata_gold_ann_set(gold_path, entity_type, text_path, corpus_type)
     elif corpus_type == "pubmed":
         goldset = get_unique_gold_ann_set(gold_path)
     elif corpus_type == "genia":
@@ -125,6 +131,61 @@ def get_gold_ann_set(corpus_type, gold_path):
     elif corpus_type == "mirtex":
         goldset = get_mirtex_gold_ann_set(gold_path)
     return goldset
+
+def get_thymedata_gold_ann_set(gold_path, etype, text_path, doctype):
+    gold_set = set()
+    relation_gold_set = set() # (did,(start,end),(start,end))
+    doc_to_id_to_span = {}
+    traindirs = os.listdir(gold_path) # list of directories corresponding to each document
+    trainfiles = []
+    for d in traindirs:
+        if doctype != "all" and doctype not in d:
+            continue
+        fname = gold_path + "/" + d + "/" + d + ".Temporal-Relation.gold.completed.xml"
+        fname2 = gold_path + "/" + d + "/" + d + ".Temporal-Entity.gold.completed.xml"
+        if os.path.isfile(fname):
+            trainfiles.append(fname)
+        elif os.path.isfile(fname2):
+                trainfiles.append(fname2)
+        else:
+            print "no annotations for this doc: {}".format(d)
+
+    total = len(trainfiles)
+    # logging.info("loading annotations...")
+    for current, f in enumerate(trainfiles):
+        # logging.debug('%s:%s/%s', f, current + 1, total)
+        with open(f, 'r') as xml:
+            root = ET.fromstring(xml.read())
+            did = traindirs[current]
+            doc_to_id_to_span[did] = {}
+            with open(text_path + "/" + did) as text_file:
+                doc_text = text_file.read()
+            annotations = root.find("annotations")
+            for entity in annotations.findall("entity"):
+                eid = entity.find("id").text
+                span = entity.find("span").text
+                if ";" in span:
+                    # entity is not sequential: skip for now
+                    continue
+                span = span.split(",")
+                start = int(span[0])
+                end = int(span[1])
+                entity_type = entity.find("type").text
+                doc_to_id_to_span[did][eid] = (start, end)
+                if etype != "all" and entity_type != etype:
+                    continue
+                else:
+                    gold_set.add((did, start, end, doc_text[start:end]))
+            for relation in annotations.findall("relation"):
+                props = relation.find("properties")
+                if props.find("Type").text == "CONTAINS":
+                    eid1 = props.find("Source").text
+                    eid2 = props.find("Target").text
+                    if eid1 not in doc_to_id_to_span or eid2 not in doc_to_id_to_span:
+                        continue
+                    relation_gold_set.add((did, doc_to_id_to_span[did][eid1], doc_to_id_to_span[did][eid2]))
+
+    return gold_set, relation_gold_set
 
 def get_mirtex_gold_ann_set(goldpath):
     logging.info("loading gold standard... {}".format(goldpath))
@@ -168,8 +229,8 @@ def get_ddi_mirna_gold_ann_set(goldpath):
                         gold_offsets.add((did, start, end, entity.get("text").replace("-", " ")))
 
                 doctext += " " + sentence_text # generate the full text of this document
-    # logging.debug(gold_offsets)
-    # logging.debug(len(gold_offsets))
+    logging.debug(gold_offsets)
+    logging.debug(len(gold_offsets))
     return gold_offsets
 
 def get_chemdner_gold_ann_set(goldann="CHEMDNER/CHEMDNER_TEST_ANNOTATION/chemdner_ann_test_13-09-13.txt"):
@@ -300,10 +361,11 @@ def get_report(results, corpus, restype="TP", getwords=True):
         if t[0] != "" and t[0] not in corpus.documents:
             logging.info("this doc is not in the corpus! %s" % t[0])
             continue
+        start, end = t[1], t[2]
+        start, end = str(start), str(end)
         if getwords:
             # doctext = corpus.documents[x[0]].text
-            start, end = t[1], t[2]
-            start, end = str(start), str(end)
+
             # if stype == "T":
             #     tokentext = corpus.documents[x[0]].title[start:end]
             # else:
@@ -315,13 +377,11 @@ def get_report(results, corpus, restype="TP", getwords=True):
         if getwords:
             line = did + '\t' + start + ":" + end + '\t' + tokentext
         else:
-            #line = start + ":" + end
-            line = ""
+            line = did + '\t' + start + ":" + end
         report[did].append(line)
     for d in report:
         report[d].sort()
     return report, words
-
 
 def run_chemdner_evaluation(goldstd, results, format=""):
     """
@@ -338,6 +398,112 @@ def run_chemdner_evaluation(goldstd, results, format=""):
     r = check_output(cem_command)
     return r
 
+def run_anafora_evaluation(annotations_path, results, doctype="all"):
+    anafora_command = ["python", "-m", "anafora.evaluate", "-r", annotations_path, "-p", results]
+    if doctype != "all":
+        anafora_command += ["-x", ".*{}.*".format(doctype)]
+    r = check_output(anafora_command)
+    return r
+
+def write_tempeval_results(results, models, ths, rules):
+    print "saving results to {}".format(results.path + ".tsv")
+    n = 0
+    for did in results.corpus.documents:
+        root = ET.Element("data") # XML data
+        head = ET.SubElement(root, "annotations") #XML annotations
+        for sentence in results.corpus.documents[did].sentences:
+            for s in sentence.entities.elist:
+                if s.startswith(models):
+                    for e in sentence.entities.elist[s]: 
+                        val = e.validate(ths, rules)                        
+                        if not val:
+                            continue
+                        # iterate over val in case it was split into multiple entities
+                        for iv, v in enumerate(val):
+                            n=n+1
+                            head = add_entity_to_doc(head, v, n)
+
+        for p in results.document_pairs[did].pairs:
+            if p.recognized_by.get("svmtk") == 1 or p.recognized_by.get("jsre") == 1 or p.recognized_by.get("rules") == 1:
+                head = add_relation_to_doc(head, p)
+                            
+        tree = ET.ElementTree(root)
+        if not os.path.exists(results.path + "/" + did + "/"):
+            os.makedirs(results.path + "/" + did + "/")
+        name = results.path + "/" + did + "/" + did + ".Temporal-Relation.system.completed.xml"
+        xmlstr = minidom.parseString(ET.tostring(root)).toprettyxml(indent="   ")
+        with open(name, "w") as f:
+            f.write(xmlstr)
+
+
+def write_tempeval_relations_report(results, goldset, path="relations_report.txt"):
+    all_pairs = set()
+    lines = []
+    for did in results.corpus.documents:
+        for p in results.document_pairs[did].pairs:
+            if p.recognized_by.get("svmtk") == 1 or p.recognized_by.get("jsre") == 1 or p.recognized_by.get("rules") == 1:
+                pair = (did, (p.entities[0].dstart, p.entities[0].dend), (p.entities[1].dstart, p.entities[1].dend))
+                if pair in goldset:
+                    # tp.append(p)
+                    lines.append((p.did, "TP", p.entities[0].text + "=>" + p.entities[1].text,
+                                 results.corpus.documents[did].text[pair[1][1]:pair[2][0]]))
+                else:
+                    lines.append((p.did, "FP", p.entities[0].text + "=>" + p.entities[1].text,
+                                  results.corpus.documents[did].text[pair[1][1]:pair[2][0]]))
+                all_pairs.add(pair)
+    for pair in goldset:
+        if pair not in all_pairs:
+            lines.append((p.did, "FN", results.corpus.documents[did].text[pair[1][0]:pair[1][1]] + "=>" +\
+                           results.corpus.documents[did].text[pair[2][0]:pair[2][1]],
+                          results.corpus.documents[did].text[pair[1][1]:pair[2][0]]))
+    lines.sort()
+    with codecs.open(path, "w", "utf-8") as report:
+        for l in lines:
+            report.write("\t".join(l) + "\n")
+    # print random.sample(all_pairs,5)
+    # print random.sample(goldset,5)
+
+
+def add_entity_to_doc(doc_element, entity, n):
+    entityname = ET.SubElement(doc_element, "entity")
+    id = ET.SubElement(entityname, "id")
+    id.text = "t" + str(n)
+    entityname.append(ET.Comment(entity.text))
+    #id.text = str(len(doc_element.findall("entity")))
+    span = ET.SubElement(entityname, "span")
+    span.text = str(entity.dstart)+","+str(entity.dend)
+    type = ET.SubElement(entityname, "type")
+    type.texts = "EVENT"
+    propertiesname = ET.SubElement(entityname, "properties")
+    classs = ET.SubElement(propertiesname, "Class")
+    value = ET.SubElement(propertiesname, "Value")
+    ####
+    propertiesname = ET.SubElement(entityname, "properties") #XML
+    classs = ET.SubElement(propertiesname, "Class") # XML
+    classs.text = "asdasd"#entity.tag 
+    ##
+    return doc_element
+
+def add_relation_to_doc(doc_element, relation):
+    relationname = ET.SubElement(doc_element, "relation") #XML entity
+    id = ET.SubElement(relationname, "id") #XML id
+    id.text = convert_id(relation.pid)
+    # id.append(ET.Comment(relation.entities[0].text + "+" + relation.entities[1].text))
+    #id.text = str(len(doc_element.findall("entity"))) esta so comentado
+    type = ET.SubElement(relationname, "type") #XML
+    type.text = "TLINK"
+    # entity1 = ET.SubElement(relationname, "parentsType")
+    # entity1.text = "TemporalRelations"
+    propertiesname = ET.SubElement(relationname, "properties") #XML
+    source = ET.SubElement(propertiesname, "Source") # XML
+    source.text = convert_id(relation.entities[0].eid)
+    propertiesname.append(ET.Comment("Source:{}".format(relation.entities[0].text)))
+    t = ET.SubElement(propertiesname, "Type") # XML
+    t.text = "CONTAINS"
+    target = ET.SubElement(propertiesname, "Target") # XML
+    target.text = convert_id(relation.entities[1].eid)
+    propertiesname.append(ET.Comment("Target:{}".format(relation.entities[1].text)))
+    return doc_element
 
 def get_list_results(results, models, goldset, ths, rules):
     """
@@ -374,8 +540,7 @@ def get_list_results(results, models, goldset, ths, rules):
             for line in reportlines:
                 reportfile.write(line + '\n')
 
-
-def get_results(results, models, gold_offsets, ths, rules):
+def get_results(results, models, gold_offsets, ths, rules, compare_text=True):
     """
     Write a report file with basic stats
     :param results: ResultsNER object
@@ -384,14 +549,17 @@ def get_results(results, models, gold_offsets, ths, rules):
     :param ths: Validation thresholds
     :param rules: Validation rules
     """
+    # TODO: Separate CHEMDNER specific files from general report file
     offsets = results.corpus.get_offsets(models, ths, rules)
     # logging.debug(offsets)
     for o in offsets:
         if o[0] not in results.corpus.documents:
             print "DID not found! {}".format(o[0])
             sys.exit()
+    if not compare_text: #e.g. gold standard does not include the original text
+        offsets = [(o[0], o[1], o[2], "") for o in offsets]
     # logging.info("system entities: {}; gold entities: {}".format(len(offsets), len(gold_offsets)))
-    reportlines, tps, fps, fns = compare_results(set(offsets), gold_offsets, results.corpus, getwords=True)
+    reportlines, tps, fps, fns = compare_results(set(offsets), gold_offsets, results.corpus, getwords=compare_text)
     with codecs.open(results.path + "_report.txt", 'w', "utf-8") as reportfile:
         print "writing report to {}_report.txt".format(results.path)
         reportfile.write("TPs: {!s}\nFPs: {!s}\n FNs: {!s}\n".format(len(tps), len(fps), len(fns)))
@@ -445,7 +613,8 @@ def main():
     parser.add_argument("--rules", default=[], nargs='+', help="aditional post processing rules")
     parser.add_argument("--features", default=["chebi", "case", "number", "greek", "dashes", "commas", "length", "chemwords", "bow"],
                         nargs='+', help="aditional features for ensemble classifier")
-    parser.add_argument("--bceval", action="store_true", default=False, help="Run bc-evaluate after evaluation")
+    parser.add_argument("--doctype", dest="doctype", help="type of document to be considered", default="all")
+    parser.add_argument("--external", action="store_true", default=False, help="Run external evaluation script, depends on corpus type")
     options = parser.parse_args()
 
     numeric_level = getattr(logging, options.loglevel.upper(), None)
@@ -458,8 +627,12 @@ def main():
     logging.getLogger().setLevel(numeric_level)
     logging.info("Processing action {0} on {1}".format(options.action, options.goldstd))
     logging.info("loading results %s" % options.results + ".pickle")
-    results = pickle.load(open(options.results + ".pickle", 'rb'))
-    results.name = options.results
+    if os.path.exists(options.results + ".pickle"):
+        results = pickle.load(open(options.results + ".pickle", 'rb'))
+        results.path = options.results
+    else:
+        print "results not found"
+        results = None
 
     if options.action == "chebi":
         if not config.use_chebi:
@@ -485,10 +658,12 @@ def main():
         results.save(options.results + "_combined.pickle")
 
     elif options.action in ("evaluate", "evaluate_list", "train_ensemble", "test_ensemble"):
-
-        logging.info("loading gold standard %s" % config.paths[options.goldstd]["annotations"])
-        goldset = get_gold_ann_set(config.paths[options.goldstd]["format"],
-                                   config.paths[options.goldstd]["annotations"])
+        if "annotations" in config.paths[options.goldstd]:
+            logging.info("loading gold standard %s" % config.paths[options.goldstd]["annotations"])
+            goldset = get_gold_ann_set(config.paths[options.goldstd]["format"], config.paths[options.goldstd]["annotations"], "EVENT",
+                                    config.paths[options.goldstd]["text"])
+        else:
+            goldset = None
         logging.info("using thresholds: chebi > {!s} ssm > {!s}".format(options.chebi, options.ssm))
         results.load_corpus(options.goldstd)
         results.path = options.results
@@ -524,13 +699,23 @@ def main():
             #test_ensemble(results, )
         if options.action == "evaluate":
             get_results(results, options.models, goldset, ths, options.rules)
-            if options.bceval:
-                write_chemdner_files(results, options.models, goldset, ths, options.rules)
-                evaluation = run_chemdner_evaluation(config.paths[options.goldstd]["cem"],
-                                                     options.results + ".tsv")
-                print evaluation
+            #if options.bceval:
+            #    write_chemdner_files(results, options.models, goldset, ths, options.rules)
+            #    evaluation = run_chemdner_evaluation(config.paths[options.goldstd]["cem"],
+            #                                         options.results + ".tsv")
+            #    print evaluation
         elif options.action == "evaluate_list": # ignore the spans, the gold standard is a list of unique entities
             get_list_results(results, options.models, goldset, ths, options.rules)
+    elif options.action == "evaluate_tempeval":
+        results.load_corpus(options.goldstd)
+        results.path = options.results
+        write_tempeval_results(results, options.models, {}, options.rules)
+        if "test" not in options.goldstd:
+            goldset = get_gold_ann_set(config.paths[options.goldstd]["format"], config.paths[options.goldstd]["annotations"], "EVENT",
+                                    config.paths[options.goldstd]["text"])
+            precision, recall = get_results(results, options.models, goldset, {}, options.rules, compare_text=True)
+            evaluation = run_anafora_evaluation(config.paths[options.goldstd]["annotations"], options.results)
+
 
     total_time = time.time() - start_time
     logging.info("Total time: %ss" % total_time)

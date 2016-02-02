@@ -73,7 +73,6 @@ class DDICorpus(Corpus):
         return offsets
 
     def load_annotations(self, ann_dir, etype):
-        logging.info("Cleaning previous annotations...")
         trainfiles = [ann_dir + '/' + f for f in os.listdir(ann_dir) if f.endswith('.xml')]
         total = len(trainfiles)
         current = 0

@@ -14,14 +14,17 @@ import time
 import codecs
 from corenlp import StanfordCoreNLP
 
+from classification.re.rules import RuleClassifier
+from reader.genia_corpus import GeniaCorpus
+from reader.tempEval_corpus import TempEvalCorpus
 from classification.ner.crfsuitener import CrfSuiteModel
 from classification.ner.mirna_matcher import MirnaMatcher
-
 from reader.chemdner_corpus import ChemdnerCorpus
-from reader.genia_corpus import GeniaCorpus
 from reader.gpro_corpus import GproCorpus
 from reader.ddi_corpus import DDICorpus
 from reader.chebi_corpus import ChebiCorpus
+from classification.re.jsrekernel import JSREKernel
+from classification.re.svmtk import SVMTKernel
 from reader.mirna_corpus import MirnaCorpus
 from reader.mirtext_corpus import MirtexCorpus
 from reader.pubmed_corpus import PubmedCorpus
@@ -36,9 +39,9 @@ if config.use_chebi:
     from postprocessing.chebi_resolution import add_chebi_mappings
     from postprocessing.ssm import add_ssm_score
 from evaluate import get_results, run_chemdner_evaluation, get_gold_ann_set
+from classification.re.kernelmodels import KernelModel
 
-
-def run_crossvalidation_types(goldstd, corpus, model, cv):
+def run_crossvalidation(goldstd, corpus, model, cv, crf, entity_type="all"):
     doclist = corpus.documents.keys()
     random.shuffle(doclist)
     size = int(len(doclist)/cv)
@@ -49,63 +52,6 @@ def run_crossvalidation_types(goldstd, corpus, model, cv):
         trainids = list(itertools.chain.from_iterable(sublists[:nlist]))
         trainids += list(itertools.chain.from_iterable(sublists[nlist+1:]))
         print 'CV{} - test set: {}; train set: {}'.format(nlist, len(testids), len(trainids))
-        train_corpus = Corpus(corpus.path, documents={did: corpus.documents[did] for did in trainids})
-        test_corpus = Corpus(corpus.path, documents={did: corpus.documents[did] for did in testids})
-        corpus.subtypes = []  # TEMPORARY!!!!
-        train_corpus.subtypes = corpus.subtypes
-        test_corpus.subtypes = corpus.subtypes
-        basemodel = model + "_cv{}".format(nlist)
-        '''logging.debug('CV{} - test set: {}; train set: {}'.format(nlist, len(test_corpus.documents), len(train_corpus.documents)))
-        for d in train_corpus.documents:
-            for s in train_corpus.documents[d].sentences:
-                print len([t.tags.get("goldstandard") for t in s.tokens if t.tags.get("goldstandard") != "other"])
-        sys.exit()'''
-        # train
-        logging.info('CV{} - TRAIN'.format(nlist))
-        models = TaggerCollection(basepath=basemodel, corpus=train_corpus, subtypes=corpus.subtypes)
-        models.train_types()
-
-        # test
-        logging.info('CV{} - TEST'.format(nlist))
-        models.load_models()
-        results = models.test_types(corpus)
-        results.basepath = basemodel + "_results"
-        final_results = results.combine_results()
-
-        # validate
-        if config.use_chebi:
-            logging.info('CV{} - VALIDATE'.format(nlist))
-            final_results = add_chebi_mappings(final_results, basemodel)
-            final_results = add_ssm_score(final_results, basemodel)
-            final_results.combine_results(basemodel, basemodel + "_combined")
-
-        # evaluate
-        logging.info('CV{} - EVALUATE'.format(nlist))
-        goldset = get_gold_ann_set(config.paths[goldstd]["annotations"])
-        get_results(final_results, basemodel + "_combined", goldset, {})
-        evaluation = run_chemdner_evaluation(config.paths[goldstd]["cem"], basemodel + "_results.txt", "-t")
-        values = evaluation.split("\n")[1].split('\t')
-        p.append(float(values[13])) # index of micro precision
-        r.append(float(values[14])) # index of micro recall
-        logging.info("precision: {} recall:{}".format(str(values[13]), str(values[14])))
-    pavg = sum(p)/cv
-    ravg = sum(r)/cv
-    print "precision: average={} all={}".format(pavg, '|'.join(p))
-    print "recall: average={}  all={}".format(ravg, '|'.join(r))
-
-def run_crossvalidation(goldstd, corpus, model, cv, crf):
-    doclist = corpus.documents.keys()
-    random.shuffle(doclist)
-    size = int(len(doclist)/cv)
-    sublists = chunks(doclist, size)
-    p, r = [], []
-    for nlist in range(cv):
-        testids = sublists[nlist]
-        trainids = list(itertools.chain.from_iterable(sublists[:nlist]))
-        trainids += list(itertools.chain.from_iterable(sublists[nlist+1:]))
-        print 'CV{} - test set: {}; train set: {}'.format(nlist, len(testids), len(trainids))
-        logging.debug(str(trainids))
-        logging.debug(str(testids))
         train_corpus = Corpus(corpus.path, documents={did: corpus.documents[did] for did in trainids})
         test_corpus = Corpus(corpus.path, documents={did: corpus.documents[did] for did in testids})
         test_entities = len(test_corpus.get_all_entities("goldstandard"))
@@ -182,7 +128,7 @@ def main():
     parser.add_argument("actions", default="classify",  help="Actions to be performed.",
                       choices=["load_corpus", "annotate", "classify", "write_results", "write_goldstandard",
                                "train", "test", "train_multiple", "test_multiple", "train_matcher", "test_matcher",
-                               "crossvalidation"])
+                               "crossvalidation", "train_relations", "test_relations"])
     parser.add_argument("--goldstd", default="", dest="goldstd",
                       help="Gold standard to be used. Will override corpus, annotations",
                       choices=config.paths.keys())
@@ -197,14 +143,18 @@ considered when coadministering with megestrol acetate.''',
     parser.add_argument("--annotations", dest="annotations")
     parser.add_argument("--tag", dest="tag", default="0", help="Tag to identify the text.")
     parser.add_argument("--models", dest="models", help="model destination path, without extension")
+    parser.add_argument("--entitytype", dest="etype", help="type of entities to be considered", default="all")
+    parser.add_argument("--doctype", dest="doctype", help="type of document to be considered", default="all")
     parser.add_argument("--annotated", action="store_true", default=False, dest="annotated",
                       help="True if the input has <entity> tags.")
     parser.add_argument("-o", "--output", "--format", dest="output",
                         nargs=2, help="format path; output formats: xml, html, tsv, text, chemdner.")
-    parser.add_argument("--entitytype", dest="etype", help="type of entities to be considered", default="all")
     parser.add_argument("--crf", dest="crf", help="CRF implementation", default="stanford",
                         choices=["stanford", "crfsuite"])
     parser.add_argument("--log", action="store", dest="loglevel", default="WARNING", help="Log level")
+    parser.add_argument("--kernel", action="store", dest="kernel", default="svmtk", help="Kernel for relation extraction")
+    parser.add_argument("--pairtype1", action="store", dest="pairtype1")
+    parser.add_argument("--pairtype2", action="store", dest="pairtype2")
     options = parser.parse_args()
 
     # set logger
@@ -281,6 +231,9 @@ considered when coadministering with megestrol acetate.''',
             corpus.load_corpus(corenlpserver)
             # since the path of this corpus is a directory, add the reference to save this corpus
             corpus.path += options.goldstd + ".txt"
+        elif corpus_format == "tempeval":
+            corpus = TempEvalCorpus(corpus_path)
+            corpus.load_corpus(corenlpserver)
         elif corpus_format == "pubmed":
             # corenlpserver = ""
             with open(corpus_path, 'r') as f:
@@ -296,11 +249,11 @@ considered when coadministering with megestrol acetate.''',
         elif corpus_format == "mirtex":
             corpus = MirtexCorpus(corpus_path)
             corpus.load_corpus(corenlpserver)
-            corpus.path = ".".join(config.paths[options.goldstd]["corpus"].split(".")[:-1])
-        corpus.save()
+            # corpus.path = ".".join(config.paths[options.goldstd]["corpus"].split(".")[:-1])
+        corpus.save(config.paths[options.goldstd]["corpus"])
         if corpus_ann and "test" not in options.goldstd: #add annotation if it is not a test set
             corpus.load_annotations(corpus_ann, options.etype)
-            corpus.save()
+            corpus.save(config.paths[options.goldstd]["corpus"])
     else: # options other than processing a corpus, i.e. load the corpus directly from a pickle file
         logging.info("loading corpus %s" % corpus_path)
         corpus = pickle.load(open(corpus_path, 'rb'))
@@ -309,9 +262,7 @@ considered when coadministering with megestrol acetate.''',
         logging.debug("loading annotations...")
         corpus.clear_annotations(options.etype)
         corpus.load_annotations(corpus_ann, options.etype)
-        # for d in corpus.documents:
-        #    for s in corpus.documents[d].sentences:
-        #        print s.entities.elist
+        corpus.get_invalid_sentences()
         corpus.save()
     elif options.actions == "write_goldstandard":
         model = BiasModel(options.output[1])
@@ -333,11 +284,18 @@ considered when coadministering with megestrol acetate.''',
     elif options.actions == "train_matcher": # Train a simple classifier based on string matching
         model = MatcherModel(options.models)
         model.train(corpus)
+        # TODO: term list option
+        #model.train("TermList.txt")
     elif options.actions == "train_multiple": # Train one classifier for each type of entity in this corpus
         # logging.info(corpus.subtypes)
         models = TaggerCollection(basepath=options.models, corpus=corpus, subtypes=corpus.subtypes)
         models.train_types()
-
+    elif options.actions == "train_relations":
+        if options.kernel == "jsre":
+            model = JSREKernel(corpus)
+        elif options.kernel == "svmtk":
+            model = SVMTKernel(corpus)
+        model.train()
     # testing
     elif options.actions == "test":
         base_port = 9191
@@ -401,10 +359,20 @@ considered when coadministering with megestrol acetate.''',
             final_results = allresults.combine_results()
         logging.info("saving results...")
         final_results.save(options.output[1] + ".pickle")
-
+    elif options.actions == "test_relations":
+        if options.kernel == "jsre":
+            model = JSREKernel(corpus, (options.pairtype1, options.pairtype2))
+        elif options.kernel == "svmtk":
+            model = SVMTKernel(corpus)
+        elif options.kernel == "rules":
+            model = RuleClassifier(corpus)
+        model.load_classifier()
+        model.test()
+        results = model.get_predictions(corpus)
+        results.save(options.output[1] + ".pickle")
     elif options.actions == "crossvalidation":
-        cv = 5 # fixed 10-fold CV
-        run_crossvalidation(options.goldstd, corpus, options.models, cv, options.crf)
+        cv = 5 # fixed 5-fold CV
+        run_crossvalidation(options.goldstd, corpus, options.models, cv, options.etype)
 
     total_time = time.time() - start_time
     logging.info("Total time: %ss" % total_time)

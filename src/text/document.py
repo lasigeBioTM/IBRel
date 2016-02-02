@@ -11,6 +11,9 @@ import xml.etree.ElementTree as ET
 from config.config import geniass_path
 from text.sentence import Sentence
 from text.token2 import Token2
+from classification.re.relations import Pairs
+
+from text.tlink import TLink
 
 whitespace = [u"\u2002", u"\u2003", u"\u00A0", u"\u2009", u"\u200C", u"\u200D",
               u'\u2005', u'\u2009', u'\u200A']
@@ -35,6 +38,9 @@ class Document(object):
         self.title = kwargs.get("title")
         self.sentences = kwargs.get("sentences", [])
         self.did = kwargs.get("did", "d0")
+        self.invalid_sids = []
+        self.title_sids = []
+        self.pairs = Pairs()
         if ssplit:
             self.sentence_tokenize(doctype)
         if process:
@@ -62,6 +68,9 @@ class Document(object):
         with codecs.open("/tmp/geniaoutput.txt", 'r', "utf-8") as geniaoutput:
             for l in geniaoutput:
                 stext = l.strip()
+                if stext == "":
+                    offset = self.get_space_between_sentences(offset)
+                    continue
                 sid = self.did + ".s" + str(len(self.sentences))
                 self.sentences.append(Sentence(stext, offset=offset, sid=sid, did=self.did))
                 offset += len(stext)
@@ -113,6 +122,17 @@ class Document(object):
                                                                        end, self.did)
                 # sys.exit()
 
+    def add_relation(self, entity1, entity2, subtype, relation, source="goldstandard", **kwargs):
+        if self.pairs.pairs:
+            pid = self.did + ".p" + str(len(self.pairs.pairs))
+        else:
+            pid = self.did + ".p0"
+        if subtype == "tlink":
+            pair = TLink(entity1, entity2, relation=relation, original_id=kwargs.get("original_id"),
+                                     did=self.did, pid=pid, rtype=subtype)
+            self.pairs.add_pair(pair, source)
+            return pair
+
     def get_space_between_sentences(self, totalchars):
         """
         When the sentences are split, the whitespace between each sentence is not preserved, so we need to get it back
@@ -141,14 +161,6 @@ class Document(object):
                 lines += res[0]
                 totalentities = res[1]
         return lines
-
-    def get_offsets(self, esource, ths, rules):
-        offsets = []
-        for s in self.sentences:
-            if s.entities:
-                offsets += s.entities.get_offsets(esource, ths, rules)
-        return offsets
-
 
     def write_bioc_results(self, parent, source, ths={}):
         bioc_document = ET.SubElement(parent, "document")
@@ -207,7 +219,7 @@ class Document(object):
             firstsent = 0
         for i, s in enumerate(self.sentences[firstsent:]):
             if len(s.tokens) == 0:
-                logging.debug("sentence without tokens: {} {}".format(s.sid, s.text))
+                # logging.debug("sentence without tokens: {} {}".format(s.sid, s.text))
                 continue
             #print s.tokens[0].dstart, s.tokens[-1].dend
             if s.tokens[0].dstart <= start and s.tokens[-1].dend >= end:
@@ -215,4 +227,17 @@ class Document(object):
                 return s
         return None
 
+    def get_offsets(self, esource, ths, rules):
+        offsets = []
+        for s in self.sentences:
+            if s.entities:
+                offsets += s.entities.get_offsets(esource, ths, rules)
+        return offsets
 
+    def get_entity(self, eid, source="goldstandard"):
+        for sentence in self.sentences:
+            for e in sentence.entities.elist[source]:
+                if e.eid == eid:
+                   return e
+        print "no entity found for eid {}".format(eid)
+        return None

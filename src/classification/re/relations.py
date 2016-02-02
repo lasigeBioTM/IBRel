@@ -14,7 +14,7 @@ import tarfile
 
 from sklearn.cross_validation import KFold
 
-import ddi_kernels
+import kernelmodels
 
 TRUE_DDI = 'trueDDI'
 #shallow linguist kernel prediction using jsre
@@ -29,13 +29,13 @@ allclassifiers = [SLK_PRED, SST_PRED, "all", ""]
 
 class Pair(object):
     """Relation between two entities from the same sentence"""
-    def __init__(self, entities, **kwargs):
+    def __init__(self, entities, relation, *args, **kwargs):
         self.sid = kwargs.get("sid")
         self.did = kwargs.get("did")
         self.pid = kwargs.get("pid")
         self.entities = entities
         self.eids = (entities[0].eid, entities[1].eid)
-        self.relation = False
+        self.relation = relation
         self.recognized_by = {}
         self.score = 0
 
@@ -50,7 +50,7 @@ class Pairs(object):
     """ List of pairs related to a sentence
     """
     def __init__(self, **kwargs):
-        self.pairs = {}
+        self.pairs = []
         self.sid = kwargs.get("sid")
         self.did = kwargs.get("did")
 
@@ -59,6 +59,15 @@ class Pairs(object):
         for p in self.pairs:
             dic.append(p.get_dic())
         return dic
+
+    def add_pair(self, pair, psource):
+            # logging.debug("created new entry %s for %s" % (esource, self.sid))
+        #if entity in self.elist[esource]:
+        #    logging.info("Repeated entity! %s", entity.eid)
+        # print pair.relation, pair.entities
+        pair.recognized_by[psource] = 1
+        self.pairs.append(pair)
+
 
 def getSentenceID(pair):
     return '.'.join(pair.split('.')[:-1])
@@ -91,18 +100,18 @@ def train(docs, kernelpairs, classifiers, dditype="all", tag="", backup=False):
         logging.info("**Training SLK classifier %s ..." % (tag,))
         #trainpairdic = ddi_kernels.fromddiDic(traindocs)
 
-        ddi_kernels.generatejSREdata(kernelpairs, docs, tag + "ddi_train_jsre.txt",
-                                     dditype=dditype, excludesentences=excludesentences,
-                                     train=True)
-        ddi_kernels.trainjSRE(tag + "ddi_train_jsre.txt", tag + "ddi_train_slk.model")
+        kernelmodels.generatejSREdata(kernelpairs, docs, tag + "ddi_train_jsre.txt",
+                                      dditype=dditype, excludesentences=excludesentences,
+                                      train=True)
+        kernelmodels.trainjSRE(tag + "ddi_train_jsre.txt", tag + "ddi_train_slk.model")
         logging.info("done.")
         #logging.info("pred: %s \ntest_y: %s", labels, test_y)
         #tempfiles.append(ddi_kernels.basedir + tag + "ddi_train_jsre.txt")
         #tempfiles.append(ddi_kernels.basedir + tag + "ddi_train_slk.model")
     if SST_PRED in classifiers:
         logging.info("****Training SST classifier %s ..." % (tag,))
-        ddi_kernels.trainSVMTK(docs, kernelpairs, model=tag + "ddi_train_sst.model",
-                               dditype=dditype, excludesentences=excludesentences)
+        kernelmodels.trainSVMTK(docs, kernelpairs, model=tag + "ddi_train_sst.model",
+                                dditype=dditype, excludesentences=excludesentences)
         tempfiles.append("ddi_models/" + tag + "ddi_train_sst.model")
         logging.info("done.")
     print tag + " training complete"
@@ -122,20 +131,20 @@ def test(docs, allpairs, kernelpairs, classifiers=[SLK_PRED, SST_PRED],
     if SLK_PRED in classifiers:
         logging.info("**Testing SLK classifier %s ..." % (tag,))
         #testpairdic = ddi_kernels.fromddiDic(testdocs)
-        ddi_kernels.generatejSREdata(kernelpairs, docs, tag + "ddi_test_jsre.txt", dditype=dditype,
-                                     excludesentences=excludesentences)
-        ddi_kernels.testjSRE(tag + "ddi_test_jsre.txt", tag + "ddi_test_result.txt",
-                             model=tag + "ddi_train_slk.model")
-        allpairs = ddi_kernels.getjSREPredicitons(tag + "ddi_test_jsre.txt", tag + "ddi_test_result.txt",
-                                                  allpairs, kernelpairs, dditype=dditype)
-        tempfiles.append(ddi_kernels.basedir + tag + "ddi_test_jsre.txt")
-        tempfiles.append(ddi_kernels.basedir + tag + "ddi_test_result.txt")
+        kernelmodels.generatejSREdata(kernelpairs, docs, tag + "ddi_test_jsre.txt", dditype=dditype,
+                                      excludesentences=excludesentences)
+        kernelmodels.testjSRE(tag + "ddi_test_jsre.txt", tag + "ddi_test_result.txt",
+                              model=tag + "ddi_train_slk.model")
+        allpairs = kernelmodels.getjSREPredicitons(tag + "ddi_test_jsre.txt", tag + "ddi_test_result.txt",
+                                                   allpairs, kernelpairs, dditype=dditype)
+        tempfiles.append(kernelmodels.basedir + tag + "ddi_test_jsre.txt")
+        tempfiles.append(kernelmodels.basedir + tag + "ddi_test_result.txt")
 
     if SST_PRED in classifiers:
         logging.info("****Testing SST classifier %s ..." % (tag,))
-        allpairs = ddi_kernels.testSVMTK(docs, kernelpairs, allpairs, dditype=dditype,
-                                         model=tag + "ddi_train_sst.model", tag=tag,
-                                         excludesentences=excludesentences)
+        allpairs = kernelmodels.testSVMTK(docs, kernelpairs, allpairs, dditype=dditype,
+                                          model=tag + "ddi_train_sst.model", tag=tag,
+                                          excludesentences=excludesentences)
     return tempfiles, allpairs
 
 

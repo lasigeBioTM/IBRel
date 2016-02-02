@@ -16,5 +16,6 @@
   "stanford_ner_dir": "bin/stanford-ner-2015-04-20/",
   "stanford_ner_train_ram": "-Xmx8g",
   "stanford_ner_test_ram": "-Xmx4g",
-  "stoplist": "data/stopwords.txt"
+  "stoplist": "data/stopwords.txt",
+  "termlist_dir": "data/lists"
 }
