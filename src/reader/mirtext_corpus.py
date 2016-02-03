@@ -2,7 +2,7 @@ import logging
 import xml.etree.ElementTree as ET
 import os
 import sys
-
+import progressbar as pb
 import time
 
 from text.corpus import Corpus
@@ -24,9 +24,11 @@ class MirtexCorpus(Corpus):
         # self.path is the base directory of the files of this corpus
         trainfiles = [self.path + '/' + f for f in os.listdir(self.path) if f.endswith('.txt')]
         total = len(trainfiles)
+        widgets = [pb.Percentage(), ' ', pb.Bar(), ' ', pb.ETA(), ' ', pb.Timer()]
+        pbar = pb.ProgressBar(widgets=widgets, maxval=total).start()
         time_per_abs = []
         for current, f in enumerate(trainfiles):
-            logging.debug('%s:%s/%s', f, current + 1, total)
+            #logging.debug('%s:%s/%s', f, current + 1, total)
             did = f.split(".")[0]
             t = time.time()
             with open(f, 'r') as txt:
@@ -38,7 +40,9 @@ class MirtexCorpus(Corpus):
             self.documents[newdoc.did] = newdoc
             abs_time = time.time() - t
             time_per_abs.append(abs_time)
-            logging.info("%s sentences, %ss processing time" % (len(newdoc.sentences), abs_time))
+            #logging.info("%s sentences, %ss processing time" % (len(newdoc.sentences), abs_time))
+            pbar.update(current+1)
+        pbar.finish()
         abs_avg = sum(time_per_abs)*1.0/len(time_per_abs)
         logging.info("average time per abstract: %ss" % abs_avg)
 

@@ -4,6 +4,7 @@ import logging
 import sys
 import os
 import xml.etree.ElementTree as ET
+import progressbar as pb
 sys.path.append(os.path.abspath(os.path.dirname(__file__) + '../..'))
 from text.corpus import Corpus
 from text.document import Document
@@ -17,14 +18,14 @@ class MirnaCorpus(Corpus):
 
     def load_corpus(self, corenlpserver, process=True):
         # self.path is just one file with every document
-        current = 0
         time_per_abs = []
-        current += 1
         with open(self.path, 'r') as xml:
-            #parse DDI corpus file
             t = time.time()
             root = ET.fromstring(xml.read())
-            for doc in root.findall("document"):
+            all_docs = root.findall("document")
+            widgets = [pb.Percentage(), ' ', pb.Bar(), ' ', pb.ETA(), ' ', pb.Timer()]
+            pbar = pb.ProgressBar(widgets=widgets, maxval=len(all_docs)).start()
+            for i, doc in enumerate(all_docs):
                 doctext = ""
                 did = doc.get('id')
                 doc_sentences = [] # get the sentences of this document
@@ -39,15 +40,14 @@ class MirnaCorpus(Corpus):
                     this_sentence = Sentence(text, offset=doc_offset, sid=sid, did=did)
                     doc_offset = len(doctext)
                     doc_sentences.append(this_sentence)
-                #logging.info(len(doc_sentences))
                 newdoc = Document(doctext, process=False, did=did)
                 newdoc.sentences = doc_sentences[:]
                 newdoc.process_document(corenlpserver, "biomedical")
-                #logging.info(len(newdoc.sentences))
                 self.documents[newdoc.did] = newdoc
                 abs_time = time.time() - t
                 time_per_abs.append(abs_time)
-                logging.info("%s sentences, %ss processing time" % (len(newdoc.sentences), abs_time))
+                pbar.update(i+1)
+            pbar.finish()
         abs_avg = sum(time_per_abs)*1.0/len(time_per_abs)
         logging.info("average time per abstract: %ss" % abs_avg)
 

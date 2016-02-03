@@ -1,5 +1,6 @@
 import logging
 import time
+import progressbar as pb
 from text.corpus import Corpus
 from pubmed import PubmedDocument
 
@@ -19,7 +20,9 @@ class PubmedCorpus(Corpus):
         :return:
         """
         time_per_abs = []
-        for pmid in self.pmids:
+        widgets = [pb.Percentage(), ' ', pb.Bar(), ' ', pb.ETA(), ' ', pb.Timer()]
+        pbar = pb.ProgressBar(widgets=widgets, maxval=len(self.pmids)).start()
+        for i, pmid in enumerate(self.pmids):
             t = time.time()
             newdoc = PubmedDocument(pmid)
             if newdoc.abstract == "":
@@ -29,6 +32,7 @@ class PubmedCorpus(Corpus):
             self.documents["PMID" + pmid] = newdoc
             abs_time = time.time() - t
             time_per_abs.append(abs_time)
-            logging.info("%s sentences, %ss processing time" % (len(newdoc.sentences), abs_time))
+            pbar.update(i+1)
+        pbar.finish()
         abs_avg = sum(time_per_abs)*1.0/len(time_per_abs)
         logging.info("average time per abstract: %ss" % abs_avg)
