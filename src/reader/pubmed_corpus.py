@@ -20,8 +20,8 @@ class PubmedCorpus(Corpus):
         :return:
         """
         time_per_abs = []
-        widgets = [pb.Percentage(), ' ', pb.Bar(), ' ', pb.ETA(), ' ', pb.Timer()]
-        pbar = pb.ProgressBar(widgets=widgets, maxval=len(self.pmids)).start()
+        widgets = [pb.Percentage(), ' ', pb.Bar(), ' ', pb.AdaptiveETA(), ' ', pb.Timer()]
+        pbar = pb.ProgressBar(widgets=widgets, maxval=len(self.pmids), redirect_stdout=True).start()
         for i, pmid in enumerate(self.pmids):
             t = time.time()
             newdoc = PubmedDocument(pmid)

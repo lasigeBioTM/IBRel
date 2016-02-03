@@ -1,7 +1,7 @@
 import logging
 import pickle
 
-from text.chemical_entity import ChemdnerAnnotation
+from text.chemical_entity import ChemicalEntity
 from config import config
 from copy import deepcopy
 #from model import SINGLE_TAG, START_TAG, MIDDLE_TAG, END_TAG, OTHER_TAG
@@ -76,83 +76,6 @@ class ResultsNER(object):
                     #    logging.info("bad entity: {}".format(entity.text.encode("utf8")))
                 sentence.entities.elist[self.name] = new_entities
         self.corpus = corpus
-
-    def get_ner_results(self, corpus, model):
-        """
-            Read the results obtained with the model, add the entities to the entities set, and also
-                to each sentence of the corpus object.
-        """
-        logging.debug("%s sentences", (len(model.predicted)))
-        sentence_entities = {} # sid -> Entities
-        for si in range(len(model.predicted)):
-            did = '.'.join(model.sids[si].split(".")[:-1])
-            this_sentence = corpus.documents[did].get_sentence(model.sids[si])
-            #logging.debug("getting results for %s", model.sids[si])
-            new_entity = None
-            for ti in range(len(model.predicted[si])):
-                #if model.predicted[si][ti] != OTHER_TAG:
-                    #logging.debug("%s %s %s", model.predicted[si][ti], model.labels[si][ti],
-                    #              model.tokens[si][ti].text)
-                if model.predicted[si][ti] == SINGLE_TAG:
-                    # logging.debug("found a single: %s", model.tokens[si][ti].text)
-                    single_entity = ChemdnerAnnotation(tokens=[model.tokens[si][ti]],
-                                                      sid=model.sids[si], did=did,
-                                                      text=model.tokens[si][ti].text,
-                                                      score=model.scores[si][ti])
-                    #logging.info("%s single: %s" % (single_entity.sid, str(single_entity)))
-                    eid = this_sentence.tag_entity(start=model.tokens[si][ti].start,
-                                            end=model.tokens[si][ti].end, subtype="chem",
-                                            entity=single_entity, source=model.path)
-                    single_entity.eid = eid
-                    self.entities[eid] = single_entity # deepcopy
-                    sentence_entities[this_sentence.sid] = this_sentence.entities
-                elif model.predicted[si][ti] == START_TAG:
-                    # logging.debug("found a start: %s", model.tokens[si][ti].text)
-                    new_entity = ChemdnerAnnotation(tokens=[model.tokens[si][ti]],
-                                                   sid=model.sids[si], did=did,
-                                                   text=model.tokens[si][ti].text,
-                                                   score=model.scores[si][ti])
-                elif model.predicted[si][ti] == MIDDLE_TAG:
-                    # TODO: fix mistakes
-                    if not new_entity:
-                        new_entity = ChemdnerAnnotation(tokens=[model.tokens[si][ti]],
-                                                   sid=model.sids[si], did=did,
-                                                   text=model.tokens[si][ti].text,
-                                                   score=model.scores[si][ti])
-                        #logging.debug("started from a middle: {0}".format(new_entity))
-                    else:
-                        new_entity.tokens.append(model.tokens[si][ti])
-                        new_entity.score += model.scores[si][ti]
-                    # else:
-                    #    logging.debug("found a middle without start!: %s", model.tokens[i].text)
-                elif model.predicted[si][ti] == END_TAG:
-                    if not new_entity:
-                        new_entity = ChemdnerAnnotation(tokens=[model.tokens[si][ti]],
-                                                   sid=model.sids[si], did=did,
-                                                   text=model.tokens[si][ti].text,
-                                                   score=model.scores[si][ti])
-                        #logging.debug("started from a end: {0}".format(new_entity))
-                    else:
-                        new_entity.tokens.append(model.tokens[si][ti])
-                        new_entity.text= this_sentence.text[new_entity.tokens[0].start:new_entity.tokens[-1].end]
-                        new_entity.end = new_entity.start + len(new_entity.text)
-                        new_entity.dend = new_entity.dstart + len(new_entity.text)
-                        new_entity.score += model.scores[si][ti]
-                        new_entity.score = new_entity.score/len(new_entity.tokens)
-                    #logging.info("%s end: %s" % (new_entity.sid, str(new_entity)))
-                    #logging.debug("found the end: %s", ''.join([t.text for t in new_entity.tokens]))
-                    eid = this_sentence.tag_entity(start=new_entity.tokens[0].start,
-                        end=new_entity.tokens[-1].end, subtype="chem",
-                        entity=new_entity, source=model.path)
-                    new_entity.eid = eid
-                    self.entities[eid] = new_entity # deepcopy
-                    sentence_entities[this_sentence.sid] = this_sentence.entities
-                    new_entity = None
-                    logging.debug(str(self.entities[eid]))
-                    # else:
-                    #    logging.debug("found the end without start!: %s", model.tokens[i].text)
-        self.corpus = corpus
-        return sentence_entities
 
     def save(self, path):
         # no need to save the whole corpus, only the entities of each sentence are necessary

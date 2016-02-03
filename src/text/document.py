@@ -87,7 +87,6 @@ class Document(object):
             # use specific sentence splitter
             self.sentence_tokenize(doctype)
         for s in self.sentences:
-            logging.debug(s.sid)
             corenlpres = corenlpserver.raw_parse(s.text)
             s.process_corenlp_sentence(corenlpres)
             # TODO: bllip parser biomodel

@@ -12,8 +12,7 @@ import errno
 from text.protein_entity import ProteinEntity
 from text.offset import Offsets, Offset
 from classification.results import ResultsNER
-from text.chemical_entity import ChemdnerAnnotation
-from classification.ner.simpletagger import SimpleTaggerModel
+from classification.ner.simpletagger import SimpleTaggerModel, create_entity
 from config import config
 
 stanford_coding = {"-LRB-": "<", "\/": "/", "&apos;": "'", "analogs": "analogues", "analog": "analogue",
@@ -42,8 +41,8 @@ class StanfordNERModel(SimpleTaggerModel):
     XML_PATTERN = re.compile(r'<([\w-]+?)>(.+?)</\1>')
     CLEAN_XML = re.compile(r'<[^>]*>')
 
-    def __init__(self, path, **kwargs):
-        super(StanfordNERModel, self).__init__(path, **kwargs)
+    def __init__(self, path, etype, **kwargs):
+        super(StanfordNERModel, self).__init__(path, etype, **kwargs)
         self.process = None
         self.tagger = None
 
@@ -144,32 +143,32 @@ class StanfordNERModel(SimpleTaggerModel):
                 #logging.debug([(t.start, t.end, t.text) for t in sentence.tokens])
                 continue
             if e.tag.startswith("S"):
-                single_entity = self.create_entity(tokens=tokens,
+                single_entity = create_entity(tokens=tokens,
                                                       sid=sentence.sid, did=sentence.did,
-                                                      text=e.text, score=1)
-                eid = sentence.tag_entity(start=e.start, end=e.end, subtype="chem",
+                                                      text=e.text, score=1, etype=self.etype)
+                eid = sentence.tag_entity(start=e.start, end=e.end, etype=self.etype,
                                             entity=single_entity, source=self.path)
                 single_entity.eid = eid
                 results.entities[eid] = single_entity # deepcopy
                 #logging.info("new single entity: {}".format(single_entity))
             elif e.tag.startswith("B"):
-                new_entity = self.create_entity(tokens=tokens,
+                new_entity = create_entity(tokens=tokens,
                                                    sid=sentence.sid, did=sentence.did,
-                                                   text=e.text, score=1)
+                                                   text=e.text, score=1, etype=self.etype)
             elif e.tag.startswith("I"):
                 if not new_entity:
                     logging.info("starting with inside...")
-                    new_entity = self.create_entity(tokens=tokens,
+                    new_entity = create_entity(tokens=tokens,
                                                    sid=sentence.sid, did=sentence.did,
-                                                   text=e.text, score=1)
+                                                   text=e.text, score=1, etype=self.etype)
                 else:
                     new_entity.tokens += tokens
             elif e.tag.startswith("E"):
                 if not new_entity:
-                    new_entity = self.create_entity(tokens=tokens,
+                    new_entity = create_entity(tokens=tokens,
                                                sid=sentence.sid, did=sentence.did,
                                                text=e.text,
-                                               score=1)
+                                               score=1, etype=self.etype)
                     logging.debug("started from a end: {0}".format(new_entity))
                 else:
                     new_entity.tokens += tokens
@@ -180,8 +179,8 @@ class StanfordNERModel(SimpleTaggerModel):
                 #logging.info("%s end: %s" % (new_entity.sid, str(new_entity)))
                 #logging.debug("found the end: %s", ''.join([t.text for t in new_entity.tokens]))
                 eid = sentence.tag_entity(start=new_entity.tokens[0].start,
-                    end=new_entity.tokens[-1].end, subtype="chem",
-                    entity=new_entity, source=self.path)
+                                          end=new_entity.tokens[-1].end, etype=self.etype,
+                                          entity=new_entity, source=self.path)
                 new_entity.eid = eid
                 results.entities[eid] = new_entity # deepcopy
                 new_entity = None

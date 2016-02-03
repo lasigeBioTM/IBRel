@@ -92,10 +92,10 @@ class IICEServer(object):
         # load data into the model format
         model.load_data(test_corpus, feature_extractors.keys())
         # run the classifier on the data
-        model.test(stats=False)
-        results = ResultsNER("models/chemdner_train_f13_lbfgs_" + modeltype)
+        results = model.test(stats=False)
+        #results = ResultsNER("models/chemdner_train_f13_lbfgs_" + modeltype)
         # process the results
-        results.get_ner_results(test_corpus, model)
+        #results.get_ner_results(test_corpus, model)
         output = self.get_output(results, "models/chemdner_train_f13_lbfgs_" + modeltype)
         return output
 

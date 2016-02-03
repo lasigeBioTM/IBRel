@@ -2,10 +2,12 @@ import codecs
 import logging
 import unicodedata
 from classification.model import Model
-from text.chemical_entity import element_base, ChemdnerAnnotation
+from text.chemical_entity import element_base, ChemicalEntity
 from text.chemical_entity import amino_acids
 from text.mirna_entity import MirnaEntity
 from text.protein_entity import ProteinEntity
+from text.time_entity import TimeEntity
+from text.event_entity import EventEntity
 
 feature_extractors = {# "text": lambda x, i: x.tokens[i].text,
                       "prefix3": lambda x, i: x.tokens[i].text[:3],
@@ -180,12 +182,18 @@ def simplewordclass(word):
 
 class SimpleTaggerModel(Model):
     """Model trained with a tagger"""
-    def __init__(self, path, **kwargs):
+    def __init__(self, path, etype, **kwargs):
+        """
+        Generic NER classifier
+        :param path: Location of the model file
+        :param etype: type of entities classified
+        """
         super(SimpleTaggerModel, self).__init__(path, **kwargs)
         self.sids = []
         self.tagger = None
         self.trainer = None
         self.sentences = []
+        self.etype = etype
 
     def load_data(self, corpus, flist, subtype="all", mode="train", doctype="all"):
         """
@@ -204,7 +212,7 @@ class SimpleTaggerModel(Model):
         for did in corpus.documents:
             if doctype != "all" and doctype not in did:
                 continue
-            logging.debug("processing doc %s/%s" % (didx, len(corpus.documents)))
+            # logging.debug("processing doc %s/%s" % (didx, len(corpus.documents)))
             for si, sentence in enumerate(corpus.documents[did].sentences):
                 # skip if no entities in this sentence
                 if sentence.sid in corpus.documents[did].invalid_sids:
@@ -297,7 +305,7 @@ class SimpleTaggerModel(Model):
         #logging.debug(features)
         return features, label
 
-    def save_corpus_to_sbilou(self, entity_type="CHEMICAL"):
+    def save_corpus_to_sbilou(self):
         """
         Saves the data that was loaded into simple tagger format to a file compatible with Stanford NER
         :param entity_type:
@@ -310,13 +318,13 @@ class SimpleTaggerModel(Model):
                 if l == "other":
                     label = "O"
                 elif l == "start":
-                    label = "B-{}".format(entity_type)
+                    label = "B-{}".format(self.etype.upper())
                 elif l == "end":
-                    label = "E-{}".format(entity_type)
+                    label = "E-{}".format(self.etype.upper())
                 elif l == "middle":
-                    label = "I-{}".format(entity_type)
+                    label = "I-{}".format(self.etype.upper())
                 elif l == "single":
-                    label = "S-{}".format(entity_type)
+                    label = "S-{}".format(self.etype.upper())
                 #label += "_" + entity_type
                 try:
                     lines.append("{0}\t{1}\n".format(self.tokens[isent][it].text, label))
@@ -328,27 +336,42 @@ class SimpleTaggerModel(Model):
         logging.info("done")
 
 
-    def create_entity(self, tokens, sid, did, text, score):
-        """
-        Create a new entity based on the type of model
-        :param tokens: list of Tokens
-        :param sid: ID of the sentence
-        :param did: ID of the document
-        :param text: string
-        :param score:
-        :return: entity
-        """
-        if "chem" in self.path:
-            e = ChemdnerAnnotation(tokens=tokens, sid=sid, did=did, text=text, score=score)
-        elif "prot" in self.path:
-            e = ProteinEntity(tokens=tokens, sid=sid, did=did, text=text, score=score)
-        elif "mirna" in self.path:
-            e = MirnaEntity(tokens=tokens, sid=sid, did=did, text=text, score=score)
-        return e
+def create_entity(tokens, sid, did, text, score, etype, **kwargs):
+    """
+    Create a new entity based on the type of model
+    :param tokens: list of Tokens
+    :param sid: ID of the sentence
+    :param did: ID of the document
+    :param text: string
+    :param score:
+    :param etype: Type of the entity
+    :return: entity
+    """
+    e = None
+    if etype == "chemical" or "chem" in etype.lower():
+        e = ChemicalEntity(tokens, sid, text=text, score=score,
+                           did=did, eid=kwargs.get("eid"), subtype=kwargs.get("subtype"))
+    elif etype == "mirna" or "mirna" in etype.lower():
+        e = MirnaEntity(tokens, sid, text=text, did=did, score=score,
+                        eid=kwargs.get("eid"), subtype=kwargs.get("subtype"), nextword=kwargs.get("nextword"))
+    elif etype == "protein" or "prot" in etype.lower():
+        e = ProteinEntity(tokens, sid, text=text, did=did,score=score,
+                          eid=kwargs.get("eid"), subtype=kwargs.get("subtype"), nextword=kwargs.get("nextword"))
+    elif etype == "event":
+         e = EventEntity(tokens, sid, text=text, did=did,score=score,
+                         eid=kwargs.get("eid"), subtype=kwargs.get("subtype"), nextword=kwargs.get("nextword"),
+                         original_id=kwargs.get("original_id"))
+    elif etype in ("timex3", "sectiontime", "doctime"):
+         e = TimeEntity(tokens, sid, text=text, did=did,score=score,
+                        eid=kwargs.get("eid"), subtype=kwargs.get("subtype"), nextword=kwargs.get("nextword"),
+                        original_id=kwargs.get("original_id"))
+    return e
 
 
 class BiasModel(SimpleTaggerModel):
     """Model which cheats by using the gold standard tags"""
 
     def test(self):
+        # TODO: return results
         self.predicted = self.labels
+

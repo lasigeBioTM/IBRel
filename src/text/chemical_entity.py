@@ -167,7 +167,7 @@ with open(config.stoplist, 'r') as stopfile:
 
 class ChemicalEntity(Entity):
     """Chemical entities"""
-    def __init__(self, tokens, *args, **kwargs):
+    def __init__(self, tokens, sid, *args, **kwargs):
         # Entity.__init__(self, kwargs)
         super(ChemicalEntity, self).__init__(tokens, *args, **kwargs)
         self.type = "chemical"
@@ -175,6 +175,7 @@ class ChemicalEntity(Entity):
         self.chebi_id = None
         self.chebi_score = 0
         self.chebi_name = None
+        self.sid = sid
 
     def get_dic(self):
         dic = super(ChemicalEntity, self).get_dic()
@@ -239,11 +240,3 @@ class ChemicalEntity(Entity):
             logging.debug("excluded for -: {}".format(self.text))
             return False
         return True
-
-
-class ChemdnerAnnotation(ChemicalEntity):
-    """Chemical entity annotated on the CHEMDNER corpus"""
-    def __init__(self, tokens, sid, *args, **kwargs):
-        # ChemicalEntity.__init__(self, kwargs)
-        super(ChemdnerAnnotation, self).__init__(tokens, *args, **kwargs)
-        self.sid = sid

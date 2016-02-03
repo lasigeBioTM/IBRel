@@ -3,13 +3,13 @@ import math
 import pycrfsuite
 import sys
 
-from classification.ner.simpletagger import SimpleTaggerModel
+from classification.ner.simpletagger import SimpleTaggerModel, create_entity
 from classification.results import ResultsNER
 
 
 class CrfSuiteModel(SimpleTaggerModel):
-    def __init__(self, path, **kwargs):
-        super(CrfSuiteModel, self).__init__(path, **kwargs)
+    def __init__(self, path, etype, **kwargs):
+        super(CrfSuiteModel, self).__init__(path, etype, **kwargs)
 
     def train(self, entitytype):
         logging.info("Training model with CRFsuite")
@@ -82,31 +82,31 @@ class CrfSuiteModel(SimpleTaggerModel):
         for it, t in enumerate(predicted):
             token = sentence.tokens[it]
             if t == "single":
-                single_entity = self.create_entity(tokens=[token],
+                single_entity = create_entity(tokens=[token],
                                       sid=sentence.sid, did=sentence.did,
-                                      text=token.text, score=1)
-                eid = sentence.tag_entity(start=token.start, end=token.end, subtype="chem",
+                                      text=token.text, score=1, etype=self.etype)
+                eid = sentence.tag_entity(start=token.start, end=token.end, etype=self.etype,
                                             entity=single_entity, source=self.path)
                 single_entity.eid = eid
                 results.entities[eid] = single_entity # deepcopy
             elif t == "start":
-                new_entity = self.create_entity(tokens=[token],
+                new_entity = create_entity(tokens=[token],
                                                    sid=sentence.sid, did=sentence.did,
-                                                   text=token.text, score=1)
+                                                   text=token.text, score=1, etype=self.etype)
             elif t == "middle":
                 if not new_entity:
                     logging.info("starting with inside...")
-                    new_entity = self.create_entity(tokens=[token],
+                    new_entity = create_entity(tokens=[token],
                                                    sid=sentence.sid, did=sentence.did,
-                                                   text=token.text, score=1)
+                                                   text=token.text, score=1, etype=self.etype)
                 else:
                     new_entity.tokens.append(token)
             elif t == "end":
                 if not new_entity:
-                    new_entity = self.create_entity(tokens=[token],
+                    new_entity = create_entity(tokens=[token],
                                                sid=sentence.sid, did=sentence.did,
                                                text=token.text,
-                                               score=1)
+                                               score=1, etype=self.etype)
                     logging.debug("started from a end: {0}".format(new_entity))
                 else:
                     new_entity.tokens.append(token)
@@ -116,8 +116,8 @@ class CrfSuiteModel(SimpleTaggerModel):
 
                 #logging.info("%s end: %s" % (new_entity.sid, str(new_entity)))
                 #logging.debug("found the end: %s", ''.join([t.text for t in new_entity.tokens]))
-                eid = sentence.tag_entity(start=new_entity.tokens[0].start,
-                    end=new_entity.tokens[-1].end, entity=new_entity, source=self.path)
+                eid = sentence.tag_entity(new_entity.tokens[0].start, new_entity.tokens[-1].end, self.etype,
+                                          entity=new_entity, source=self.path)
                 new_entity.eid = eid
                 results.entities[eid] = new_entity # deepcopy
                 new_entity = None

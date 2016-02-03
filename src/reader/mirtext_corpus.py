@@ -24,11 +24,12 @@ class MirtexCorpus(Corpus):
         # self.path is the base directory of the files of this corpus
         trainfiles = [self.path + '/' + f for f in os.listdir(self.path) if f.endswith('.txt')]
         total = len(trainfiles)
-        widgets = [pb.Percentage(), ' ', pb.Bar(), ' ', pb.ETA(), ' ', pb.Timer()]
-        pbar = pb.ProgressBar(widgets=widgets, maxval=total).start()
+        widgets = [pb.Percentage(), ' ', pb.Bar(), ' ', pb.AdaptiveETA(), ' ', pb.Timer()]
+        pbar = pb.ProgressBar(widgets=widgets, maxval=total, redirect_stdout=True).start()
         time_per_abs = []
         for current, f in enumerate(trainfiles):
             #logging.debug('%s:%s/%s', f, current + 1, total)
+            print '{}:{}/{}'.format(f, current + 1, total)
             did = f.split(".")[0]
             t = time.time()
             with open(f, 'r') as txt:

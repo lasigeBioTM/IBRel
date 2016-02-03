@@ -267,18 +267,18 @@ considered when coadministering with megestrol acetate.''',
     elif options.actions == "write_goldstandard":
         model = BiasModel(options.output[1])
         model.load_data(corpus, [])
-        model.test()
-        results = ResultsNER(options.output[1])
-        results.get_ner_results(corpus, model)
+        results = model.test()
+        #results = ResultsNER(options.output[1])
+        #results.get_ner_results(corpus, model)
         results.save(options.output[1] + ".pickle")
         #logging.info("saved gold standard results to " + options.output[1] + ".txt")
 
     # training
     elif options.actions == "train":
         if options.crf == "stanford":
-            model = StanfordNERModel(options.models)
+            model = StanfordNERModel(options.models, options.etype)
         elif options.crf == "crfsuite":
-            model = CrfSuiteModel(options.models)
+            model = CrfSuiteModel(options.models, options.etype)
         model.load_data(corpus, feature_extractors.keys(), options.etype)
         model.train(options.etype)
     elif options.actions == "train_matcher": # Train a simple classifier based on string matching
@@ -314,15 +314,15 @@ considered when coadministering with megestrol acetate.''',
             final_results = allresults.combine_results()
         else:
             if options.crf == "stanford":
-                model = StanfordNERModel(options.models)
+                model = StanfordNERModel(options.models, options.etype)
             elif options.crf == "crfsuite":
-                model = CrfSuiteModel(options.models)
+                model = CrfSuiteModel(options.models, options.etype)
             model.load_tagger()
             model.load_data(corpus, feature_extractors.keys(), mode="test")
             final_results = model.test(corpus, options.etype)
-        with codecs.open(options.output[1] + ".txt", 'w', 'utf-8') as outfile:
-            lines = final_results.corpus.write_chemdner_results(options.models, outfile)
-        final_results.lines = lines
+        #with codecs.open(options.output[1] + ".txt", 'w', 'utf-8') as outfile:
+        #    lines = final_results.corpus.write_chemdner_results(options.models, outfile)
+        #final_results.lines = lines
         final_results.save(options.output[1] + ".pickle")
     elif options.actions == "test_matcher":
         if "mirna" in options.models:

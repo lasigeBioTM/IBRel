@@ -7,10 +7,11 @@ from text.protein_entity import ProteinEntity
 
 from token2 import Token2
 from entity import Entities
+from classification.ner.simpletagger import create_entity
 from classification.re.relations import Pairs
 from classification.re import ddi_kernels
 from classification.re import relations
-from text.chemical_entity import ChemdnerAnnotation
+from text.chemical_entity import ChemicalEntity
 from text.mirna_entity import MirnaEntity
 from text.event_entity import EventEntity
 from text.time_entity import TimeEntity
@@ -51,8 +52,8 @@ class Sentence(object):
             # print t[0]
             if t[0]:
                 # separate "-" when between words with more than 1 chars
-                #token_seq = re.split(r'(\w+)(-|/|\\|\+|\.)(\w+)', t[0])
-                token_seq = re.split(r'(\w+)(/|\\|\+|\.)(\w+)', t[0])
+                token_seq = re.split(r'(\w+)(-|/|\\|\+|\.)(\w+)', t[0])
+                #token_seq = re.split(r'(\w+)(/|\\|\+|\.)(\w+)', t[0])
 
                 if len(token_seq) > 1: # and all([len(elem) > 1 for elem in token_seq]):
                     #logging.info("{}: {}".format(t[0], "&".join(token_seq)))
@@ -103,7 +104,7 @@ class Sentence(object):
             self.pairs.add_pair(TLink(entity1, entity2, original_id=kwargs.get("original_id"),
                                      did=self.did, pid=pid, rtype=subtype), source)
 
-    def tag_entity(self, start, end, subtype, entity=None, totalchars=0, source="goldstandard", **kwargs):
+    def tag_entity(self, start, end, etype, entity=None, source="goldstandard", **kwargs):
         """Find the tokens that match this entity. start and end are relative to the sentence.
            Totalchars is the offset of the sentence on the document."""
         tlist = []
@@ -135,27 +136,12 @@ class Sentence(object):
                 eid = self.sid + ".e" + str(len(self.entities.elist[source]))
             else:
                 eid = self.sid + ".e0"
-            if entity:
-                self.entities.add_entity(entity, source)
-                subtype = entity.type
-            elif subtype == "chemical":
-                self.entities.add_entity(ChemdnerAnnotation(tlist, self.sid, text=newtext,
-                                         did=self.did, eid=eid, subtype=subtype), source)
-            elif subtype == "mirna" or "mirna" in subtype.lower():
-                self.entities.add_entity(MirnaEntity(tlist, self.sid, text=newtext,
-                                         did=self.did, eid=eid, subtype=subtype, nextword=nextword), source)
-            elif subtype == "protein" or "protein" in subtype.lower():
-                self.entities.add_entity(ProteinEntity(tlist, self.sid, text=newtext,
-                                         did=self.did, eid=eid, subtype=subtype), source)
-            elif subtype == "event":
-                 self.entities.add_entity(EventEntity(tlist, self.sid, text=newtext,
-                                         did=self.did, eid=eid, subtype=subtype,
-                                                      original_id=kwargs.get("original_id")), source)
-            elif subtype in ("timex3", "sectiontime", "doctime"):
-                 self.entities.add_entity(TimeEntity(tlist, self.sid, text=newtext,
-                                         did=self.did, eid=eid, subtype=subtype,
-                                                      original_id=kwargs.get("original_id")), source)
-            self.label_tokens(tlist, source, subtype)
+            if entity is None:
+                entity = create_entity(tlist, self.sid, did=self.did, text=newtext, score=kwargs.get("score"),
+                                       etype=etype, eid=eid, subtype=kwargs.get("subtype"),
+                                       original_id=kwargs.get("original_id"), nextword=nextword)
+            self.entities.add_entity(entity, source)
+            self.label_tokens(tlist, source, etype)
             logging.debug("added {} to {}, now with {} entities".format(newtext, self.sid,
                                                                              len(self.entities.elist[source])))
             return eid
@@ -164,25 +150,25 @@ class Sentence(object):
             print start, end, kwargs.get("text")
             print [(t.start, t.end, t.text) for t in self.tokens]
 
-    def label_tokens(self, tlist, source, subtype="entity"):
+    def label_tokens(self, tlist, source, etype):
         if len(tlist) == 1:
             tlist[0].tags[source] = "single"
-            tlist[0].tags[source + "_subtype"] = subtype
-            tlist[0].tags[source + "_" + subtype] = "single"
+            tlist[0].tags[source + "_subtype"] = etype
+            tlist[0].tags[source + "_" + etype] = "single"
         else:
             for t in range(len(tlist)):
                 if t == 0:
                     tlist[t].tags[source] = "start"
-                    tlist[t].tags[source + "_" + subtype] = "start"
-                    tlist[t].tags[source + "_subtype"] = subtype
+                    tlist[t].tags[source + "_" + etype] = "start"
+                    tlist[t].tags[source + "_subtype"] = etype
                 elif t == len(tlist) - 1:
                     tlist[t].tags[source] = "end"
-                    tlist[t].tags[source + "_" + subtype] = "end"
-                    tlist[t].tags[source + "_subtype"] = subtype
+                    tlist[t].tags[source + "_" + etype] = "end"
+                    tlist[t].tags[source + "_subtype"] = etype
                 else:
                     tlist[t].tags[source] = "middle"
-                    tlist[t].tags[source + "_" + subtype] = "middle"
-                    tlist[t].tags[source + "_subtype"] = subtype
+                    tlist[t].tags[source + "_" + etype] = "middle"
+                    tlist[t].tags[source + "_subtype"] = etype
         #logging.debug([t.tags for t in self.tokens])
 
     def write_bioc_results(self, parent, source):
