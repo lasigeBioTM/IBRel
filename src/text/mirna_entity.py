@@ -58,9 +58,9 @@ class MirnaEntity(Entity):
                 logging.debug("ignored next stop word: {} {}".format(self.text, self.nextword))
                 return False
 
-        if self.text.startswith("MicroRNA-") or self.text.startswith("microRNA-"):
-            self.text = "mir-" + "-".join(words[1:])
-        if len(words) > 1 and self.text[-1].isdigit() and self.text[-2].isalpha(): #let-7a1 -> let-7a-1
+        # if self.text.startswith("MicroRNA-") or self.text.startswith("microRNA-"):
+        #    self.text = "mir-" + "-".join(words[1:])
+        """if len(words) > 1 and self.text[-1].isdigit() and self.text[-2].isalpha(): #let-7a1 -> let-7a-1
             self.text = self.text[:-1] + "-" + self.text[-1]
         if len(words) > 1 and words[-1].isdigit() and words[-2].isdigit(): # mir-371-373 -> mir-371
             self.text = "-".join(words[:-1])
@@ -70,6 +70,6 @@ class MirnaEntity(Entity):
             self.text = words[0] + "-" + words[1] + words[2]
             if len(words) > 3:
                 self.text += "-" + '-'.join(words[3:])
-            logging.info('-'.join(words) + " -> " + self.text)
+            logging.info('-'.join(words) + " -> " + self.text)"""
 
         return True

@@ -68,7 +68,7 @@ class StanfordNERModel(SimpleTaggerModel):
 
     def train(self, entitytype):
         self.write_prop()
-        self.save_corpus_to_sbilou(entitytype)
+        self.save_corpus_to_sbilou()
         logging.info("Training model with StanfordNER")
         process = Popen(self.PARAMS, stdout=PIPE, stderr=PIPE)
         # process.communicate()
@@ -90,11 +90,11 @@ class StanfordNERModel(SimpleTaggerModel):
         for isent, sid in enumerate(self.sids):
             #out = self.tagger.tag_text(replace_abbreviations(" ".join([t.text for t in self.tokens[isent]])))
             #out = self.tagger.tag_text(self.sentences[isent])
-            text = self.sentences[isent]
+            #text = self.sentences[isent]
+            text = " ".join([t.text for t in self.tokens[isent]])
             #logging.info("tagging: {}/{} - {}={}".format(isent, len(self.sids), sid, did))
             try:
                 out = self.tagger.tag_text(text)
-                #logging.debug("results:{}".format(out))
             except SocketError as e:
                 if e.errno != errno.ECONNRESET:
                     raise # Not error we are looking for
@@ -136,6 +136,7 @@ class StanfordNERModel(SimpleTaggerModel):
                 # we don't care if the token is nothing or just whitespace
                 continue
             tokens = sentence.find_tokens_between(e.start, e.end, relativeto="sent")
+            #tokens = sentence.find_tokens(e.text, e.start, e.end, e.count, relativeto="sent")
             if not tokens:
                 logging.debug("no tokens found between offset {}-{} on sentence {}".format(e.start, e.end, sentence.text))
                 logging.debug("expected to find |{}|{}".format(e.text, e.tag))
@@ -184,7 +185,7 @@ class StanfordNERModel(SimpleTaggerModel):
                 new_entity.eid = eid
                 results.entities[eid] = new_entity # deepcopy
                 new_entity = None
-                #logging.debug("completed entity:{}".format(results.entities[eid]))
+                logging.debug("completed entity:{}".format(results.entities[eid]))
         return results
 
     def get_offsets_for_tag(self, data, tag):
@@ -197,7 +198,9 @@ class StanfordNERModel(SimpleTaggerModel):
             # logging.info("found {}-{} ({})".format(text, match.group(1), tag.pattern))
             start = len(self.CLEAN_XML.sub('', data[:match.start(2)]))
             end = start + len(text)
-            entities.append(Offset(start, end, text=text, tag=match.group(1)))
+            o = Offset(start, end, text=text, tag=match.group(1))
+            o.count = len([e.text for e in entities if e.text == text])
+            entities.append(o)
         return entities
 
     def load_tagger(self, port=9191):
@@ -206,7 +209,9 @@ class StanfordNERModel(SimpleTaggerModel):
         :return:
         """
         ner_args = ["java", self.RAM_TEST, "-Dfile.encoding=UTF-8", "-cp", self.STANFORD_NER, "edu.stanford.nlp.ie.NERServer",
-                    "-port", str(port), "-loadClassifier", self.path + ".ser.gz", "-outputFormat", "inlineXML"]
+                    "-port", str(port), "-loadClassifier", self.path + ".ser.gz", "-outputFormat", "inlineXML",
+                    "-tokenizerFactory", "edu.stanford.nlp.process.WhitespaceTokenizer", "-tokenizerOptions",
+                    "tokenizeNLs=true"]
         logging.info(' '.join(ner_args))
         logging.info("Starting the server for {}...".format(self.path))
         self.process = Popen(ner_args, stdin = PIPE, stdout = PIPE, stderr = PIPE, shell=False)

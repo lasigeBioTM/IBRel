@@ -127,7 +127,41 @@ class GeniaCorpus(Corpus):
             print s, len(all_entities[s])
 
 
+def get_genia_gold_ann_set(goldann):
+    gold_offsets = set()
+    soup = BeautifulSoup(codecs.open(goldann, 'r', "utf-8"), 'html.parser')
+    docs = soup.find_all("article")
+    all_entities = {}
+    for doc in docs:
+        did = "GENIA" + doc.articleinfo.bibliomisc.text.split(":")[1]
+        title = doc.title.sentence.get_text()
+        doc_text = title + " "
+        doc_offset = 0
+        sentences = doc.abstract.find_all("sentence")
+        for si, s in enumerate(sentences):
+            stext = s.get_text()
+            sentities = s.find_all("cons")
+            lastindex = 0
+            for ei, e in enumerate(sentities):
+                estart = stext.find(e.text, lastindex) + doc_offset # relative to document
+                eend = estart + len(e.text)
+                sems = e.get("sem")
+                if sems is None or len(sems.split(" ")) > 1: # parent cons, skip
+                    continue
+                sem = sems
+                # print sem
+                if sem.endswith(")"):
+                    sem = sem[:-1]
+                if sem.startswith("("):
+                    sem = sem[1:]
+                if sem.startswith("G#protein"):
+                    gold_offsets.add((did, estart, eend, e.text))
+                # etext = doc_text[estart:eend]
+                # logging.info("gold annotation: {}".format(e.text))
 
+            doc_text += stext + " "
+            doc_offset = len(doc_text)
+    return gold_offsets
 
 def main():
     logging.basicConfig(level=logging.DEBUG)

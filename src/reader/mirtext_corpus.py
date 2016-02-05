@@ -74,3 +74,20 @@ class MirtexCorpus(Corpus):
                                 sentence.tag_entity(start, end, entity_type, text=etext)
                             else:
                                 print "could not find sentence for this span: {}-{}".format(dstart, dend)
+
+
+def get_mirtex_gold_ann_set(goldpath):
+    logging.info("loading gold standard... {}".format(goldpath))
+    annfiles = [goldpath + '/' + f for f in os.listdir(goldpath) if f.endswith('.ann')]
+    gold_offsets = set()
+    for current, f in enumerate(annfiles):
+            did = f.split(".")[0]
+            with open(f, 'r') as txt:
+                for line in txt:
+                    if line.startswith("T"):
+                        tid, ann, etext = line.strip().split("\t")
+                        etype, dstart, dend = ann.split(" ")
+                        if etype == "MiRNA":
+                            dstart, dend = int(dstart), int(dend)
+                            gold_offsets.add((did, dstart, dend, etext))
+    return gold_offsets

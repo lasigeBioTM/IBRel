@@ -1,29 +1,30 @@
 #!/usr/bin/env python
 from __future__ import division, unicode_literals
+
 import argparse
 import cPickle as pickle
-import random
-from xml.dom import minidom
-
 import codecs
-import logging
-import time
-import sys
-import os
-from subprocess import Popen, PIPE, check_output
 import collections
-from operator import itemgetter
-from bs4 import BeautifulSoup
-import xml.etree.ElementTree as ET
+import logging
+import os
+import sys
+import time
 
 from config import config
+from reader.chemdner_corpus import get_chemdner_gold_ann_set, run_chemdner_evaluation
+from reader.genia_corpus import get_genia_gold_ann_set
+from reader.mirna_corpus import get_ddi_mirna_gold_ann_set
+from reader.mirtext_corpus import get_mirtex_gold_ann_set
+
 if config.use_chebi:
     from postprocessing import chebi_resolution
     from postprocessing.ssm import get_ssm
 from postprocessing.ensemble_ner import EnsembleNER
 from classification.results import ResultsNER
 
-from reader.tempEval_corpus import TempEvalCorpus
+from reader.tempEval_corpus import get_thymedata_gold_ann_set, write_tempeval_results, \
+    run_anafora_evaluation
+
 
 def add_chebi_mappings(results, path, source, save=True):
     """
@@ -117,6 +118,7 @@ def add_ssm_score(results, path, source, measure, ontology, save=True):
         pickle.dump(results, open(path, "wb"))
     return results
 
+
 def get_gold_ann_set(corpus_type, gold_path, entity_type, text_path):
     if corpus_type == "chemdner":
         goldset = get_chemdner_gold_ann_set(gold_path)
@@ -131,161 +133,6 @@ def get_gold_ann_set(corpus_type, gold_path, entity_type, text_path):
     elif corpus_type == "mirtex":
         goldset = get_mirtex_gold_ann_set(gold_path)
     return goldset
-
-def get_thymedata_gold_ann_set(gold_path, etype, text_path, doctype):
-    gold_set = set()
-    relation_gold_set = set() # (did,(start,end),(start,end))
-    doc_to_id_to_span = {}
-    traindirs = os.listdir(gold_path) # list of directories corresponding to each document
-    trainfiles = []
-    for d in traindirs:
-        if doctype != "all" and doctype not in d:
-            continue
-        fname = gold_path + "/" + d + "/" + d + ".Temporal-Relation.gold.completed.xml"
-        fname2 = gold_path + "/" + d + "/" + d + ".Temporal-Entity.gold.completed.xml"
-        if os.path.isfile(fname):
-            trainfiles.append(fname)
-        elif os.path.isfile(fname2):
-                trainfiles.append(fname2)
-        else:
-            print "no annotations for this doc: {}".format(d)
-
-    total = len(trainfiles)
-    # logging.info("loading annotations...")
-    for current, f in enumerate(trainfiles):
-        # logging.debug('%s:%s/%s', f, current + 1, total)
-        with open(f, 'r') as xml:
-            root = ET.fromstring(xml.read())
-            did = traindirs[current]
-            doc_to_id_to_span[did] = {}
-            with open(text_path + "/" + did) as text_file:
-                doc_text = text_file.read()
-            annotations = root.find("annotations")
-            for entity in annotations.findall("entity"):
-                eid = entity.find("id").text
-                span = entity.find("span").text
-                if ";" in span:
-                    # entity is not sequential: skip for now
-                    continue
-                span = span.split(",")
-                start = int(span[0])
-                end = int(span[1])
-                entity_type = entity.find("type").text
-                doc_to_id_to_span[did][eid] = (start, end)
-                if etype != "all" and entity_type != etype:
-                    continue
-                else:
-                    gold_set.add((did, start, end, doc_text[start:end]))
-            for relation in annotations.findall("relation"):
-                props = relation.find("properties")
-                if props.find("Type").text == "CONTAINS":
-                    eid1 = props.find("Source").text
-                    eid2 = props.find("Target").text
-                    if eid1 not in doc_to_id_to_span or eid2 not in doc_to_id_to_span:
-                        continue
-                    relation_gold_set.add((did, doc_to_id_to_span[did][eid1], doc_to_id_to_span[did][eid2]))
-
-    return gold_set, relation_gold_set
-
-def get_mirtex_gold_ann_set(goldpath):
-    logging.info("loading gold standard... {}".format(goldpath))
-    annfiles = [goldpath + '/' + f for f in os.listdir(goldpath) if f.endswith('.ann')]
-    gold_offsets = set()
-    for current, f in enumerate(annfiles):
-            did = f.split(".")[0]
-            with open(f, 'r') as txt:
-                for line in txt:
-                    if line.startswith("T"):
-                        tid, ann, etext = line.strip().split("\t")
-                        etype, dstart, dend = ann.split(" ")
-                        if etype == "MiRNA":
-                            dstart, dend = int(dstart), int(dend)
-                            gold_offsets.add((did, dstart, dend, etext))
-    return gold_offsets
-
-def get_ddi_mirna_gold_ann_set(goldpath):
-    logging.info("loading gold standard... {}".format(goldpath))
-    gold_offsets = set()
-    with open(goldpath, 'r') as xml:
-        #parse DDI corpus file
-        t = time.time()
-        root = ET.fromstring(xml.read())
-        for doc in root.findall("document"):
-            did = doc.get('id')
-            doctext = ""
-            for sentence in doc.findall('sentence'):
-                sentence_text = sentence.get('text')
-                sentence_text = sentence_text.replace('\r\n', '  ')
-                for entity in sentence.findall('entity'):
-                    entity_offset = entity.get('charOffset')
-                    if ";" in entity_offset:
-                        continue
-                    offsets = entity_offset.split("-")
-                    start, end = int(offsets[0]) + len(doctext), int(offsets[1]) + len(doctext) + 1
-                    entity_type = entity.get("type")
-                    #print this_sentence.text[offsets[0]:offsets[-1]], entity.get("text")
-                    #if "protein" in entity_type.lower() or "mirna" in entity_type.lower():
-                    if entity_type == "Specific_miRNAs":
-                        gold_offsets.add((did, start, end, entity.get("text").replace("-", " ")))
-
-                doctext += " " + sentence_text # generate the full text of this document
-    logging.debug(gold_offsets)
-    logging.debug(len(gold_offsets))
-    return gold_offsets
-
-def get_chemdner_gold_ann_set(goldann="CHEMDNER/CHEMDNER_TEST_ANNOTATION/chemdner_ann_test_13-09-13.txt"):
-    """
-    Load the CHEMDNER annotations to a set
-    :param goldann: Path to CHEMDNER annotation file
-    :return: Set of gold standard annotations
-    """
-    # TODO: copy to chemdner:corpus
-    with codecs.open(goldann, 'r', 'utf-8') as goldfile:
-            gold = goldfile.readlines()
-    goldlist = []
-    for line in gold:
-        #pmid, T/A, start, end
-        x = line.strip().split('\t')
-        goldlist.append((x[0], x[1] + ":" + x[2] + ":" + x[3], '1'))
-    #print goldlist[0:2]
-    goldset = set(goldlist)
-    return goldset
-
-def get_genia_gold_ann_set(goldann):
-    gold_offsets = set()
-    soup = BeautifulSoup(codecs.open(goldann, 'r', "utf-8"), 'html.parser')
-    docs = soup.find_all("article")
-    all_entities = {}
-    for doc in docs:
-        did = "GENIA" + doc.articleinfo.bibliomisc.text.split(":")[1]
-        title = doc.title.sentence.get_text()
-        doc_text = title + " "
-        doc_offset = 0
-        sentences = doc.abstract.find_all("sentence")
-        for si, s in enumerate(sentences):
-            stext = s.get_text()
-            sentities = s.find_all("cons")
-            lastindex = 0
-            for ei, e in enumerate(sentities):
-                estart = stext.find(e.text, lastindex) + doc_offset # relative to document
-                eend = estart + len(e.text)
-                sems = e.get("sem")
-                if sems is None or len(sems.split(" ")) > 1: # parent cons, skip
-                    continue
-                sem = sems
-                # print sem
-                if sem.endswith(")"):
-                    sem = sem[:-1]
-                if sem.startswith("("):
-                    sem = sem[1:]
-                if sem.startswith("G#protein"):
-                    gold_offsets.add((did, estart, eend, e.text))
-                # etext = doc_text[estart:eend]
-                # logging.info("gold annotation: {}".format(e.text))
-
-            doc_text += stext + " "
-            doc_offset = len(doc_text)
-    return gold_offsets
 
 
 def get_unique_gold_ann_set(goldann):
@@ -309,8 +156,6 @@ def compare_results(offsets, goldoffsets, corpus, getwords=True):
     """
     #TODO: check if size of offsets and goldoffsets tuples is the same
     report = []
-    # logging.info(offsets)
-    # logging.info(goldoffsets)
     tps = offsets & goldoffsets
     fps = offsets - goldoffsets
     fns = goldoffsets - offsets
@@ -383,127 +228,6 @@ def get_report(results, corpus, restype="TP", getwords=True):
         report[d].sort()
     return report, words
 
-def run_chemdner_evaluation(goldstd, results, format=""):
-    """
-    Use the official BioCreative evaluation script (should be installed in the system)
-    :param goldstd: Gold standard file path
-    :param results: Results file path
-    :param: format option
-    :return: Output of the evaluation script
-    """
-    # TODO: copy to chemdner_corpus.py
-    cem_command = ["bc-evaluate", results, goldstd]
-    if format != "":
-        cem_command = cem_command[:1] + [format] + cem_command[1:]
-    r = check_output(cem_command)
-    return r
-
-def run_anafora_evaluation(annotations_path, results, doctype="all"):
-    anafora_command = ["python", "-m", "anafora.evaluate", "-r", annotations_path, "-p", results]
-    if doctype != "all":
-        anafora_command += ["-x", ".*{}.*".format(doctype)]
-    r = check_output(anafora_command)
-    return r
-
-def write_tempeval_results(results, models, ths, rules):
-    print "saving results to {}".format(results.path + ".tsv")
-    n = 0
-    for did in results.corpus.documents:
-        root = ET.Element("data") # XML data
-        head = ET.SubElement(root, "annotations") #XML annotations
-        for sentence in results.corpus.documents[did].sentences:
-            for s in sentence.entities.elist:
-                if s.startswith(models):
-                    for e in sentence.entities.elist[s]: 
-                        val = e.validate(ths, rules)                        
-                        if not val:
-                            continue
-                        # iterate over val in case it was split into multiple entities
-                        for iv, v in enumerate(val):
-                            n=n+1
-                            head = add_entity_to_doc(head, v, n)
-
-        for p in results.document_pairs[did].pairs:
-            if p.recognized_by.get("svmtk") == 1 or p.recognized_by.get("jsre") == 1 or p.recognized_by.get("rules") == 1:
-                head = add_relation_to_doc(head, p)
-                            
-        tree = ET.ElementTree(root)
-        if not os.path.exists(results.path + "/" + did + "/"):
-            os.makedirs(results.path + "/" + did + "/")
-        name = results.path + "/" + did + "/" + did + ".Temporal-Relation.system.completed.xml"
-        xmlstr = minidom.parseString(ET.tostring(root)).toprettyxml(indent="   ")
-        with open(name, "w") as f:
-            f.write(xmlstr)
-
-
-def write_tempeval_relations_report(results, goldset, path="relations_report.txt"):
-    all_pairs = set()
-    lines = []
-    for did in results.corpus.documents:
-        for p in results.document_pairs[did].pairs:
-            if p.recognized_by.get("svmtk") == 1 or p.recognized_by.get("jsre") == 1 or p.recognized_by.get("rules") == 1:
-                pair = (did, (p.entities[0].dstart, p.entities[0].dend), (p.entities[1].dstart, p.entities[1].dend))
-                if pair in goldset:
-                    # tp.append(p)
-                    lines.append((p.did, "TP", p.entities[0].text + "=>" + p.entities[1].text,
-                                 results.corpus.documents[did].text[pair[1][1]:pair[2][0]]))
-                else:
-                    lines.append((p.did, "FP", p.entities[0].text + "=>" + p.entities[1].text,
-                                  results.corpus.documents[did].text[pair[1][1]:pair[2][0]]))
-                all_pairs.add(pair)
-    for pair in goldset:
-        if pair not in all_pairs:
-            lines.append((p.did, "FN", results.corpus.documents[did].text[pair[1][0]:pair[1][1]] + "=>" +\
-                           results.corpus.documents[did].text[pair[2][0]:pair[2][1]],
-                          results.corpus.documents[did].text[pair[1][1]:pair[2][0]]))
-    lines.sort()
-    with codecs.open(path, "w", "utf-8") as report:
-        for l in lines:
-            report.write("\t".join(l) + "\n")
-    # print random.sample(all_pairs,5)
-    # print random.sample(goldset,5)
-
-
-def add_entity_to_doc(doc_element, entity, n):
-    entityname = ET.SubElement(doc_element, "entity")
-    id = ET.SubElement(entityname, "id")
-    id.text = "t" + str(n)
-    entityname.append(ET.Comment(entity.text))
-    #id.text = str(len(doc_element.findall("entity")))
-    span = ET.SubElement(entityname, "span")
-    span.text = str(entity.dstart)+","+str(entity.dend)
-    type = ET.SubElement(entityname, "type")
-    type.texts = "EVENT"
-    propertiesname = ET.SubElement(entityname, "properties")
-    classs = ET.SubElement(propertiesname, "Class")
-    value = ET.SubElement(propertiesname, "Value")
-    ####
-    propertiesname = ET.SubElement(entityname, "properties") #XML
-    classs = ET.SubElement(propertiesname, "Class") # XML
-    classs.text = "asdasd"#entity.tag 
-    ##
-    return doc_element
-
-def add_relation_to_doc(doc_element, relation):
-    relationname = ET.SubElement(doc_element, "relation") #XML entity
-    id = ET.SubElement(relationname, "id") #XML id
-    id.text = convert_id(relation.pid)
-    # id.append(ET.Comment(relation.entities[0].text + "+" + relation.entities[1].text))
-    #id.text = str(len(doc_element.findall("entity"))) esta so comentado
-    type = ET.SubElement(relationname, "type") #XML
-    type.text = "TLINK"
-    # entity1 = ET.SubElement(relationname, "parentsType")
-    # entity1.text = "TemporalRelations"
-    propertiesname = ET.SubElement(relationname, "properties") #XML
-    source = ET.SubElement(propertiesname, "Source") # XML
-    source.text = convert_id(relation.entities[0].eid)
-    propertiesname.append(ET.Comment("Source:{}".format(relation.entities[0].text)))
-    t = ET.SubElement(propertiesname, "Type") # XML
-    t.text = "CONTAINS"
-    target = ET.SubElement(propertiesname, "Target") # XML
-    target.text = convert_id(relation.entities[1].eid)
-    propertiesname.append(ET.Comment("Target:{}".format(relation.entities[1].text)))
-    return doc_element
 
 def get_list_results(results, models, goldset, ths, rules):
     """
@@ -540,6 +264,7 @@ def get_list_results(results, models, goldset, ths, rules):
             for line in reportlines:
                 reportfile.write(line + '\n')
 
+
 def get_results(results, models, gold_offsets, ths, rules, compare_text=True):
     """
     Write a report file with basic stats
@@ -558,7 +283,7 @@ def get_results(results, models, gold_offsets, ths, rules, compare_text=True):
             sys.exit()
     if not compare_text: #e.g. gold standard does not include the original text
         offsets = [(o[0], o[1], o[2], "") for o in offsets]
-    # logging.info("system entities: {}; gold entities: {}".format(len(offsets), len(gold_offsets)))
+    logging.info("system entities: {}; gold entities: {}".format(offsets, gold_offsets))
     reportlines, tps, fps, fns = compare_results(set(offsets), gold_offsets, results.corpus, getwords=compare_text)
     with codecs.open(results.path + "_report.txt", 'w', "utf-8") as reportfile:
         print "writing report to {}_report.txt".format(results.path)
@@ -575,20 +300,6 @@ def get_results(results, models, gold_offsets, ths, rules, compare_text=True):
     print "Precision: {}".format(precision)
     print "Recall: {}".format(recall)
     return precision, recall
-
-
-def write_chemdner_files(results, models, goldset, ths, rules):
-    """ results files for CHEMDNER CEMP and CPD tasks"""
-    print "saving results to {}".format(results.path + ".tsv")
-    with codecs.open(results.path + ".tsv", 'w', 'utf-8') as outfile:
-        cpdlines, max_entities = results.corpus.write_chemdner_results(models, outfile, ths, rules)
-    cpdlines = sorted(cpdlines, key=itemgetter(2))
-    with open(results.path + "_cpd.tsv", "w") as cpdfile:
-        for i, l in enumerate(cpdlines):
-            if l[2] == 0:
-                cpdfile.write("{}_{}\t0\t{}\t1\n".format(l[0], l[1], i+1))
-            else:
-                cpdfile.write("{}_{}\t1\t{}\t{}\n".format(l[0], l[1], i+1, l[2]*1.0/max_entities))
 
 
 def main():

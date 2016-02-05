@@ -51,9 +51,9 @@ class Sentence(object):
         for t in sentence['words']:
             # print t[0]
             if t[0]:
-                # separate "-" when between words with more than 1 chars
-                token_seq = re.split(r'(\w+)(-|/|\\|\+|\.)(\w+)', t[0])
-                #token_seq = re.split(r'(\w+)(/|\\|\+|\.)(\w+)', t[0])
+                # TODO: specific rules for each corpus
+                #token_seq = re.split(r'(\w+)(-|/|\\|\+|\.)(\w+)', t[0])
+                token_seq = re.split(r'(\w+)(/|\\|\+|\.)(\w+)', t[0])
 
                 if len(token_seq) > 1: # and all([len(elem) > 1 for elem in token_seq]):
                     #logging.info("{}: {}".format(t[0], "&".join(token_seq)))
@@ -197,6 +197,29 @@ class Sentence(object):
                 e["eid"] = self.sid + ".e{}".format(ei)
         dic["pairs"] = self.pairs.get_dic()
         return dic
+
+    def find_tokens(self, text, start, end, count, relativeto="doc"):
+        candidates = []
+        for t in self.tokens:
+            if t.text == text:
+                print t.text, text
+                candidates.append(t)
+        print text, candidates
+        if len(candidates) == 0:
+            print "could not find tokens!"
+        elif len(candidates) == 1:
+            return candidates
+        elif len(candidates)-1 > count:
+            candidates[count]
+        """else:
+            dist = []
+            for c in candidates:
+                if relativeto == "doc":
+                    d = c.dstart
+                else:
+                    d = c.start
+                dist.append(abs(d-start))
+            return [candidates[dist.index(min(dist))]]"""
 
     def find_tokens_between(self, start, end, relativeto="doc"):
         """Return list of tokens between offsets. Use relativeto to consider doc indexes or

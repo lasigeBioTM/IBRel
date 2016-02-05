@@ -4,6 +4,8 @@ import logging
 import sys
 import os
 import xml.etree.ElementTree as ET
+from xml.etree import ElementTree as ET
+
 import progressbar as pb
 sys.path.append(os.path.abspath(os.path.dirname(__file__) + '../..'))
 from text.corpus import Corpus
@@ -23,7 +25,7 @@ class MirnaCorpus(Corpus):
             t = time.time()
             root = ET.fromstring(xml.read())
             all_docs = root.findall("document")
-            widgets = [pb.Percentage(), ' ', pb.Bar(), ' ', pb.ETA(), ' ', pb.Timer()]
+            widgets = [pb.Percentage(), ' ', pb.Bar(), ' ', pb.AdaptiveETA(), ' ', pb.Timer()]
             pbar = pb.ProgressBar(widgets=widgets, maxval=len(all_docs)).start()
             for i, doc in enumerate(all_docs):
                 doctext = ""
@@ -34,8 +36,7 @@ class MirnaCorpus(Corpus):
                     sid = sentence.get('id')
                     #logging.info(sid)
                     text = sentence.get('text')
-                    text = text.replace('\r\n', '  ')
-                    text = text.replace("-", " ")
+                    #text = text.replace('\r\n', '  ')
                     doctext += " " + text # generate the full text of this document
                     this_sentence = Sentence(text, offset=doc_offset, sid=sid, did=did)
                     doc_offset = len(doctext)
@@ -97,4 +98,35 @@ class MirnaCorpus(Corpus):
                         #if "protein" in entity_type.lower() or "mirna" in entity_type.lower():
                         if etype == "all" or (etype != "all" and etype == entity_type):
                             this_sentence.tag_entity(offsets[0], offsets[-1], entity_type,
-                                                     text=entity.get("text").replace("-", " "))
+                                                     text=entity.get("text"))
+
+
+def get_ddi_mirna_gold_ann_set(goldpath):
+    logging.info("loading gold standard... {}".format(goldpath))
+    gold_offsets = set()
+    with open(goldpath, 'r') as xml:
+        #parse DDI corpus file
+        t = time.time()
+        root = ET.fromstring(xml.read())
+        for doc in root.findall("document"):
+            did = doc.get('id')
+            doctext = ""
+            for sentence in doc.findall('sentence'):
+                sentence_text = sentence.get('text')
+                #sentence_text = sentence_text.replace('\r\n', '  ')
+                for entity in sentence.findall('entity'):
+                    entity_offset = entity.get('charOffset')
+                    if ";" in entity_offset:
+                        continue
+                    offsets = entity_offset.split("-")
+                    start, end = int(offsets[0]) + len(doctext), int(offsets[1]) + len(doctext) + 1
+                    entity_type = entity.get("type")
+                    #print this_sentence.text[offsets[0]:offsets[-1]], entity.get("text")
+                    #if "protein" in entity_type.lower() or "mirna" in entity_type.lower():
+                    if entity_type == "Specific_miRNAs":
+                        gold_offsets.add((did, start, end, entity.get("text")))
+
+                doctext += " " + sentence_text # generate the full text of this document
+    logging.debug(gold_offsets)
+    logging.debug(len(gold_offsets))
+    return gold_offsets
