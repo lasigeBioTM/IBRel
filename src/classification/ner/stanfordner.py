@@ -38,8 +38,6 @@ class StanfordNERModel(SimpleTaggerModel):
               "-readerAndWriter", "edu.stanford.nlp.sequences.CoNLLDocumentReaderAndWriter"]
     logging.info(PARAMS)
     TEST_SENT = "Structure-activity relationships have been investigated for inhibition of DNA-dependent protein kinase (DNA-PK) and ATM kinase by a series of pyran-2-ones, pyran-4-ones, thiopyran-4-ones, and pyridin-4-ones."
-    XML_PATTERN = re.compile(r'<([\w-]+?)>(.+?)</\1>')
-    CLEAN_XML = re.compile(r'<[^>]*>')
 
     def __init__(self, path, etype, **kwargs):
         super(StanfordNERModel, self).__init__(path, etype, **kwargs)
@@ -120,8 +118,6 @@ class StanfordNERModel(SimpleTaggerModel):
         return results
 
     def process_sentence(self, out, sid, results):
-        # entities is a list of Offsets that correspond to part to entities (S, B, I, E)
-        entities = self.get_offsets_for_tag(out, self.XML_PATTERN)
         sentence = results.corpus.documents['.'.join(sid.split('.')[:-1])].get_sentence(sid)
         if sentence is None:
             print sid
@@ -129,50 +125,41 @@ class StanfordNERModel(SimpleTaggerModel):
             print results.corpus.documents['.'.join(sid.split('.')[:-1])]
             print [s.sid for s in results.corpus.documents['.'.join(sid.split('.')[:-1])].sentences]
             sys.exit()
-        sentence.tagged = out
+        tagged_tokens = self.tag_tokens(out, sentence)
+        sentence.tagged = tagged_tokens
         new_entity = None
-        for e in entities:
-            if not e.text or e.text.isspace():
-                # we don't care if the token is nothing or just whitespace
-                continue
-            tokens = sentence.find_tokens_between(e.start, e.end, relativeto="sent")
-            #tokens = sentence.find_tokens(e.text, e.start, e.end, e.count, relativeto="sent")
-            if not tokens:
-                logging.debug("no tokens found between offset {}-{} on sentence {}".format(e.start, e.end, sentence.text))
-                logging.debug("expected to find |{}|{}".format(e.text, e.tag))
-                #logging.debug(sentence.tagged)
-                #logging.debug([(t.start, t.end, t.text) for t in sentence.tokens])
-                continue
-            if e.tag.startswith("S"):
-                single_entity = create_entity(tokens=tokens,
+        for t in tagged_tokens:
+            text, tag, token = t
+            if tag.startswith("S"):
+                single_entity = create_entity(tokens=[token],
                                                       sid=sentence.sid, did=sentence.did,
-                                                      text=e.text, score=1, etype=self.etype)
-                eid = sentence.tag_entity(start=e.start, end=e.end, etype=self.etype,
+                                                      text=text, score=1, etype=self.etype)
+                eid = sentence.tag_entity(start=token.start, end=token.end, etype=self.etype,
                                             entity=single_entity, source=self.path)
                 single_entity.eid = eid
                 results.entities[eid] = single_entity # deepcopy
                 #logging.info("new single entity: {}".format(single_entity))
-            elif e.tag.startswith("B"):
-                new_entity = create_entity(tokens=tokens,
+            elif tag.startswith("B"):
+                new_entity = create_entity(tokens=[token],
                                                    sid=sentence.sid, did=sentence.did,
-                                                   text=e.text, score=1, etype=self.etype)
-            elif e.tag.startswith("I"):
+                                                   text=text, score=1, etype=self.etype)
+            elif tag.startswith("I"):
                 if not new_entity:
                     logging.info("starting with inside...")
-                    new_entity = create_entity(tokens=tokens,
+                    new_entity = create_entity(tokens=[token],
                                                    sid=sentence.sid, did=sentence.did,
-                                                   text=e.text, score=1, etype=self.etype)
+                                                   text=text, score=1, etype=self.etype)
                 else:
-                    new_entity.tokens += tokens
-            elif e.tag.startswith("E"):
+                    new_entity.tokens += [token]
+            elif tag.startswith("E"):
                 if not new_entity:
-                    new_entity = create_entity(tokens=tokens,
+                    new_entity = create_entity(tokens=[token],
                                                sid=sentence.sid, did=sentence.did,
-                                               text=e.text,
+                                               text=text,
                                                score=1, etype=self.etype)
                     logging.debug("started from a end: {0}".format(new_entity))
                 else:
-                    new_entity.tokens += tokens
+                    new_entity.tokens += [token]
                     new_entity.text= sentence.text[new_entity.tokens[0].start:new_entity.tokens[-1].end]
                     new_entity.end = new_entity.start + len(new_entity.text)
                     new_entity.dend = new_entity.dstart + len(new_entity.text)
@@ -188,20 +175,26 @@ class StanfordNERModel(SimpleTaggerModel):
                 logging.debug("completed entity:{}".format(results.entities[eid]))
         return results
 
-    def get_offsets_for_tag(self, data, tag):
-        #data = "<ROOT>{}</ROOT>".format(data)
-        #print data
-        entities = []
-        matches = tag.finditer(data)
-        for match in matches:
-            text = match.group(2)
-            # logging.info("found {}-{} ({})".format(text, match.group(1), tag.pattern))
-            start = len(self.CLEAN_XML.sub('', data[:match.start(2)]))
-            end = start + len(text)
-            o = Offset(start, end, text=text, tag=match.group(1))
-            o.count = len([e.text for e in entities if e.text == text])
-            entities.append(o)
-        return entities
+    def tag_tokens(self, data, sentence):
+        tagged = []
+        tindex = 0
+        words = data.split(" ")
+        # print data, words
+        for t in words:
+            # account for tokens with j/ - not necessary
+            if t.strip() == "":
+                # print "whitespace"
+                continue
+            # if t.count("/") > 1:
+            #     print "more than 1 /: {}".format(t)
+            # print t, sentence.tokens[tindex].text
+            x = t.split("/")
+            match = (x[0], x[1], sentence.tokens[tindex])
+            tagged.append(match)
+            tindex += 1
+        return tagged
+
+
 
     def load_tagger(self, port=9191):
         """
@@ -209,7 +202,7 @@ class StanfordNERModel(SimpleTaggerModel):
         :return:
         """
         ner_args = ["java", self.RAM_TEST, "-Dfile.encoding=UTF-8", "-cp", self.STANFORD_NER, "edu.stanford.nlp.ie.NERServer",
-                    "-port", str(port), "-loadClassifier", self.path + ".ser.gz", "-outputFormat", "inlineXML",
+                    "-port", str(port), "-loadClassifier", self.path + ".ser.gz",
                     "-tokenizerFactory", "edu.stanford.nlp.process.WhitespaceTokenizer", "-tokenizerOptions",
                     "tokenizeNLs=true"]
         logging.info(' '.join(ner_args))
