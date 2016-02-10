@@ -82,7 +82,6 @@ def run_chemdner_evaluation(goldstd, results, format=""):
     :param: format option
     :return: Output of the evaluation script
     """
-    # TODO: copy to chemdner_corpus.py
     cem_command = ["bc-evaluate", results, goldstd]
     if format != "":
         cem_command = cem_command[:1] + [format] + cem_command[1:]
@@ -96,7 +95,6 @@ def get_chemdner_gold_ann_set(goldann="CHEMDNER/CHEMDNER_TEST_ANNOTATION/chemdne
     :param goldann: Path to CHEMDNER annotation file
     :return: Set of gold standard annotations
     """
-    # TODO: copy to chemdner:corpus
     with codecs.open(goldann, 'r', 'utf-8') as goldfile:
             gold = goldfile.readlines()
     goldlist = []

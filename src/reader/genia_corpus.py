@@ -46,6 +46,7 @@ class GeniaCorpus(Corpus):
         abs_avg = sum(time_per_abs)*1.0/len(time_per_abs)
         logging.info("average time per abstract: %ss" % abs_avg)
 
+
     def load_annotations(self, ann_dir, etype):
         time_per_abs = []
         skipped = 0

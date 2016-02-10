@@ -251,7 +251,7 @@ considered when coadministering with megestrol acetate.''',
             corpus.load_corpus(corenlpserver)
             # corpus.path = ".".join(config.paths[options.goldstd]["corpus"].split(".")[:-1])
         corpus.save(config.paths[options.goldstd]["corpus"])
-        if corpus_ann and "test" not in options.goldstd: #add annotation if it is not a test set
+        if corpus_ann: #add annotation if it is not a test set
             corpus.load_annotations(corpus_ann, options.etype)
             corpus.save(config.paths[options.goldstd]["corpus"])
     else: # options other than processing a corpus, i.e. load the corpus directly from a pickle file

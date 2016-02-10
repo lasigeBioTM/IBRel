@@ -274,7 +274,6 @@ def get_results(results, models, gold_offsets, ths, rules, compare_text=True):
     :param ths: Validation thresholds
     :param rules: Validation rules
     """
-    # TODO: Separate CHEMDNER specific files from general report file
     offsets = results.corpus.get_offsets(models, ths, rules)
     # logging.debug(offsets)
     for o in offsets:

@@ -52,8 +52,8 @@ class Sentence(object):
             # print t[0]
             if t[0]:
                 # TODO: specific rules for each corpus
-                #token_seq = re.split(r'(\w+)(-|/|\\|\+|\.)(\w+)', t[0])
-                token_seq = re.split(r'(\w+)(/|\\|\+|\.)(\w+)', t[0])
+                token_seq = re.split(r'(\w+)(-|/|\\|\+|\.)(\w+)', t[0])
+                #token_seq = re.split(r'(\w+)(/|\\|\+|\.)(\w+)', t[0])
 
                 if len(token_seq) > 1: # and all([len(elem) > 1 for elem in token_seq]):
                     #logging.info("{}: {}".format(t[0], "&".join(token_seq)))
