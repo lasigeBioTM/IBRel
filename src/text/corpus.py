@@ -133,3 +133,6 @@ class Corpus(object):
                     if entitytype != "all" and "goldstandard_" + entitytype in t.tags:
                         del t.tags["goldstandard_" + entitytype]
 
+    def get_invalid_sentences(self):
+        pass
+

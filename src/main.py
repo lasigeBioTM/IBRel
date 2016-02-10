@@ -262,8 +262,8 @@ considered when coadministering with megestrol acetate.''',
         logging.debug("loading annotations...")
         corpus.clear_annotations(options.etype)
         corpus.load_annotations(corpus_ann, options.etype)
-        corpus.get_invalid_sentences()
-        corpus.save()
+        # corpus.get_invalid_sentences()
+        corpus.save(config.paths[options.goldstd]["corpus"])
     elif options.actions == "write_goldstandard":
         model = BiasModel(options.output[1])
         model.load_data(corpus, [])

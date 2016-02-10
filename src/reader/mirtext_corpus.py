@@ -9,7 +9,8 @@ from text.corpus import Corpus
 from text.document import Document
 from text.sentence import Sentence
 
-
+type_match = {"MiRNA": "mirna",
+              "Gene": "protein"}
 class MirtexCorpus(Corpus):
     """
     DDI corpus used for NER and RE on the SemEval DDI tasks of 2011 and 2013.
@@ -60,11 +61,7 @@ class MirtexCorpus(Corpus):
                     if line.startswith("T"):
                         tid, ann, etext = line.strip().split("\t")
                         entity_type, dstart, dend = ann.split(" ")
-                        if entity_type == "MiRNA":
-                            entity_type = "mirna"
-                        elif entity_type == "Gene":
-                            entity_type = "protein"
-                        if etype == "all" or (etype != "all" and etype == entity_type):
+                        if etype == "all" or (etype != "all" and etype == type_match[entity_type]):
                             dstart, dend = int(dstart), int(dend)
                             sentence = self.documents[did].find_sentence_containing(dstart, dend, chemdner=False)
                             if sentence is not None:
@@ -76,7 +73,7 @@ class MirtexCorpus(Corpus):
                                 print "could not find sentence for this span: {}-{}".format(dstart, dend)
 
 
-def get_mirtex_gold_ann_set(goldpath):
+def get_mirtex_gold_ann_set(goldpath, entitytype):
     logging.info("loading gold standard... {}".format(goldpath))
     annfiles = [goldpath + '/' + f for f in os.listdir(goldpath) if f.endswith('.ann')]
     gold_offsets = set()
@@ -87,7 +84,7 @@ def get_mirtex_gold_ann_set(goldpath):
                     if line.startswith("T"):
                         tid, ann, etext = line.strip().split("\t")
                         etype, dstart, dend = ann.split(" ")
-                        if etype == "MiRNA":
+                        if entitytype == type_match[etype]:
                             dstart, dend = int(dstart), int(dend)
                             gold_offsets.add((did, dstart, dend, etext))
     return gold_offsets
