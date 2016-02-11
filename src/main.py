@@ -129,7 +129,7 @@ def main():
                       choices=["load_corpus", "annotate", "classify", "write_results", "write_goldstandard",
                                "train", "test", "train_multiple", "test_multiple", "train_matcher", "test_matcher",
                                "crossvalidation", "train_relations", "test_relations"])
-    parser.add_argument("--goldstd", default="", dest="goldstd",
+    parser.add_argument("--goldstd", default="", dest="goldstd", nargs="+",
                       help="Gold standard to be used. Will override corpus, annotations",
                       choices=config.paths.keys())
     parser.add_argument("--submodels", default="", nargs='+', help="sub types of classifiers"),
@@ -170,20 +170,16 @@ considered when coadministering with megestrol acetate.''',
 
     # set configuration variables based on the goldstd option if the corpus has a gold standard,
     # or on corpus and annotation options
-    if options.goldstd:
-        if "load_corpus" in options.actions or "process_text" in options.actions:
-            corpus_format = config.paths[options.goldstd]["format"]
-            corpus_path = config.paths[options.goldstd]["text"]
-        else:
-            corpus_format = "pickle"
-            corpus_path = config.paths[options.goldstd]["corpus"]
-        corpus_ann = config.paths[options.goldstd]["annotations"]
-    else:
-        corpus_format, corpus_path = options.corpus
-        corpus_ann = options.annotations
-
     # pre-processing options
     if options.actions == "load_corpus":
+        if len(options.goldstd) > 1:
+            print "load only one corpus each time"
+            sys.exit()
+        options.goldstd = options.goldstd[0]
+        corpus_format = config.paths[options.goldstd]["format"]
+        corpus_path = config.paths[options.goldstd]["text"]
+        corpus_ann = config.paths[options.goldstd]["annotations"]
+
         print("loading CoreNLP...")
         corenlpserver = StanfordCoreNLP(corenlp_path=config.corenlp_dir,
                                     properties=config.corenlp_dir + "default.properties")
@@ -254,125 +250,138 @@ considered when coadministering with megestrol acetate.''',
         if corpus_ann: #add annotation if it is not a test set
             corpus.load_annotations(corpus_ann, options.etype)
             corpus.save(config.paths[options.goldstd]["corpus"])
-    else: # options other than processing a corpus, i.e. load the corpus directly from a pickle file
+
+
+    elif options.actions == "annotate": # rext-add annotation to corpus
+        if len(options.goldstd) > 1:
+            print "load only one corpus each time"
+            sys.exit()
+        options.goldstd = options.goldstd[0]
+        corpus_path = config.paths[options.goldstd]["corpus"]
+        corpus_ann = config.paths[options.goldstd]["annotations"]
         logging.info("loading corpus %s" % corpus_path)
         corpus = pickle.load(open(corpus_path, 'rb'))
-
-    if options.actions == "annotate": # rext-add annotation to corpus
         logging.debug("loading annotations...")
         corpus.clear_annotations(options.etype)
         corpus.load_annotations(corpus_ann, options.etype)
         # corpus.get_invalid_sentences()
         corpus.save(config.paths[options.goldstd]["corpus"])
-    elif options.actions == "write_goldstandard":
-        model = BiasModel(options.output[1])
-        model.load_data(corpus, [])
-        results = model.test()
-        #results = ResultsNER(options.output[1])
-        #results.get_ner_results(corpus, model)
-        results.save(options.output[1] + ".pickle")
-        #logging.info("saved gold standard results to " + options.output[1] + ".txt")
+    else:
+        corpus = Corpus("corpus/" + "&".join(options.goldstd))
+        for g in options.goldstd:
+            corpus_path = config.paths[g]["corpus"]
+            logging.info("loading corpus %s" % corpus_path)
+            this_corpus = pickle.load(open(corpus_path, 'rb'))
+            corpus.documents.update(this_corpus.documents)
+        if options.actions == "write_goldstandard":
+            model = BiasModel(options.output[1])
+            model.load_data(corpus, [])
+            results = model.test()
+            #results = ResultsNER(options.output[1])
+            #results.get_ner_results(corpus, model)
+            results.save(options.output[1] + ".pickle")
+            #logging.info("saved gold standard results to " + options.output[1] + ".txt")
 
-    # training
-    elif options.actions == "train":
-        if options.crf == "stanford":
-            model = StanfordNERModel(options.models, options.etype)
-        elif options.crf == "crfsuite":
-            model = CrfSuiteModel(options.models, options.etype)
-        model.load_data(corpus, feature_extractors.keys(), options.etype)
-        model.train(options.etype)
-    elif options.actions == "train_matcher": # Train a simple classifier based on string matching
-        model = MatcherModel(options.models)
-        model.train(corpus)
-        # TODO: term list option
-        #model.train("TermList.txt")
-    elif options.actions == "train_multiple": # Train one classifier for each type of entity in this corpus
-        # logging.info(corpus.subtypes)
-        models = TaggerCollection(basepath=options.models, corpus=corpus, subtypes=corpus.subtypes)
-        models.train_types()
-    elif options.actions == "train_relations":
-        if options.kernel == "jsre":
-            model = JSREKernel(corpus)
-        elif options.kernel == "svmtk":
-            model = SVMTKernel(corpus)
-        model.train()
-    # testing
-    elif options.actions == "test":
-        base_port = 9191
-        if len(options.submodels) > 1:
-            allresults = ResultSetNER(corpus, options.output[1])
-            for i, submodel in enumerate(options.submodels):
-                model = StanfordNERModel(options.models + "_" + submodel)
-                model.load_tagger(base_port + i)
-                # load data into the model format
-                model.load_data(corpus, feature_extractors.keys(), mode="test")
-                # run the classifier on the data
-                results = model.test(corpus, port=base_port + i)
-                allresults.add_results(results)
-                model.kill_process()
-            # save the results to an object that can be read again, and log files to debug
-            final_results = allresults.combine_results()
-        else:
+        # training
+        elif options.actions == "train":
             if options.crf == "stanford":
                 model = StanfordNERModel(options.models, options.etype)
             elif options.crf == "crfsuite":
                 model = CrfSuiteModel(options.models, options.etype)
-            model.load_tagger()
-            model.load_data(corpus, feature_extractors.keys(), mode="test")
-            final_results = model.test(corpus, options.etype)
-        #with codecs.open(options.output[1] + ".txt", 'w', 'utf-8') as outfile:
-        #    lines = final_results.corpus.write_chemdner_results(options.models, outfile)
-        #final_results.lines = lines
-        final_results.save(options.output[1] + ".pickle")
-    elif options.actions == "test_matcher":
-        if "mirna" in options.models:
-            model = MirnaMatcher(options.models)
-        else:
+            model.load_data(corpus, feature_extractors.keys(), options.etype)
+            model.train(options.etype)
+        elif options.actions == "train_matcher": # Train a simple classifier based on string matching
             model = MatcherModel(options.models)
-        results = ResultsNER(options.models)
-        results.corpus, results.entities = model.test(corpus)
-        allentities = set()
-        for e in results.entities:
-            allentities.add(results.entities[e].text)
-        with codecs.open(options.output[1] + ".txt", 'w', 'utf-8') as outfile:
-            outfile.write('\n'.join(allentities))
-
-        results.save(options.output[1] + ".pickle")
-    elif options.actions == "test_multiple":
-        logging.info("testing with multiple classifiers... {}".format(' '.join(options.submodels)))
-        allresults = ResultSetNER(corpus, options.output[1])
-        if len(options.submodels) < 2:
-            models = TaggerCollection(basepath=options.models)
-            models.load_models()
-            results = models.test_types(corpus)
-            final_results = results.combine_results()
-        else:
+            model.train(corpus)
+            # TODO: term list option
+            #model.train("TermList.txt")
+        elif options.actions == "train_multiple": # Train one classifier for each type of entity in this corpus
+            # logging.info(corpus.subtypes)
+            models = TaggerCollection(basepath=options.models, corpus=corpus, subtypes=corpus.subtypes)
+            models.train_types()
+        elif options.actions == "train_relations":
+            if options.kernel == "jsre":
+                model = JSREKernel(corpus)
+            elif options.kernel == "svmtk":
+                model = SVMTKernel(corpus)
+            model.train()
+        # testing
+        elif options.actions == "test":
             base_port = 9191
-            for submodel in options.submodels:
-                models = TaggerCollection(basepath=options.models + "_" + submodel, baseport = base_port)
+            if len(options.submodels) > 1:
+                allresults = ResultSetNER(corpus, options.output[1])
+                for i, submodel in enumerate(options.submodels):
+                    model = StanfordNERModel(options.models + "_" + submodel)
+                    model.load_tagger(base_port + i)
+                    # load data into the model format
+                    model.load_data(corpus, feature_extractors.keys(), mode="test")
+                    # run the classifier on the data
+                    results = model.test(corpus, port=base_port + i)
+                    allresults.add_results(results)
+                    model.kill_process()
+                # save the results to an object that can be read again, and log files to debug
+                final_results = allresults.combine_results()
+            else:
+                if options.crf == "stanford":
+                    model = StanfordNERModel(options.models, options.etype)
+                elif options.crf == "crfsuite":
+                    model = CrfSuiteModel(options.models, options.etype)
+                model.load_tagger()
+                model.load_data(corpus, feature_extractors.keys(), mode="test")
+                final_results = model.test(corpus, options.etype)
+            #with codecs.open(options.output[1] + ".txt", 'w', 'utf-8') as outfile:
+            #    lines = final_results.corpus.write_chemdner_results(options.models, outfile)
+            #final_results.lines = lines
+            final_results.save(options.output[1] + ".pickle")
+        elif options.actions == "test_matcher":
+            if "mirna" in options.models:
+                model = MirnaMatcher(options.models)
+            else:
+                model = MatcherModel(options.models)
+            results = ResultsNER(options.models)
+            results.corpus, results.entities = model.test(corpus)
+            allentities = set()
+            for e in results.entities:
+                allentities.add(results.entities[e].text)
+            with codecs.open(options.output[1] + ".txt", 'w', 'utf-8') as outfile:
+                outfile.write('\n'.join(allentities))
+
+            results.save(options.output[1] + ".pickle")
+        elif options.actions == "test_multiple":
+            logging.info("testing with multiple classifiers... {}".format(' '.join(options.submodels)))
+            allresults = ResultSetNER(corpus, options.output[1])
+            if len(options.submodels) < 2:
+                models = TaggerCollection(basepath=options.models)
                 models.load_models()
                 results = models.test_types(corpus)
-                logging.info("combining results...")
-                submodel_results = results.combine_results()
-                allresults.add_results(submodel_results)
-                base_port += len(models.models)
-            final_results = allresults.combine_results()
-        logging.info("saving results...")
-        final_results.save(options.output[1] + ".pickle")
-    elif options.actions == "test_relations":
-        if options.kernel == "jsre":
-            model = JSREKernel(corpus, (options.pairtype1, options.pairtype2))
-        elif options.kernel == "svmtk":
-            model = SVMTKernel(corpus)
-        elif options.kernel == "rules":
-            model = RuleClassifier(corpus)
-        model.load_classifier()
-        model.test()
-        results = model.get_predictions(corpus)
-        results.save(options.output[1] + ".pickle")
-    elif options.actions == "crossvalidation":
-        cv = 5 # fixed 5-fold CV
-        run_crossvalidation(options.goldstd, corpus, options.models, cv, options.etype)
+                final_results = results.combine_results()
+            else:
+                base_port = 9191
+                for submodel in options.submodels:
+                    models = TaggerCollection(basepath=options.models + "_" + submodel, baseport = base_port)
+                    models.load_models()
+                    results = models.test_types(corpus)
+                    logging.info("combining results...")
+                    submodel_results = results.combine_results()
+                    allresults.add_results(submodel_results)
+                    base_port += len(models.models)
+                final_results = allresults.combine_results()
+            logging.info("saving results...")
+            final_results.save(options.output[1] + ".pickle")
+        elif options.actions == "test_relations":
+            if options.kernel == "jsre":
+                model = JSREKernel(corpus, (options.pairtype1, options.pairtype2))
+            elif options.kernel == "svmtk":
+                model = SVMTKernel(corpus)
+            elif options.kernel == "rules":
+                model = RuleClassifier(corpus)
+            model.load_classifier()
+            model.test()
+            results = model.get_predictions(corpus)
+            results.save(options.output[1] + ".pickle")
+        elif options.actions == "crossvalidation":
+            cv = 5 # fixed 5-fold CV
+            run_crossvalidation(options.goldstd, corpus, options.models, cv, options.etype)
 
     total_time = time.time() - start_time
     logging.info("Total time: %ss" % total_time)
