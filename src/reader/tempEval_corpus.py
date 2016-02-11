@@ -15,7 +15,7 @@ from subprocess import check_output
 from text.corpus import Corpus
 from text.document import Document
 import xml.etree.ElementTree as ET
-from classification.re.relations import Pairs
+from classification.rext.relations import Pairs
 
 
 class TempEvalCorpus(Corpus):

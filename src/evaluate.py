@@ -36,7 +36,7 @@ def get_gold_ann_set(corpus_type, gold_path, entity_type, text_path):
     elif corpus_type == "genia":
         goldset = get_genia_gold_ann_set(gold_path)
     elif corpus_type == "ddi-mirna":
-        goldset = get_ddi_mirna_gold_ann_set(gold_path)
+        goldset = get_ddi_mirna_gold_ann_set(gold_path, entity_type)
     elif corpus_type == "mirtex":
         goldset = get_mirtex_gold_ann_set(gold_path, entity_type)
     return goldset
@@ -260,7 +260,7 @@ def main():
         results.combine_results(options.models, options.models + "_combined")
         results.save(options.results + "_combined.pickle")
 
-    elif options.action in ("evaluate", "evaluate_list", "train_ensemble", "test_ensemble"):
+    elif options.action in ("evaluate", "evaluate_list"):
         if "annotations" in config.paths[options.goldstd]:
             logging.info("loading gold standard %s" % config.paths[options.goldstd]["annotations"])
             goldset = get_gold_ann_set(config.paths[options.goldstd]["format"], config.paths[options.goldstd]["annotations"],
@@ -271,35 +271,6 @@ def main():
         results.load_corpus(options.goldstd)
         results.path = options.results
         ths = {"chebi": options.chebi, "ssm": options.ssm}
-        if "ensemble" in options.action:
-            if len(options.submodels) > 1:
-                submodels = []
-                for s in options.submodels:
-                    submodels += ['_'.join(options.models.split("_")[:-1]) + "_" + s + "_" + t for t in results.corpus.subtypes]
-            else:
-                submodels = ['_'.join(options.models.split("_")[:-1]) + "_" + t for t in results.corpus.subtypes]
-            logging.info("using these features: {}".format(' '.join(submodels)))
-        if options.action == "train_ensemble":
-            ensemble = EnsembleNER(options.ensemble, goldset, options.models, types=submodels,
-                                   features=options.features)
-            ensemble.generate_data(results)
-            ensemble.train()
-            ensemble.save()
-        if options.action == "test_ensemble":
-            ensemble = EnsembleNER(options.ensemble, [], options.models, types=submodels,
-                                   features=options.features)
-            ensemble.load()
-            ensemble.generate_data(results, supervisioned=False)
-            ensemble.test()
-            ensemble_results = ResultsNER(options.models + "_ensemble")
-            # process the results
-            ensemble_results.get_ensemble_results(ensemble, results.corpus, options.models)
-            ensemble_results.path = options.results + "_ensemble"
-            get_results(ensemble_results, options.models + "_ensemble", goldset, ths, options.rules)
-            if "cem" in config.paths[options.goldstd]:
-                print run_chemdner_evaluation(config.paths[options.goldstd]["cem"],
-                                              ensemble_results.path + ".tsv")
-            #test_ensemble(results, )
         if options.action == "evaluate":
             get_results(results, options.models, goldset, ths, options.rules)
             #if options.bceval:
@@ -317,8 +288,6 @@ def main():
         if "test" not in options.goldstd:
             precision, recall = get_results(results, options.models, goldset, {}, options.rules, compare_text=True)
             evaluation = run_anafora_evaluation(config.paths[options.goldstd]["annotations"], options.results)
-
-
     total_time = time.time() - start_time
     logging.info("Total time: %ss" % total_time)
 if __name__ == "__main__":

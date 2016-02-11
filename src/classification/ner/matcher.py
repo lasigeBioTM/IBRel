@@ -42,7 +42,7 @@ class MatcherModel(object):
         for n in self.names:
             # logging.info(n)
             self.p.append(re.compile(r"(\A|\s)(" + re.escape(n) + r")(\s|\Z|\.|,)", re.I))
-        # self.p = [re.compile(r"(\A|\s)(" + n + r")(\s|\Z|\.)", re.I) for n in self.names]
+        # self.p = [rext.compile(r"(\A|\s)(" + n + r")(\s|\Z|\.)", rext.I) for n in self.names]
         logging.info("testing {} documents".format(len(corpus.documents)))
         did_count = 1
         elist = {}

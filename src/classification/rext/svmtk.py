@@ -8,13 +8,13 @@ import re
 
 import itertools
 
-from classification.re.kernelmodels import KernelModel
+from classification.rext.kernelmodels import KernelModel
 # from nltk import WordNetLemmatizer
 from nltk.stem.porter import *
 from nltk.tree import Tree
 import logging
 
-from classification.re import relations
+from classification.rext import relations
 from classification.results import ResultsRE
 
 
@@ -243,7 +243,7 @@ class SVMTKernel(KernelModel):
         # tree = tree.replace(pair.entities[0].tokens[0].text, 'candidate1')
         # tree = tree.replace(pair.entities[1].tokens[0].text, 'candidate2')
         # TODO: replace other entities
-        # tree = re.sub(sid2 + r'\d+', 'otherentity', tree)
+        # tree = rext.sub(sid2 + r'\d+', 'otherentity', tree)
         #print "tree2:", tree
 
         # logging.info("final tree: {}".format(str(tree)))

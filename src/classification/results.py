@@ -1,10 +1,13 @@
 import logging
 import pickle
-
-from text.chemical_entity import ChemicalEntity
+import os
+import time
+import argparse
+import sys
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + '../..'))
 from config import config
-from copy import deepcopy
-#from model import SINGLE_TAG, START_TAG, MIDDLE_TAG, END_TAG, OTHER_TAG
+from text.offset import Offset, perfect_overlap, contained_by, Offsets
+
 SINGLE_TAG = "single"
 START_TAG = "start"
 END_TAG = "end"
@@ -149,3 +152,119 @@ class ResultSetNER(object):
         final_results = ResultsNER(self.basepath)
         final_results.corpus = self.corpus
         return final_results
+
+
+def combine_results(models, results, resultsname):
+    all_results = ResultsNER(resultsname)
+    all_results.corpus = results[0].corpus
+    for r in results:
+        print r.path
+        for did in r.corpus.documents:
+            for sentence in r.corpus.documents[did].sentences:
+                if sentence.entities:
+                    offsets = Offsets()
+                    if resultsname not in all_results.corpus.documents[did].get_sentence(sentence.sid).entities.elist:
+                        all_results.corpus.documents[did].get_sentence(sentence.sid).entities.elist[resultsname] = []
+                    for s in sentence.entities.elist:
+                        if s in models:
+                            for e in sentence.entities.elist[s]:
+                                eid_offset = Offset(e.dstart, e.dend, text=e.text, sid=e.sid)
+                                exclude = [perfect_overlap]
+                                toadd, v, alt = offsets.add_offset(eid_offset, exclude_if=exclude)
+                                if toadd:
+                                    # print r.path, e.text
+                                    all_results.corpus.documents[did].get_sentence(sentence.sid).entities.elist[resultsname].append(e)
+    return all_results
+
+def main():
+    start_time = time.time()
+    parser = argparse.ArgumentParser(description='')
+    parser.add_argument("action", default="evaluate", help="Actions to be performed.")
+    parser.add_argument("goldstd", default="chemdner_sample", help="Gold standard to be used.",
+                        choices=config.paths.keys())
+    parser.add_argument("--corpus", dest="corpus",
+                      default="data/chemdner_sample_abstracts.txt.pickle",
+                      help="format path")
+    parser.add_argument("--results", dest="results", help="Results object pickle.",  nargs='+')
+    parser.add_argument("--models", dest="models", help="model destination path, without extension",  nargs='+')
+    parser.add_argument("--ensemble", dest="ensemble", help="name/path of ensemble classifier", default="combined")
+    parser.add_argument("--log", action="store", dest="loglevel", default="WARNING", help="Log level")
+    parser.add_argument("-o", "--output", action="store", dest="output")
+    parser.add_argument("--submodels", default="", nargs='+', help="sub types of classifiers"),
+    parser.add_argument("--features", default=["chebi", "case", "number", "greek", "dashes", "commas", "length", "chemwords", "bow"],
+                        nargs='+', help="aditional features for ensemble classifier")
+    parser.add_argument("--doctype", dest="doctype", help="type of document to be considered", default="all")
+    parser.add_argument("--entitytype", dest="etype", help="type of entities to be considered", default="all")
+    parser.add_argument("--external", action="store_true", default=False, help="Run external evaluation script, depends on corpus type")
+    options = parser.parse_args()
+
+    numeric_level = getattr(logging, options.loglevel.upper(), None)
+    if not isinstance(numeric_level, int):
+        raise ValueError('Invalid log level: %s' % options.loglevel)
+    while len(logging.root.handlers) > 0:
+        logging.root.removeHandler(logging.root.handlers[-1])
+    logging_format = '%(asctime)s %(levelname)s %(filename)s:%(lineno)s:%(funcName)s %(message)s'
+    logging.basicConfig(level=numeric_level, format=logging_format)
+    logging.getLogger().setLevel(numeric_level)
+    logging.info("Processing action {0} on {1}".format(options.action, options.goldstd))
+    logging.info("loading results %s" % options.results + ".pickle")
+    results_list = []
+    for r in options.results:
+        if os.path.exists(r + ".pickle"):
+            results = pickle.load(open(r + ".pickle", 'rb'))
+            results.path = r
+            results.load_corpus(options.goldstd)
+            results_list.append(results)
+        else:
+            print "results not found"
+
+    if options.action == "combine":
+        # add another set of annotations to each sentence, ending in combined
+        # each entity from this dataset should have a unique ID and a recognized_by attribute
+        logging.info("combining results...")
+        #new_name = "_".join([m.split("/")[-1] for m in options.results])
+        #print new_name
+        results = combine_results(options.models, results_list, options.output)
+        results.save(options.output + ".pickle")
+
+    """elif options.action in ("train_ensemble", "test_ensemble"):
+        if "annotations" in config.paths[options.goldstd]:
+            logging.info("loading gold standard %s" % config.paths[options.goldstd]["annotations"])
+            goldset = get_gold_ann_set(config.paths[options.goldstd]["format"], config.paths[options.goldstd]["annotations"],
+                                       options.etype,  config.paths[options.goldstd]["text"])
+        else:
+            goldset = None
+        logging.info("using thresholds: chebi > {!s} ssm > {!s}".format(options.chebi, options.ssm))
+        results.load_corpus(options.goldstd)
+        results.path = options.results
+        ths = {"chebi": options.chebi, "ssm": options.ssm}
+        if "ensemble" in options.action:
+            if len(options.submodels) > 1:
+                submodels = []
+                for s in options.submodels:
+                    submodels += ['_'.join(options.models.split("_")[:-1]) + "_" + s + "_" + t for t in results.corpus.subtypes]
+            else:
+                submodels = ['_'.join(options.models.split("_")[:-1]) + "_" + t for t in results.corpus.subtypes]
+            logging.info("using these features: {}".format(' '.join(submodels)))
+        if options.action == "train_ensemble":
+            ensemble = EnsembleNER(options.ensemble, goldset, options.models, types=submodels,
+                                   features=options.features)
+            ensemble.generate_data(results)
+            ensemble.train()
+            ensemble.save()
+        if options.action == "test_ensemble":
+            ensemble = EnsembleNER(options.ensemble, [], options.models, types=submodels,
+                                   features=options.features)
+            ensemble.load()
+            ensemble.generate_data(results, supervisioned=False)
+            ensemble.test()
+            ensemble_results = ResultsNER(options.models + "_ensemble")
+            # process the results
+            ensemble_results.get_ensemble_results(ensemble, results.corpus, options.models)
+            ensemble_results.path = options.results + "_ensemble"
+            get_results(ensemble_results, options.models + "_ensemble", goldset, ths, options.rules)"""
+
+    total_time = time.time() - start_time
+    logging.info("Total time: %ss" % total_time)
+if __name__ == "__main__":
+    main()

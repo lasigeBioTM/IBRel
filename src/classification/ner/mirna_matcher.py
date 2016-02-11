@@ -29,12 +29,12 @@ class MirnaMatcher(MatcherModel):
             # include the prefix and then words or dashes
             # end with whitespace, end of string, dot, comma or )
             # best for miRNA corpus
-            # self.p.append(re.compile(r"(\(|\A|\s|Ad-|pEGFP-)(" + n + r"[\s-]?\d{1,3}?\w?-?[a-z]?/?\d{0,3}?\w?)(\s|\Z|\.|\*|//|,|-[a-z]{3,}|\))")) # , re.I))
+            # self.p.append(rext.compile(r"(\(|\A|\s|Ad-|pEGFP-)(" + n + r"[\s-]?\d{1,3}?\w?-?[a-z]?/?\d{0,3}?\w?)(\s|\Z|\.|\*|//|,|-[a-z]{3,}|\))")) # , rext.I))
             # best for miRTex
-            self.p.append(re.compile(r"(\(|\A|\s|Ad-|pEGFP-|Pre-|pre-|as-|anti-)(" + n + r"[\s-]?\d{1,3}?\w?-?[a-z]?\d{0,3}?\w?\*?)(\s|\Z|\.|\*|//|,|-[a-z]{3,}|\)|\()")) # , re.I))
+            self.p.append(re.compile(r"(\(|\A|\s|Ad-|pEGFP-|Pre-|pre-|as-|anti-)(" + n + r"[\s-]?\d{1,3}?\w?-?[a-z]?\d{0,3}?\w?\*?)(\s|\Z|\.|\*|//|,|-[a-z]{3,}|\)|\()")) # , rext.I))
 
-            # self.p.append(re.compile(r"(\(|\A|\s)(" + re.escape(n) + r"[\w-]*[" + "|".join(self.separators) + r"\w" + r"]*)(\Z|\.|\)|/)"))
-        # self.p = [re.compile(r"(\A|\s)(" + n + r")(\s|\Z|\.)", re.I) for n in self.names]
+            # self.p.append(rext.compile(r"(\(|\A|\s)(" + rext.escape(n) + r"[\w-]*[" + "|".join(self.separators) + r"\w" + r"]*)(\Z|\.|\)|/)"))
+        # self.p = [rext.compile(r"(\A|\s)(" + n + r")(\s|\Z|\.)", rext.I) for n in self.names]
         logging.info("testing {} documents".format(len(corpus.documents)))
         logging.debug("with these patterns:")
         for r in self.p:

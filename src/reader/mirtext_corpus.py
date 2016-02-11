@@ -68,7 +68,7 @@ class MirtexCorpus(Corpus):
                                 # e[0] and e[1] are relative to the document, so subtract sentence offset
                                 start = dstart - sentence.offset
                                 end = dend - sentence.offset
-                                sentence.tag_entity(start, end, entity_type, text=etext)
+                                sentence.tag_entity(start, end, type_match[entity_type], text=etext)
                             else:
                                 print "could not find sentence for this span: {}-{}".format(dstart, dend)
 

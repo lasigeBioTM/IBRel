@@ -2,6 +2,10 @@ from __future__ import division, absolute_import, unicode_literals
 import logging
 import pickle
 import sys
+import os
+import argparse
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + '../..'))
+
 
 
 class Corpus(object):

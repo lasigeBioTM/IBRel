@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 import os
 import logging
 import sys
-from classification.re.kernelmodels import KernelModel
+from classification.rext.kernelmodels import KernelModel
 from subprocess import Popen, PIPE
 import platform
 import itertools

@@ -8,9 +8,9 @@ from text.protein_entity import ProteinEntity
 from token2 import Token2
 from entity import Entities
 from classification.ner.simpletagger import create_entity
-from classification.re.relations import Pairs
-from classification.re import ddi_kernels
-from classification.re import relations
+from classification.rext.relations import Pairs
+from classification.rext import ddi_kernels
+from classification.rext import relations
 from text.chemical_entity import ChemicalEntity
 from text.mirna_entity import MirnaEntity
 from text.event_entity import EventEntity
@@ -53,7 +53,7 @@ class Sentence(object):
             if t[0]:
                 # TODO: specific rules for each corpus
                 token_seq = re.split(r'(\w+)(-|/|\\|\+|\.)(\w+)', t[0])
-                #token_seq = re.split(r'(\w+)(/|\\|\+|\.)(\w+)', t[0])
+                #token_seq = rext.split(r'(\w+)(/|\\|\+|\.)(\w+)', t[0])
 
                 if len(token_seq) > 1: # and all([len(elem) > 1 for elem in token_seq]):
                     #logging.info("{}: {}".format(t[0], "&".join(token_seq)))
@@ -147,7 +147,7 @@ class Sentence(object):
             return eid
         else:
             print "no tokens found:"
-            print start, end, kwargs.get("text")
+            print self.sid, start, end, kwargs.get("text")
             print [(t.start, t.end, t.text) for t in self.tokens]
 
     def label_tokens(self, tlist, source, etype):

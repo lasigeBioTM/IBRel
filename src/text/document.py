@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 from config.config import geniass_path
 from text.sentence import Sentence
 from text.token2 import Token2
-from classification.re.relations import Pairs
+from classification.rext.relations import Pairs
 
 from text.tlink import TLink
 

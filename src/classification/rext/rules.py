@@ -2,7 +2,7 @@ import logging
 import sys
 import itertools
 import re
-from classification.re.kernelmodels import KernelModel
+from classification.rext.kernelmodels import KernelModel
 from classification.results import ResultsRE
 
 

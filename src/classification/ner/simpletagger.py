@@ -195,7 +195,7 @@ class SimpleTaggerModel(Model):
         self.sentences = []
         self.etype = etype
 
-    def load_data(self, corpus, flist, subtype="all", mode="train", doctype="all"):
+    def load_data(self, corpus, flist, etype="all", mode="train", doctype="all"):
         """
             Load the data from the corpus to the format required by crfsuite.
             Generate the following variables:
@@ -204,7 +204,7 @@ class SimpleTaggerModel(Model):
                 - self.sids = list of sentence IDs
                 - self.tokens = list of tokens for each sentence
         """
-        logging.info("Loading data for subtype %s" % subtype)
+        logging.info("Loading data for type %s" % etype)
         fname = "f" + str(len(flist))
         nsentences = 0
         didx = 0
@@ -222,7 +222,7 @@ class SimpleTaggerModel(Model):
                     logging.debug("Title sentence: {} - {}".format(sentence.sid, sentence.text))
                     continue
                 if mode == "train" and "goldstandard" not in sentence.entities.elist:
-                    logging.debug("Skipped sentence without entities: {}".format(sentence.sid))
+                    # logging.debug("Skipped sentence without entities: {}".format(sentence.sid))
                     continue
                 sentencefeatures = []
                 sentencelabels = []
@@ -234,12 +234,12 @@ class SimpleTaggerModel(Model):
                         if fname in sentence.tokens[i].features:
                             tokenfeatures = sentence.tokens[i].features[fname]
                             #logging.info("loaded features from corpus: %s" % tokenfeatures)
-                            if subtype == "all":
+                            if etype == "all":
                                 tokenlabel = sentence.tokens[i].tags.get("goldstandard", "other")
                             else:
-                                tokenlabel = sentence.tokens[i].tags.get("goldstandard_" + subtype, "other")
+                                tokenlabel = sentence.tokens[i].tags.get("goldstandard_" + type, "other")
                         else:
-                            tokenfeatures, tokenlabel = self.generate_features(sentence, i, flist, subtype)
+                            tokenfeatures, tokenlabel = self.generate_features(sentence, i, flist, etype)
                             savecorpus = True
                             sentence.tokens[i].features[fname] = tokenfeatures[:]
                         # if tokenlabel != "other":
@@ -262,7 +262,7 @@ class SimpleTaggerModel(Model):
         # save data back to corpus to improve performance
         #if subtype == "all" and savecorpus:
         #    corpus.save()
-        logging.info("used %s sentences for model %s" % (nsentences, subtype))
+        logging.info("used %s sentences for model %s" % (nsentences, etype))
 
     def copy_data(self, basemodel, t="all"):
         #logging.debug(self.subtypes)

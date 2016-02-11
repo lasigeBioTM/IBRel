@@ -14,7 +14,7 @@ import time
 import codecs
 from corenlp import StanfordCoreNLP
 
-from classification.re.rules import RuleClassifier
+from classification.rext.rules import RuleClassifier
 from reader.genia_corpus import GeniaCorpus
 from reader.tempEval_corpus import TempEvalCorpus
 from classification.ner.crfsuitener import CrfSuiteModel
@@ -23,8 +23,8 @@ from reader.chemdner_corpus import ChemdnerCorpus
 from reader.gpro_corpus import GproCorpus
 from reader.ddi_corpus import DDICorpus
 from reader.chebi_corpus import ChebiCorpus
-from classification.re.jsrekernel import JSREKernel
-from classification.re.svmtk import SVMTKernel
+from classification.rext.jsrekernel import JSREKernel
+from classification.rext.svmtk import SVMTKernel
 from reader.mirna_corpus import MirnaCorpus
 from reader.mirtext_corpus import MirtexCorpus
 from reader.pubmed_corpus import PubmedCorpus
@@ -39,7 +39,7 @@ if config.use_chebi:
     from postprocessing.chebi_resolution import add_chebi_mappings
     from postprocessing.ssm import add_ssm_score
 from evaluate import get_results, run_chemdner_evaluation, get_gold_ann_set
-from classification.re.kernelmodels import KernelModel
+from classification.rext.kernelmodels import KernelModel
 
 def run_crossvalidation(goldstd, corpus, model, cv, crf, entity_type="all"):
     doclist = corpus.documents.keys()
@@ -258,7 +258,7 @@ considered when coadministering with megestrol acetate.''',
         logging.info("loading corpus %s" % corpus_path)
         corpus = pickle.load(open(corpus_path, 'rb'))
 
-    if options.actions == "annotate": # re-add annotation to corpus
+    if options.actions == "annotate": # rext-add annotation to corpus
         logging.debug("loading annotations...")
         corpus.clear_annotations(options.etype)
         corpus.load_annotations(corpus_ann, options.etype)

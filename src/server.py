@@ -23,7 +23,7 @@ from postprocessing import chebi_resolution
 from postprocessing.ssm import get_ssm
 from postprocessing.ensemble_ner import EnsembleNER
 from reader import pubmed
-from classification.re.relations import Pair
+from classification.rext.relations import Pair
 from config import config
 from postprocessing.chebi_resolution import add_chebi_mappings
 from postprocessing.ssm import add_ssm_score

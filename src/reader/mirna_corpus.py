@@ -12,7 +12,9 @@ from text.corpus import Corpus
 from text.document import Document
 from text.sentence import Sentence
 
-
+type_match = {"Specific_miRNAs": "mirna",
+              "Non-Specific_miRNAs": "mirna",
+              "Genes/Proteins": "protein"}
 class MirnaCorpus(Corpus):
     def __init__(self, corpusdir, **kwargs):
         super(MirnaCorpus, self).__init__(corpusdir, **kwargs)
@@ -89,19 +91,15 @@ class MirnaCorpus(Corpus):
                         eid = entity.get('id')
                         entity_offset = entity.get('charOffset')
                         offsets = self.getOffsets(entity_offset)
-                        entity_type = entity.get("type")
-                        if entity_type == "Specific_miRNAs":
-                            entity_type = "mirna"
-                        elif entity_type == "Genes/Proteins":
-                            entity_type = "protein"
+                        entity_type = type_match.get(entity.get("type"))
                         #print this_sentence.text[offsets[0]:offsets[-1]], entity.get("text")
                         #if "protein" in entity_type.lower() or "mirna" in entity_type.lower():
-                        if etype == "all" or (etype != "all" and etype == entity_type):
+                        if entity_type and (etype == "all" or (etype != "all" and etype == entity_type)):
                             this_sentence.tag_entity(offsets[0], offsets[-1], entity_type,
                                                      text=entity.get("text"))
 
 
-def get_ddi_mirna_gold_ann_set(goldpath):
+def get_ddi_mirna_gold_ann_set(goldpath, entitytype):
     logging.info("loading gold standard... {}".format(goldpath))
     gold_offsets = set()
     with open(goldpath, 'r') as xml:
@@ -120,10 +118,10 @@ def get_ddi_mirna_gold_ann_set(goldpath):
                         continue
                     offsets = entity_offset.split("-")
                     start, end = int(offsets[0]) + len(doctext), int(offsets[1]) + len(doctext) + 1
-                    entity_type = entity.get("type")
+                    etype = type_match.get(entity.get("type"))
                     #print this_sentence.text[offsets[0]:offsets[-1]], entity.get("text")
                     #if "protein" in entity_type.lower() or "mirna" in entity_type.lower():
-                    if entity_type == "Specific_miRNAs":
+                    if etype == entitytype:
                         gold_offsets.add((did, start, end, entity.get("text")))
 
                 doctext += " " + sentence_text # generate the full text of this document

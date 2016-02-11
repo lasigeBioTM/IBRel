@@ -1,4 +1,4 @@
-from classification.re.relations import Pair
+from classification.rext.relations import Pair
 
 
 class TLink(Pair):

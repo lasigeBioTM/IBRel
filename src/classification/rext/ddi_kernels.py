@@ -378,7 +378,7 @@ def get_svm_train_line(tree, pair, sid):
     #tree = tree.replace(sid.replace('.', '').replace('-', '') + 'e', 'otherdrug')
     sid2 = compact_id(sid) + 'e'
     # TODO: replace other entities
-    #tree = re.sub(sid2 + r'\d+', 'otherdrug', tree)
+    #tree = rext.sub(sid2 + r'\d+', 'otherdrug', tree)
     #print "tree2:", tree
     if tree[0] != '(':
         tree = '(S (' + tree + ' NN))'
