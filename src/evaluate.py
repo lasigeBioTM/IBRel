@@ -250,7 +250,7 @@ def main():
         results.path = options.results
     else:
         print "results not found"
-        results = None
+        sys.exit()
 
     if options.action == "combine":
         # add another set of annotations to each sentence, ending in combined

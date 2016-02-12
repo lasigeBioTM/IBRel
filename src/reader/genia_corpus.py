@@ -10,6 +10,8 @@ from text.corpus import Corpus
 from text.document import Document
 from text.sentence import Sentence
 
+type_match = {"G#protein": "protein",
+              "G#DNA": "DNA"}
 
 class GeniaCorpus(Corpus):
     def __init__(self, corpusdir, **kwargs):
@@ -107,8 +109,8 @@ class GeniaCorpus(Corpus):
                         sem = sem[1:]
                     if sem.startswith("G#protein"):
                         entity_type = "protein"
-                    if sem.startswith("G#DNA"):
-                        entity_type = "protein"
+                    #if sem.startswith("G#DNA"):
+                    #    entity_type = "protein"
                     if etype == "all" or (etype != "all" and entity_type == etype):
                         eid = this_sentence.tag_entity(estart, eend, entity_type,
                                                      text=e.text)

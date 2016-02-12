@@ -3,6 +3,8 @@ import logging
 import sys
 from xml.etree import ElementTree as ET
 import re
+
+from classification.ner.stanfordner import stanford_coding
 from text.protein_entity import ProteinEntity
 
 from token2 import Token2
@@ -29,6 +31,7 @@ class Sentence(object):
         self.pairs = Pairs()
         self.parsetree = None
         self.tokens = []
+        self.regex_tokens = re.compile(r'(-|/|\\|\+|\.|\w+)')
 
     def process_corenlp_sentence(self, corenlpres):
         """
@@ -52,11 +55,13 @@ class Sentence(object):
             # print t[0]
             if t[0]:
                 # TODO: specific rules for each corpus
-                token_seq = re.split(r'(\w+)(-|/|\\|\+|\.)(\w+)', t[0])
+                #if ""
+                token_seq = self.regex_tokens.split(t[0])#, flags=re.U)
                 #token_seq = rext.split(r'(\w+)(/|\\|\+|\.)(\w+)', t[0])
-
-                if len(token_seq) > 1: # and all([len(elem) > 1 for elem in token_seq]):
-                    #logging.info("{}: {}".format(t[0], "&".join(token_seq)))
+                #token_seq = [t[0]]
+                # print t[0], token_seq
+                if len(token_seq) > 3 and t[0] not in stanford_coding.keys():
+                    logging.info("{}: {}".format(t[0], "&".join(token_seq)))
                     for its, ts in enumerate(token_seq):
                         if ts.strip() != "":
                             charoffset_begin = int(t[1]["CharacterOffsetBegin"])
@@ -123,10 +128,10 @@ class Sentence(object):
                 entity.text = newtext
             if "text" in kwargs and newtext != kwargs["text"]:
                 if newtext not in kwargs["text"] and kwargs["text"] not in newtext:
-                    print "not added, text does not match", newtext, kwargs["text"]
+                    logging.info("not added, text does not match: {}=>{}".format(newtext, kwargs["text"]))
                     return None
                 else:
-                    logging.info("{} {} |{}|=>|{}| {} {} {} {}".format(tlist[0].start, tlist[-1].end, newtext, kwargs["text"],
+                    logging.info("diferent text:|system {} {} |{}|=>|{}| {} {} input|{} {}".format(tlist[0].start, tlist[-1].end, newtext, kwargs["text"],
                                  start, end, self.sid, self.text))
             #     print "tokens found:", [t.text for t in tlist]
                 # sys.exit()
@@ -146,9 +151,9 @@ class Sentence(object):
                                                                              len(self.entities.elist[source])))
             return eid
         else:
-            print "no tokens found:"
-            print self.sid, start, end, kwargs.get("text")
-            print [(t.start, t.end, t.text) for t in self.tokens]
+            logging.info("no tokens found:")
+            logging.info("{} {} {} {}".format(self.sid, start, end, kwargs.get("text")))
+            logging.info(str([(t.start, t.end, t.text) for t in self.tokens]))
 
     def label_tokens(self, tlist, source, etype):
         if len(tlist) == 1:
