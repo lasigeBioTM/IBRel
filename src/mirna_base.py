@@ -5,7 +5,7 @@ from rdflib.namespace import RDF, RDFS
 from rdflib.plugins.sparql import prepareQuery
 import time
 import pprint
-
+from fuzzywuzzy import process
 
 
 def parse_mirbase(mirbase):
@@ -72,6 +72,13 @@ def create_graph(data, g):
         g.add((mirna_instance, RDFS.label, label))
     return g
 
+
+def map_label(label, g):
+    choices = [str(l) for l in g.objects(predicate=RDFS.label)]
+    result = process.extractOne(label, choices)
+    print result
+    return result
+
 def main():
     start_time = time.time()
     parser = argparse.ArgumentParser(description='')
@@ -110,7 +117,7 @@ def main():
         g.load(path)
         print "Opened graph with {} triples".format(len(g))
         if options.action == "map":
-            pass
+            map_label(options.label, g)
         elif options.action == "geturi":
             q = prepareQuery('SELECT ?s WHERE { ?s rdfs:label ?label .}', initNs={"rdfs": RDFS })
             l = Literal(options.label)
