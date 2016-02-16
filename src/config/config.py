@@ -31,7 +31,6 @@ with open("settings.json") as settings:
     host_ip = vals["host_ip"]
     geniass_path = vals["geniass_path"]
     florchebi_path = vals["florchebi_path"]
-    corenlp_dir = vals["corenlp_dir"]
     stanford_ner_dir = vals["stanford_ner_dir"]
     stanford_ner_train_ram = vals["stanford_ner_train_ram"]
     stanford_ner_test_ram = vals["stanford_ner_test_ram"]

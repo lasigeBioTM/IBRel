@@ -1,4 +1,4 @@
-from __future__ import division, absolute_import, unicode_literals
+from __future__ import division, absolute_import
 #from nltk.stem.porter import PorterStemmer
 #import jsonrpclib
 #from simplejson import loads
@@ -7,7 +7,7 @@ import os
 from subprocess import Popen, PIPE
 import codecs
 import xml.etree.ElementTree as ET
-
+import sys
 from config.config import geniass_path
 from text.sentence import Sentence
 from text.token2 import Token2
@@ -87,9 +87,23 @@ class Document(object):
             # use specific sentence splitter
             self.sentence_tokenize(doctype)
         for s in self.sentences:
-            corenlpres = corenlpserver.raw_parse(s.text)
+            #corenlpres = corenlpserver.raw_parse(s.text)
+            corenlpres = corenlpserver.annotate(s.text.encode("utf8"), properties={
+                'ssplit.eolonly': True,
+                # 'annotators': 'tokenize,ssplit,pos,depparse,parse',
+                'annotators': 'tokenize,ssplit,pos,parse,ner,lemma,depparse',
+                'outputFormat': 'json',
+            })
+            if isinstance(corenlpres, basestring):
+                print corenlpres
+                corenlpres = corenlpserver.annotate(s.text.encode("utf8"), properties={
+                'ssplit.eolonly': True,
+                # 'annotators': 'tokenize,ssplit,pos,depparse,parse',
+                'annotators': 'tokenize,ssplit,pos,ner,lemma',
+                'outputFormat': 'json',
+            })
             s.process_corenlp_sentence(corenlpres)
-            # TODO: bllip parser biomodel
+
 
     def tag_chemdner_entity(self, start, end, subtype, **kwargs):
         """

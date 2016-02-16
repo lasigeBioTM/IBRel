@@ -12,7 +12,7 @@ import argparse
 import datetime
 import time
 import codecs
-from corenlp import StanfordCoreNLP
+from pycorenlp import StanfordCoreNLP
 
 from classification.rext.rules import RuleClassifier
 from reader.genia_corpus import GeniaCorpus
@@ -180,9 +180,7 @@ considered when coadministering with megestrol acetate.''',
         corpus_path = config.paths[options.goldstd]["text"]
         corpus_ann = config.paths[options.goldstd]["annotations"]
 
-        print("loading CoreNLP...")
-        corenlpserver = StanfordCoreNLP(corenlp_path=config.corenlp_dir,
-                                    properties=config.corenlp_dir + "default.properties")
+        corenlp_client = StanfordCoreNLP('http://localhost:9000')
         if corpus_format == "chemdner":
             corpus = ChemdnerCorpus(corpus_path)
             #corpus.save()
@@ -196,7 +194,7 @@ considered when coadministering with megestrol acetate.''',
                 corpus.documents.update(dcorpus.documents)
             elif options.goldstd == "cemp_test_divide":
                 logging.info("loading corpus %s" % corpus_path)
-                corpus.load_corpus(corenlpserver, process=False)
+                corpus.load_corpus(corenlp_client, process=False)
                 docs = corpus.documents.keys()
                 step = int(len(docs)/10)
                 logging.info("step: {}".format(str(step)))
@@ -209,42 +207,42 @@ considered when coadministering with megestrol acetate.''',
                         logging.info("fold {}: processing {}/{}".format(i, di, step))
                         sub_corpus.documents[d] = corpus.documents[d]
                         del corpus.documents[d]
-                        sub_corpus.documents[d].process_document(corenlpserver)
+                        sub_corpus.documents[d].process_document(corenlp_client)
                     sub_corpus.save()
 
             else:
-                corpus.load_corpus(corenlpserver)
+                corpus.load_corpus(corenlp_client)
         elif corpus_format == "gpro":
             corpus = GproCorpus(corpus_path)
             corpus.load_corpus(None)
         elif corpus_format == "ddi":
             corpus = DDICorpus(corpus_path)
-            corpus.load_corpus(corenlpserver)
+            corpus.load_corpus(corenlp_client)
             # since the path of this corpus is a directory, add the reference to save this corpus
             corpus.path += options.goldstd + ".txt"
         elif corpus_format == "chebi":
             corpus = ChebiCorpus(corpus_path)
-            corpus.load_corpus(corenlpserver)
+            corpus.load_corpus(corenlp_client)
             # since the path of this corpus is a directory, add the reference to save this corpus
             corpus.path += options.goldstd + ".txt"
         elif corpus_format == "tempeval":
             corpus = TempEvalCorpus(corpus_path)
-            corpus.load_corpus(corenlpserver)
+            corpus.load_corpus(corenlp_client)
         elif corpus_format == "pubmed":
             # corenlpserver = ""
             with open(corpus_path, 'r') as f:
                 pmids = [line.strip() for line in f if line.strip()]
             corpus = PubmedCorpus(corpus_path, pmids)
-            corpus.load_corpus(corenlpserver)
+            corpus.load_corpus(corenlp_client)
         elif corpus_format == "genia":
             corpus = GeniaCorpus(corpus_path)
-            corpus.load_corpus(corenlpserver)
+            corpus.load_corpus(corenlp_client)
         elif corpus_format == "ddi-mirna":
             corpus = MirnaCorpus(corpus_path)
-            corpus.load_corpus(corenlpserver)
+            corpus.load_corpus(corenlp_client)
         elif corpus_format == "mirtex":
             corpus = MirtexCorpus(corpus_path)
-            corpus.load_corpus(corenlpserver)
+            corpus.load_corpus(corenlp_client)
             # corpus.path = ".".join(config.paths[options.goldstd]["corpus"].split(".")[:-1])
         corpus.save(config.paths[options.goldstd]["corpus"])
         if corpus_ann: #add annotation if it is not a test set

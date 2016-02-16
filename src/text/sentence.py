@@ -1,9 +1,10 @@
 from __future__ import unicode_literals
 import logging
+import socket
 import sys
 from xml.etree import ElementTree as ET
 import re
-
+import pprint
 from classification.ner.stanfordner import stanford_coding
 from text.protein_entity import ProteinEntity
 
@@ -19,7 +20,7 @@ from text.event_entity import EventEntity
 from text.time_entity import TimeEntity
 from text.tlink import TLink
 
-
+pp = pprint.PrettyPrinter(indent=2)
 class Sentence(object):
     """Sentence from a document, to be annotated"""
     def __init__(self, text, offset=0, **kwargs):
@@ -30,10 +31,13 @@ class Sentence(object):
         self.offset = offset
         self.pairs = Pairs()
         self.parsetree = None
+        self.depparse = None
         self.tokens = []
         self.regex_tokens = re.compile(r'(-|/|\\|\+|\.|\w+)')
 
+
     def process_corenlp_sentence(self, corenlpres):
+
         """
         Process the results obtained with CoreNLP for this sentence
         :param corenlpres:
@@ -41,6 +45,7 @@ class Sentence(object):
         """
         # self.sentences = []
         if len(corenlpres['sentences']) > 1:
+            print self.text
             sys.exit("Number of sentences from CoreNLP is not 1.")
         if len(corenlpres['sentences']) == 0:
             self.tokens = []
@@ -49,47 +54,53 @@ class Sentence(object):
             logging.debug(self.text)
             return
         sentence = corenlpres['sentences'][0]
-        # print sentence
-        self.parsetree = sentence['parsetree']
-        for t in sentence['words']:
+        #logging.debug(str(sentence.keys()))
+        #print "sentence", self.text.encode("utf8")
+        #print "parse", pp.pprint(sentence["parse"])
+        #print "basic", pp.pprint(sentence["basic-dependencies"])
+        #print "collapsed", pp.pprint(sentence["collapsed-dependencies"])
+        #print "ccprocessed", pp.pprint(sentence["collapsed-ccprocessed-dependencies"])
+        self.parsetree = sentence['parse']
+        self.depparse = sentence['basic-dependencies']
+        for t in sentence['tokens']:
             # print t[0]
-            if t[0]:
+            if t["word"]:
                 # TODO: specific rules for each corpus
                 #if ""
-                token_seq = self.regex_tokens.split(t[0])#, flags=re.U)
+                token_seq = self.regex_tokens.split(t["word"])#, flags=re.U)
                 #token_seq = rext.split(r'(\w+)(/|\\|\+|\.)(\w+)', t[0])
                 #token_seq = [t[0]]
                 # print t[0], token_seq
-                if len(token_seq) > 3 and t[0] not in stanford_coding.keys():
-                    logging.info("{}: {}".format(t[0], "&".join(token_seq)))
+                if len(token_seq) > 3 and t["word"] not in stanford_coding.keys():
+                    # logging.info("{}: {}".format(t["word"], "&".join(token_seq)))
                     for its, ts in enumerate(token_seq):
                         if ts.strip() != "":
-                            charoffset_begin = int(t[1]["CharacterOffsetBegin"])
+                            charoffset_begin = int(t["characterOffsetBegin"])
                             if token_seq[:its]: # not the first token
                                 charoffset_begin += sum([len(x) for x in token_seq[:its]])
                             # charoffset_begin += its
                             charoffset_end = len(ts) + charoffset_begin
                             #logging.info(str(charoffset_begin) + ":" + str(charoffset_end))
-                            ts_props = {"CharacterOffsetBegin": charoffset_begin,
-                                        "CharacterOffsetEnd": charoffset_end,
-                                        "PartOfSpeech": t[1]["PartOfSpeech"],
-                                        "NamedEntityTag": t[1]["NamedEntityTag"],
-                                        "Lemma": t[1]["Lemma"]}
+                            ts_props = {"characterOffsetBegin": charoffset_begin,
+                                        "characterOffsetEnd": charoffset_end,
+                                        "pos": t["pos"],
+                                        "ner": t["ner"],
+                                        "lemma": t["lemma"]}
                             self.create_newtoken(ts, ts_props)
 
                 else:
-                    self.create_newtoken(t[0], t[1])
+                    self.create_newtoken(t["word"], t)
 
     def create_newtoken(self, text, props):
         newtoken = Token2(text, order=len(self.tokens))
         try:
-            newtoken.start = int(props["CharacterOffsetBegin"])
+            newtoken.start = int(props["characterOffsetBegin"])
             newtoken.dstart = newtoken.start + self.offset
-            newtoken.end = int(props["CharacterOffsetEnd"])
+            newtoken.end = int(props["characterOffsetEnd"])
             newtoken.dend = newtoken.end + self.offset
-            newtoken.pos = props["PartOfSpeech"]
-            newtoken.tag = props["NamedEntityTag"]
-            newtoken.lemma = props["Lemma"]
+            newtoken.pos = props["pos"]
+            newtoken.tag = props["ner"]
+            newtoken.lemma = props["lemma"]
             # newtoken.stem = porter.stem_word(newtoken.text)
             newtoken.tid = self.sid + ".t" + str(len(self.tokens))
             self.tokens.append(newtoken)
