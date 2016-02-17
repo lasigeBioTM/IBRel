@@ -35,6 +35,7 @@ with open("settings.json") as settings:
     stanford_ner_train_ram = vals["stanford_ner_train_ram"]
     stanford_ner_test_ram = vals["stanford_ner_test_ram"]
     stoplist = vals["stoplist"]
+    mirbase_path = vals["mirbase_path"]
 
 if use_chebi or use_go:
     import MySQLdb
@@ -108,10 +109,10 @@ paths = {
         'format': "genia"
     },
     'transmir': {
-        'text': transmir_base + "transmir_pmids.txt",
-        'annotations': transmir_base + "transmir_mirnas.txt",
-        'corpus': "data/transmir_pmids.txt.pickle",
-        'format': "pubmed"
+        'text': "data/transmir_v1.2.tsv",
+        'annotations': "data/transmir_v1.2.tsv",
+        'corpus': "data/transmir_v1.2.tsv.pickle",
+        'format': "transmir"
     },
     'pubmed_test': {
         'text': pubmed_test_base + "pmids_test.txt",

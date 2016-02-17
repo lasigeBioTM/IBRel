@@ -28,6 +28,7 @@ from classification.rext.svmtk import SVMTKernel
 from reader.mirna_corpus import MirnaCorpus
 from reader.mirtext_corpus import MirtexCorpus
 from reader.pubmed_corpus import PubmedCorpus
+from reader.transmir_corpus import TransmirCorpus
 from text.corpus import Corpus
 from classification.ner.taggercollection import TaggerCollection
 from classification.ner.matcher import MatcherModel
@@ -244,6 +245,9 @@ considered when coadministering with megestrol acetate.''',
             corpus = MirtexCorpus(corpus_path)
             corpus.load_corpus(corenlp_client)
             # corpus.path = ".".join(config.paths[options.goldstd]["corpus"].split(".")[:-1])
+        elif corpus_format == "transmir":
+            corpus = TransmirCorpus(corpus_path)
+            corpus.load_corpus(corenlp_client)
         corpus.save(config.paths[options.goldstd]["corpus"])
         if corpus_ann: #add annotation if it is not a test set
             corpus.load_annotations(corpus_ann, options.etype)
