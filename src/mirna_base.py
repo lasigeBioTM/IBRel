@@ -6,7 +6,7 @@ from rdflib.plugins.sparql import prepareQuery
 import time
 import pprint
 from fuzzywuzzy import process
-
+from config import config
 
 def parse_mirbase(mirbase):
     mirna_dic = {}
@@ -76,8 +76,15 @@ def create_graph(data, g):
 def map_label(label, g):
     choices = [str(l) for l in g.objects(predicate=RDFS.label)]
     result = process.extractOne(label, choices)
-    print result
+    # print label, result
     return result
+
+
+def load_graph(path):
+    g = ConjunctiveGraph()
+    g.load(path)
+    print "Opened graph with {} triples".format(len(g))
+    return g
 
 def main():
     start_time = time.time()
@@ -99,11 +106,12 @@ def main():
     total_time = time.time() - start_time
     logging.info("Total time: %ss" % total_time)
     pp = pprint.PrettyPrinter(indent=2)
-    path = "triples/mirbase.rdf"
-    g = ConjunctiveGraph()
-    g.open(path, create=False)
+    path = config.mirbase_path
+
+
 
     if options.action == "create":
+        g = ConjunctiveGraph()
         g.open(path, create=True)
         with open("data/miRNA.dat") as datfile:
             mirbase = datfile.read().strip()
@@ -113,9 +121,7 @@ def main():
         print 'Triples in graph after add: ', len(graph)
         graph.close()
     else:
-        #g.open(path, create=False)
-        g.load(path)
-        print "Opened graph with {} triples".format(len(g))
+        g = load_graph(path)
         if options.action == "map":
             map_label(options.label, g)
         elif options.action == "geturi":
