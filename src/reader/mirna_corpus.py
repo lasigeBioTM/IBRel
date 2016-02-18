@@ -13,8 +13,10 @@ from text.document import Document
 from text.sentence import Sentence
 
 type_match = {"Specific_miRNAs": "mirna",
-              "Non-Specific_miRNAs": "mirna",
+              # "Non-Specific_miRNAs": "mirna",
               "Genes/Proteins": "protein"}
+
+
 class MirnaCorpus(Corpus):
     def __init__(self, corpusdir, **kwargs):
         super(MirnaCorpus, self).__init__(corpusdir, **kwargs)

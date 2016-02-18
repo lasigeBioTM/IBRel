@@ -5,6 +5,7 @@ import logging
 import sys
 import os
 from bs4 import BeautifulSoup
+import progressbar as pb
 sys.path.append(os.path.abspath(os.path.dirname(__file__) + '../..'))
 from text.corpus import Corpus
 from text.document import Document
@@ -19,9 +20,13 @@ class GeniaCorpus(Corpus):
         self.subtypes = ["protein", "DNA"]
 
     def load_corpus(self, corenlpserver, process=True):
-        time_per_abs = []
+
         soup = BeautifulSoup(codecs.open(self.path, 'r', "utf-8"), 'html.parser')
         docs = soup.find_all("article")
+        widgets = [pb.Percentage(), ' ', pb.Bar(), ' ', pb.ETA(), ' ', pb.Timer()]
+        pbar = pb.ProgressBar(widgets=widgets, maxval=len(docs)).start()
+        n_lines = 1
+        time_per_abs = []
         for doc in docs:
             did = "GENIA" + doc.articleinfo.bibliomisc.text.split(":")[1]
             title = doc.title.sentence.get_text()
@@ -44,7 +49,10 @@ class GeniaCorpus(Corpus):
             self.documents[newdoc.did] = newdoc
             abs_time = time.time() - t
             time_per_abs.append(abs_time)
-            logging.info("%s sentences, %ss processing time" % (len(newdoc.sentences), abs_time))
+            logging.debug("%s sentences, %ss processing time" % (len(newdoc.sentences), abs_time))
+            pbar.update(n_lines)
+            n_lines += 1
+        pbar.finish()
         abs_avg = sum(time_per_abs)*1.0/len(time_per_abs)
         logging.info("average time per abstract: %ss" % abs_avg)
 
@@ -65,53 +73,19 @@ class GeniaCorpus(Corpus):
                 stext = s.get_text()
                 sid = did + ".s" + str(si)
                 this_sentence = self.documents[did].get_sentence(sid)
-                sentities = s.find_all("cons")
+                sentities = s.find_all("cons", recursive=False)
                 lastindex = 0
                 for ei, e in enumerate(sentities):
                     estart = stext.find(e.text, lastindex)
                     eend = estart + len(e.text)
                     etext = stext[estart:eend]
-                    # print etext, stext[estart:eend]
-                    sems = e.get("sem")
-                    '''if sems is not None and len(sems.split(" ")) > 1: # parent cons, skip
-                        skipped += 1
-                        print "skipped", sems, sems.split(" ")
-                        continue
-                    if sems is None: # get the sem of parent - but for now slip
-                        # skipped += 1
-                        # print "skipped", sems
-                        continue
-                        sems = e.parent.get("sem")
-                        sems = sems.split(" ")
-                        sems = sems[1:]
-                        sibs = [x for x in e.parent.find_all("cons")]
-                        i = e.parent.index(e)/2
-                        # print etext, sems, sibs, i
-                        if i > len(sems)-1:
-                            # i = len(sems) - 1
-                            continue
-                        sem = sems[i]
-                    else:
-                        sem = sems
-                    # print sem
-                    if sem.endswith(")"):
-                        sem = sem[:-1]
+                    # sems = e.get("sem")
+                    sem = e.get("sem")
                     if sem.startswith("("):
-                        sem = sem[1:]
-                    eid = sid + ".e" + str(ei)'''
-                    if sems is None or len(sems.split(" ")) > 1: # parent cons, skip
+                        #TODO: Deal with overlapping entities
                         continue
-                    sem = sems
-                    # print sem
-                    if sem.endswith(")"):
-                        sem = sem[:-1]
-                    if sem.startswith("("):
-                        sem = sem[1:]
-                    if sem.startswith("G#protein"):
-                        entity_type = "protein"
-                    #if sem.startswith("G#DNA"):
-                    #    entity_type = "protein"
-                    if etype == "all" or (etype != "all" and entity_type == etype):
+                    entity_type = sem.split("_")[0]
+                    if etype == "all" or type_match.get(entity_type) == etype:
                         eid = this_sentence.tag_entity(estart, eend, entity_type,
                                                      text=e.text)
                         if eid is None:
@@ -126,8 +100,8 @@ class GeniaCorpus(Corpus):
                     #if sem is not None and sem.startswith("G#protein"):
                     #    print e.text, "|", etext, eindex, stext[0:20]
                     lastindex = estart
-        for s in all_entities:
-            print s, len(all_entities[s])
+        #for s in all_entities:
+        #    print s, len(all_entities[s])
 
 
 def get_genia_gold_ann_set(goldann):

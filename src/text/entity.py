@@ -224,5 +224,5 @@ class Entities(object):
                         spans.append((e.dstart, e.dend, e.text))
                         # logging.info("added {}".format(e.text))
                     else:
-                        logging.info("did not add {}".format(e.text))
+                        logging.debug("did not add {}".format(e.text))
         return spans

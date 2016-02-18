@@ -64,7 +64,7 @@ class StanfordNERModel(SimpleTaggerModel):
                     props.write(l)
         logging.info("wrote prop file")
 
-    def train(self, entitytype):
+    def train(self):
         self.write_prop()
         self.save_corpus_to_sbilou()
         logging.info("Training model with StanfordNER")
@@ -81,7 +81,7 @@ class StanfordNERModel(SimpleTaggerModel):
         # Popen(["jar", "-uf", self.STANFORD_NER, "{}.ser.gz".format(self.path)]).communicate()
         logging.info("saved model file to {}".format(self.STANFORD_NER))
 
-    def test(self, corpus, entitytype, port=9191):
+    def test(self, corpus, port=9191):
         self.tagger = ner.SocketNER("localhost", port, output_format='inlineXML')
         tagged_sentences = []
         logging.info("sending sentences to tagger {}...".format(self.path))

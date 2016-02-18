@@ -121,6 +121,7 @@ considered when coadministering with megestrol acetate.''',
     logging_format = '%(asctime)s %(levelname)s %(filename)s:%(lineno)s:%(funcName)s %(message)s'
     logging.basicConfig(level=numeric_level, format=logging_format)
     logging.getLogger().setLevel(numeric_level)
+    logging.getLogger("requests.packages").setLevel(30)
     logging.info("Processing action {0} on {1}".format(options.actions, options.goldstd))
 
     # set configuration variables based on the goldstd option if the corpus has a gold standard,
@@ -179,7 +180,7 @@ considered when coadministering with megestrol acetate.''',
             elif options.crf == "crfsuite":
                 model = CrfSuiteModel(options.models, options.etype)
             model.load_data(corpus, feature_extractors.keys(), options.etype)
-            model.train(options.etype)
+            model.train()
         elif options.actions == "train_matcher": # Train a simple classifier based on string matching
             model = MatcherModel(options.models)
             model.train(corpus)
@@ -218,7 +219,7 @@ considered when coadministering with megestrol acetate.''',
                     model = CrfSuiteModel(options.models, options.etype)
                 model.load_tagger()
                 model.load_data(corpus, feature_extractors.keys(), mode="test")
-                final_results = model.test(corpus, options.etype)
+                final_results = model.test(corpus)
             #with codecs.open(options.output[1] + ".txt", 'w', 'utf-8') as outfile:
             #    lines = final_results.corpus.write_chemdner_results(options.models, outfile)
             #final_results.lines = lines

@@ -189,7 +189,7 @@ def get_results(results, models, gold_offsets, ths, rules, compare_text=True):
             sys.exit()
     if not compare_text: #e.g. gold standard does not include the original text
         offsets = [(o[0], o[1], o[2], "") for o in offsets]
-    logging.info("system entities: {}; gold entities: {}".format(offsets, gold_offsets))
+    # logging.info("system entities: {}; gold entities: {}".format(offsets, gold_offsets))
     reportlines, tps, fps, fns = compare_results(set(offsets), gold_offsets, results.corpus, getwords=compare_text)
     with codecs.open(results.path + "_report.txt", 'w', "utf-8") as reportfile:
         print "writing report to {}_report.txt".format(results.path)
