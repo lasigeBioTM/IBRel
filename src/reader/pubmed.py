@@ -48,7 +48,8 @@ class PubmedDocument(Document):
                 abstext = [a.text for a in abstext]
                 abstext = '\n'.join(abstext)
             else:
-                print "Abstract not found"
+                print "Abstract not found:", title
+                print xml[:50]
                 abstext = ""
                 #print xml
                 #sys.exit()

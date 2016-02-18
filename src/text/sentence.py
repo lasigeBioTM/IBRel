@@ -60,8 +60,8 @@ class Sentence(object):
         #print "basic", pp.pprint(sentence["basic-dependencies"])
         #print "collapsed", pp.pprint(sentence["collapsed-dependencies"])
         #print "ccprocessed", pp.pprint(sentence["collapsed-ccprocessed-dependencies"])
-        self.parsetree = sentence['parse']
-        self.depparse = sentence['basic-dependencies']
+        self.parsetree = sentence.get('parse')
+        self.depparse = sentence.get('basic-dependencies')
         for t in sentence['tokens']:
             # print t[0]
             if t["word"]:
