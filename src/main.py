@@ -1,127 +1,81 @@
 #!/usr/bin/env python
 from __future__ import division, unicode_literals
-import random
-import itertools
-import os, sys
-import shutil
-from subprocess import Popen, PIPE
-import xml.etree.ElementTree as ET
-import logging
-import cPickle as pickle
+
 import argparse
-import datetime
-import time
+import cPickle as pickle
 import codecs
+import logging
+import sys
+import time
+
 from pycorenlp import StanfordCoreNLP
 
-from classification.rext.rules import RuleClassifier
-from reader.genia_corpus import GeniaCorpus
-from reader.tempEval_corpus import TempEvalCorpus
 from classification.ner.crfsuitener import CrfSuiteModel
+from classification.ner.matcher import MatcherModel
 from classification.ner.mirna_matcher import MirnaMatcher
-from reader.chemdner_corpus import ChemdnerCorpus
-from reader.gpro_corpus import GproCorpus
-from reader.ddi_corpus import DDICorpus
-from reader.chebi_corpus import ChebiCorpus
+from classification.ner.simpletagger import BiasModel, feature_extractors
+from classification.ner.stanfordner import StanfordNERModel
+from classification.ner.taggercollection import TaggerCollection
+from classification.results import ResultsNER, ResultSetNER
 from classification.rext.jsrekernel import JSREKernel
+from classification.rext.rules import RuleClassifier
 from classification.rext.svmtk import SVMTKernel
+from config import config
+from reader.chebi_corpus import ChebiCorpus
+from reader.chemdner_corpus import ChemdnerCorpus
+from reader.ddi_corpus import DDICorpus
+from reader.genia_corpus import GeniaCorpus
+from reader.gpro_corpus import GproCorpus
 from reader.mirna_corpus import MirnaCorpus
 from reader.mirtext_corpus import MirtexCorpus
 from reader.pubmed_corpus import PubmedCorpus
+from reader.tempEval_corpus import TempEvalCorpus
 from reader.transmir_corpus import TransmirCorpus
 from text.corpus import Corpus
-from classification.ner.taggercollection import TaggerCollection
-from classification.ner.matcher import MatcherModel
-from classification.ner.simpletagger import SimpleTaggerModel, BiasModel, feature_extractors
-from classification.ner.stanfordner import StanfordNERModel
-from classification.results import ResultsNER, ResultSetNER
-from config import config
+
 if config.use_chebi:
-    from postprocessing.chebi_resolution import add_chebi_mappings
-    from postprocessing.ssm import add_ssm_score
-from evaluate import get_results, run_chemdner_evaluation, get_gold_ann_set
-from classification.rext.kernelmodels import KernelModel
+    pass
 
-def run_crossvalidation(goldstd, corpus, model, cv, crf, entity_type="all"):
-    doclist = corpus.documents.keys()
-    random.shuffle(doclist)
-    size = int(len(doclist)/cv)
-    sublists = chunks(doclist, size)
-    p, r = [], []
-    for nlist in range(cv):
-        testids = sublists[nlist]
-        trainids = list(itertools.chain.from_iterable(sublists[:nlist]))
-        trainids += list(itertools.chain.from_iterable(sublists[nlist+1:]))
-        print 'CV{} - test set: {}; train set: {}'.format(nlist, len(testids), len(trainids))
-        train_corpus = Corpus(corpus.path, documents={did: corpus.documents[did] for did in trainids})
-        test_corpus = Corpus(corpus.path, documents={did: corpus.documents[did] for did in testids})
-        test_entities = len(test_corpus.get_all_entities("goldstandard"))
-        train_entities = len(train_corpus.get_all_entities("goldstandard"))
-        logging.info("test set entities: {}; train set entities: {}".format(test_entities, train_entities))
-        basemodel = model + "_cv{}".format(nlist)
-        logging.debug('CV{} - test set: {}; train set: {}'.format(nlist, len(test_corpus.documents), len(train_corpus.documents)))
-        '''for d in train_corpus.documents:
-            for s in train_corpus.documents[d].sentences:
-                print len([t.tags.get("goldstandard") for t in s.tokens if t.tags.get("goldstandard") != "other"])
-        sys.exit()'''
-        # train
-        logging.info('CV{} - TRAIN'.format(nlist))
-        # train_model = StanfordNERModel(basemodel)
-        if crf == "stanford":
-            train_model = StanfordNERModel(basemodel)
-        elif crf == "crfsuite":
-            train_model = CrfSuiteModel(basemodel)
-        train_model.load_data(train_corpus, feature_extractors.keys())
-        train_model.train()
-
-        # test
-        logging.info('CV{} - TEST'.format(nlist))
-        # test_model = StanfordNERModel(basemodel)
-        if crf == "stanford":
-            test_model = StanfordNERModel(basemodel)
-        elif crf == "crfsuite":
-            test_model = CrfSuiteModel(basemodel)
-        test_model.load_tagger()
-        test_model.load_data(test_corpus, feature_extractors.keys(), mode="test")
-        final_results = test_model.test(test_corpus)
-        final_results.basepath = basemodel + "_results"
-        final_results.path = basemodel
-
-        # validate
-        if config.use_chebi:
-            logging.info('CV{} - VALIDATE'.format(nlist))
-            final_results = add_chebi_mappings(final_results, basemodel)
-            final_results = add_ssm_score(final_results, basemodel)
-            final_results.combine_results(basemodel, basemodel)
-
-        # evaluate
-        logging.info('CV{} - EVALUATE'.format(nlist))
-        test_goldset = set()
-        goldset = get_gold_ann_set(config.paths[goldstd]["format"], config.paths[goldstd]["annotations"])
-        for g in goldset:
-            if g[0] in testids:
-                test_goldset.add(g)
-        precision, recall = get_results(final_results, basemodel, test_goldset, {}, [])
-        # evaluation = run_chemdner_evaluation(config.paths[goldstd]["cem"], basemodel + "_results.txt", "-t")
-        # values = evaluation.split("\n")[1].split('\t')
-        p.append(precision)
-        r.append(recall)
-        # logging.info("precision: {} recall:{}".format(str(values[13]), str(values[14])))
-    pavg = sum(p)/cv
-    ravg = sum(r)/cv
-    print "precision: average={} all={}".format(str(pavg), '|'.join([str(pp) for pp in p]))
-    print "recall: average={}  all={}".format(str(ravg), '|'.join([str(rr) for rr in r]))
-    precision, recall = get_results(final_results, model, test_goldset, {}, [])
-    print precision, recall
-
-def chunks(l, n):
-    """ return list of n sized sublists of l
-    """
-    subs = []
-    for i in xrange(0, len(l), n):
-        subs.append(l[i:i+n])
-    return subs
-
+def load_corpus(goldstd, corpus_path, corpus_format, corenlp_client):
+    if corpus_format == "chemdner":
+        corpus = ChemdnerCorpus(corpus_path)
+        corpus.load_corpus(corenlp_client)
+    elif corpus_format == "gpro":
+        corpus = GproCorpus(corpus_path)
+        corpus.load_corpus(None)
+    elif corpus_format == "ddi":
+        corpus = DDICorpus(corpus_path)
+        corpus.load_corpus(corenlp_client)
+        # since the path of this corpus is a directory, add the reference to save this corpus
+        corpus.path += goldstd + ".txt"
+    elif corpus_format == "chebi":
+        corpus = ChebiCorpus(corpus_path)
+        corpus.load_corpus(corenlp_client)
+        # since the path of this corpus is a directory, add the reference to save this corpus
+        corpus.path += goldstd + ".txt"
+    elif corpus_format == "tempeval":
+        corpus = TempEvalCorpus(corpus_path)
+        corpus.load_corpus(corenlp_client)
+    elif corpus_format == "pubmed":
+        # corenlpserver = ""
+        with open(corpus_path, 'r') as f:
+            pmids = [line.strip() for line in f if line.strip()]
+        corpus = PubmedCorpus(corpus_path, pmids)
+        corpus.load_corpus(corenlp_client)
+    elif corpus_format == "genia":
+        corpus = GeniaCorpus(corpus_path)
+        corpus.load_corpus(corenlp_client)
+    elif corpus_format == "ddi-mirna":
+        corpus = MirnaCorpus(corpus_path)
+        corpus.load_corpus(corenlp_client)
+    elif corpus_format == "mirtex":
+        corpus = MirtexCorpus(corpus_path)
+        corpus.load_corpus(corenlp_client)
+        # corpus.path = ".".join(config.paths[options.goldstd]["corpus"].split(".")[:-1])
+    elif corpus_format == "transmir":
+        corpus = TransmirCorpus(corpus_path)
+        corpus.load_corpus(corenlp_client)
+    return corpus
 
 def main():
     start_time = time.time()
@@ -182,77 +136,11 @@ considered when coadministering with megestrol acetate.''',
         corpus_ann = config.paths[options.goldstd]["annotations"]
 
         corenlp_client = StanfordCoreNLP('http://localhost:9000')
-        if corpus_format == "chemdner":
-            corpus = ChemdnerCorpus(corpus_path)
-            #corpus.save()
-            if options.goldstd == "chemdner_traindev":
-                # merge chemdner_train and chemdner_dev
-                tpath = config.paths["chemdner_train"]["corpus"]
-                tcorpus = pickle.load(open(tpath, 'rb'))
-                dpath = config.paths["chemdner_dev"]["corpus"]
-                dcorpus = pickle.load(open(dpath, 'rb'))
-                corpus.documents.update(tcorpus.documents)
-                corpus.documents.update(dcorpus.documents)
-            elif options.goldstd == "cemp_test_divide":
-                logging.info("loading corpus %s" % corpus_path)
-                corpus.load_corpus(corenlp_client, process=False)
-                docs = corpus.documents.keys()
-                step = int(len(docs)/10)
-                logging.info("step: {}".format(str(step)))
-                for i in range(10):
-                    logging.info("processing cemp_test{}: {} - {}".format(str(i), int(step*i), int(step*i+step)))
-                    sub_corpus_path = config.paths["cemp_test" + str(i)]["corpus"]
-                    sub_corpus = ChemdnerCorpus(sub_corpus_path)
-                    sub_docs = docs[int(step*i):int(step*i+step)]
-                    for di, d in enumerate(sub_docs):
-                        logging.info("fold {}: processing {}/{}".format(i, di, step))
-                        sub_corpus.documents[d] = corpus.documents[d]
-                        del corpus.documents[d]
-                        sub_corpus.documents[d].process_document(corenlp_client)
-                    sub_corpus.save()
-
-            else:
-                corpus.load_corpus(corenlp_client)
-        elif corpus_format == "gpro":
-            corpus = GproCorpus(corpus_path)
-            corpus.load_corpus(None)
-        elif corpus_format == "ddi":
-            corpus = DDICorpus(corpus_path)
-            corpus.load_corpus(corenlp_client)
-            # since the path of this corpus is a directory, add the reference to save this corpus
-            corpus.path += options.goldstd + ".txt"
-        elif corpus_format == "chebi":
-            corpus = ChebiCorpus(corpus_path)
-            corpus.load_corpus(corenlp_client)
-            # since the path of this corpus is a directory, add the reference to save this corpus
-            corpus.path += options.goldstd + ".txt"
-        elif corpus_format == "tempeval":
-            corpus = TempEvalCorpus(corpus_path)
-            corpus.load_corpus(corenlp_client)
-        elif corpus_format == "pubmed":
-            # corenlpserver = ""
-            with open(corpus_path, 'r') as f:
-                pmids = [line.strip() for line in f if line.strip()]
-            corpus = PubmedCorpus(corpus_path, pmids)
-            corpus.load_corpus(corenlp_client)
-        elif corpus_format == "genia":
-            corpus = GeniaCorpus(corpus_path)
-            corpus.load_corpus(corenlp_client)
-        elif corpus_format == "ddi-mirna":
-            corpus = MirnaCorpus(corpus_path)
-            corpus.load_corpus(corenlp_client)
-        elif corpus_format == "mirtex":
-            corpus = MirtexCorpus(corpus_path)
-            corpus.load_corpus(corenlp_client)
-            # corpus.path = ".".join(config.paths[options.goldstd]["corpus"].split(".")[:-1])
-        elif corpus_format == "transmir":
-            corpus = TransmirCorpus(corpus_path)
-            corpus.load_corpus(corenlp_client)
+        corpus = load_corpus(options.goldstd, corpus_path, corpus_format, corenlp_client)
         corpus.save(config.paths[options.goldstd]["corpus"])
         if corpus_ann: #add annotation if it is not a test set
             corpus.load_annotations(corpus_ann, options.etype)
             corpus.save(config.paths[options.goldstd]["corpus"])
-
 
     elif options.actions == "annotate": # rext-add annotation to corpus
         if len(options.goldstd) > 1:
@@ -381,9 +269,6 @@ considered when coadministering with megestrol acetate.''',
             model.test()
             results = model.get_predictions(corpus)
             results.save(options.output[1] + ".pickle")
-        elif options.actions == "crossvalidation":
-            cv = 5 # fixed 5-fold CV
-            run_crossvalidation(options.goldstd, corpus, options.models, cv, options.etype)
 
     total_time = time.time() - start_time
     logging.info("Total time: %ss" % total_time)
