@@ -131,6 +131,9 @@ class Sentence(object):
             # print t.start, t.end, t.text
             if t.start >= start and t.end <= end:
                 tlist.append(t)
+            elif (t.start == start and t.end > end) or (t.start < start and t.end == end):
+                tlist.append(t)
+                break
             elif t.start == end+1:
                 nextword = t.text
         if tlist:
@@ -158,8 +161,8 @@ class Sentence(object):
                                        original_id=kwargs.get("original_id"), nextword=nextword)
             self.entities.add_entity(entity, source)
             self.label_tokens(tlist, source, etype)
-            logging.debug("added {} to {}, now with {} entities".format(newtext, self.sid,
-                                                                             len(self.entities.elist[source])))
+            #logging.debug("added {} to {}, now with {} entities".format(newtext, self.sid,
+            #                                                                 len(self.entities.elist[source])))
             return eid
         else:
             logging.info("no tokens found:")
