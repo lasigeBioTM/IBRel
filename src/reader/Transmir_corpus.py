@@ -2,7 +2,7 @@ import logging
 
 import progressbar as pb
 from reader.pubmed_corpus import PubmedCorpus
-from mirna_base import load_graph, map_label
+from mirna_base import MirbaseDB
 from config import config
 
 
@@ -11,7 +11,8 @@ class TransmirCorpus(PubmedCorpus):
         Corpus generated from the TransmiR database, using distant supervision
     """
     def __init__(self, corpusdir, **kwargs):
-        self.mirbase = load_graph(config.mirbase_path)
+        self.mirbase = MirbaseDB(config.mirbase_path)
+        self.mirbase.load_graph()
         self.mirnas = set()
         self.tfs = set()
         self.pairs = set()
@@ -21,7 +22,6 @@ class TransmirCorpus(PubmedCorpus):
         self.normalized_pairs = set()
         self.db_path = corpusdir
         self.load_database()
-        self.normalize_entities()
         super(TransmirCorpus, self).__init__(corpusdir, self.pmids, **kwargs)
         # TODO: use negatome
 
@@ -38,6 +38,8 @@ class TransmirCorpus(PubmedCorpus):
                     active = tsv[7]
                     pmid = tsv[8].split(";")
                     self.tfs.add(tfname) # uniform TF names
+                    if not mirname.startswith("hsa-"):
+                        mirname = "hsa-" + mirname
                     self.mirnas.add(mirname)
                     # for f in func:
                     #     funcs.add(f.strip())
@@ -53,7 +55,10 @@ class TransmirCorpus(PubmedCorpus):
     def normalize_entities(self):
         logging.info("Normalizing entities...")
         for mir in self.mirnas:
-            match = map_label(mir, self.mirbase)
+            match = self.mirbase.map_label(mir)
             #if match > 0.6:
             self.normalized_mirnas.add(match[0])
+
+    def load_annotations(self, db_path, etype):
+        self.normalize_entities()
 

@@ -8,83 +8,109 @@ import pprint
 from fuzzywuzzy import process
 from config import config
 
-def parse_mirbase(mirbase):
-    mirna_dic = {}
-    mirnas = mirbase.strip().split(r"//")
-    for m in mirnas:
-        if len(m) > 0:
-            props = m.strip().split("\nXX\n")
-            mirname = props[0].split()[1]
-            if not mirname.startswith("hsa"):
+class MirbaseDB(object):
+    def __init__(self, db_path):
+        self.g = ConjunctiveGraph()
+        self.path = db_path
+        self.choices = set()
+
+    def create_graph(self):
+        self.g.open(self.path, create=True)
+        with open("data/miRNA.dat") as datfile:
+            mirbase = datfile.read().strip()
+        data = self.parse_mirbase(mirbase)
+        #g = ConjunctiveGraph(store="SPARQLUpdateStore")
+        ns = Namespace("http://www.mirbase.org/cgi-bin/mirna_entry.pl?acc=")
+        # g.bind()
+        mirna_class = URIRef("http://purl.obolibrary.org/obo/SO_0000276")
+        for mirna in data:
+            if "AC" not in  data[mirna]:
+                print "NO AC", mirna, data[mirna].keys()
                 continue
-            mirna_dic[mirname] = {}
-            for p in props[1:]:
-                plines = p.split("\n")
-                if p.startswith("SQ"):
-                    # print p
-                    mirna_dic[mirname]["SQ"] = []
-                    for l in plines[1:]:
-                        seqs = l.split()
-                        for s in seqs:
-                            if s.isalpha():
-                                mirna_dic[mirname]["SQ"].append(s)
-                elif p.startswith("FH"):
-                    current_location = ""
-                    for l in plines[1:]:
-                        values = l.split()
-                        if l.startswith("FH"):
-                            continue
-                        if values[1] == "miRNA":
-                            current_location = values[2]
-                            mirna_dic[mirname][current_location] = {}
-                        elif values[1] == "modified_base":
-                            continue
-                        elif current_location != "":
-                            if "=" not in values[1]:
-                                continue
-                            prop = values[1].split("=")
-                            prop_name = prop[0][1:]
-                            mirna_dic[mirname][current_location][prop_name] = prop[1][1:-1]
-                else:
-                    for l in plines:
-                        if len(l) > 0:
+            acc = data[mirna]["AC"][0][:-1]
+            mirna_instance = URIRef(ns + str(acc))
+            self.g.add((mirna_instance, RDF.type, mirna_class))
+            label = Literal(mirna)
+            self.g.add((mirna_instance, RDFS.label, label))
+
+
+    def parse_mirbase(self, mirbase):
+        mirna_dic = {}
+        mirnas = mirbase.strip().split(r"//")
+        for m in mirnas:
+            if len(m) > 0:
+                props = m.strip().split("\nXX\n")
+                mirname = props[0].split()[1]
+                if not mirname.startswith("hsa"):
+                    continue
+                mirna_dic[mirname] = {}
+                for p in props[1:]:
+                    plines = p.split("\n")
+                    if p.startswith("SQ"):
+                        # print p
+                        mirna_dic[mirname]["SQ"] = []
+                        for l in plines[1:]:
+                            seqs = l.split()
+                            for s in seqs:
+                                if s.isalpha():
+                                    mirna_dic[mirname]["SQ"].append(s)
+                    elif p.startswith("FH"):
+                        current_location = ""
+                        for l in plines[1:]:
                             values = l.split()
-                            if values[0].startswith("R"):
+                            if l.startswith("FH"):
                                 continue
-                            if values[0] not in mirna_dic[mirname]:
-                                mirna_dic[mirname][values[0]] = []
-                            mirna_dic[mirname][values[0]].append(" ".join(values[1:]))
-    return mirna_dic
+                            if values[1] == "miRNA":
+                                current_location = values[2]
+                                mirna_dic[mirname][current_location] = {}
+                            elif values[1] == "modified_base":
+                                continue
+                            elif current_location != "":
+                                if "=" not in values[1]:
+                                    continue
+                                prop = values[1].split("=")
+                                prop_name = prop[0][1:]
+                                mirna_dic[mirname][current_location][prop_name] = prop[1][1:-1]
+                    else:
+                        for l in plines:
+                            if len(l) > 0:
+                                values = l.split()
+                                if values[0].startswith("R"):
+                                    continue
+                                if values[0] not in mirna_dic[mirname]:
+                                    mirna_dic[mirname][values[0]] = []
+                                mirna_dic[mirname][values[0]].append(" ".join(values[1:]))
+        return mirna_dic
 
-def create_graph(data, g):
-    #g = ConjunctiveGraph(store="SPARQLUpdateStore")
-    ns = Namespace("http://www.mirbase.org/cgi-bin/mirna_entry.pl?acc=")
-    # g.bind()
-    mirna_class = URIRef("http://purl.obolibrary.org/obo/SO_0000276")
-    for mirna in data:
-        if "AC" not in  data[mirna]:
-            print "NO AC", mirna, data[mirna].keys()
-            continue
-        acc = data[mirna]["AC"][0][:-1]
-        mirna_instance = URIRef(ns + str(acc))
-        g.add((mirna_instance, RDF.type, mirna_class))
-        label = Literal(mirna)
-        g.add((mirna_instance, RDFS.label, label))
-    return g
+    def map_label(self, label):
+        result = process.extractOne(label, self.choices)
+        # result = process.extract(label, choices, limit=3)
+        if result[1] != 100:
+            print label, result
+            if label[-1].isdigit():
+                label += "a"
+            else:
+                label += "-1"
+            result = process.extractOne(label, self.choices)
+            if result[1] != 100:
+                if label[-1].isdigit():
+                    label += "a"
+                else:
+                    label += "-1"
+                    result = process.extractOne(label, self.choices)
+            print "revised:", label, result
+        return result
 
 
-def map_label(label, g):
-    choices = [str(l) for l in g.objects(predicate=RDFS.label)]
-    result = process.extractOne(label, choices)
-    # print label, result
-    return result
+    def load_graph(self):
+        self.g.load(self.path)
+        print "Opened graph with {} triples".format(len(self.g))
+        self.choices = [str(l) for l in self.g.objects(predicate=RDFS.label)]
 
-
-def load_graph(path):
-    g = ConjunctiveGraph()
-    g.load(path)
-    print "Opened graph with {} triples".format(len(g))
-    return g
+    def save_graph(self):
+        self.g.serialize(self.path, format='pretty-xml')
+        print 'Triples in graph after add: ', len(self.g)
+        self.g.close()
 
 def main():
     start_time = time.time()
@@ -109,32 +135,25 @@ def main():
     path = config.mirbase_path
 
 
-
+    mirbase = MirbaseDB(path)
     if options.action == "create":
-        g = ConjunctiveGraph()
-        g.open(path, create=True)
-        with open("data/miRNA.dat") as datfile:
-            mirbase = datfile.read().strip()
-        mirbase_parsed = parse_mirbase(mirbase)
-        graph = create_graph(mirbase_parsed, g)
-        graph.serialize(path, format='pretty-xml')
-        print 'Triples in graph after add: ', len(graph)
-        graph.close()
+        mirbase.create_graph()
+        mirbase.save_graph()
     else:
-        g = load_graph(path)
+        mirbase.load()
         if options.action == "map":
-            map_label(options.label, g)
+            mirbase.map_label(options.label)
         elif options.action == "geturi":
             q = prepareQuery('SELECT ?s WHERE { ?s rdfs:label ?label .}', initNs={"rdfs": RDFS })
             l = Literal(options.label)
-            for row in g.query(q, initBindings={'label': l}):
+            for row in mirbase.g.query(q, initBindings={'label': l}):
                 print row
         else:
             m = URIRef("http://www.mirbase.org/cgi-bin/mirna_entry.pl?acc=MI0017413")
             #for s, p, o in g:
             #    print s, p, o
             mirna_class = URIRef("http://purl.obolibrary.org/obo/SO_0000276")
-            for row in g.query('select ?s where { ?s rdf:type [] .}'):
+            for row in mirbase.query('select ?s where { ?s rdf:type [] .}'):
                 print row.s
 
 if __name__ == "__main__":
