@@ -85,7 +85,9 @@ def run_crossvalidation(goldstd, corpus, model, cv, crf="stanford", entity_type=
     ravg = sum(r)/cv
     print "precision: average={} all={}".format(str(pavg), '|'.join([str(pp) for pp in p]))
     print "recall: average={}  all={}".format(str(ravg), '|'.join([str(rr) for rr in r]))
-    precision, recall = get_results(final_results, model, test_goldset, {}, [])
+    goldset = get_gold_ann_set(config.paths[goldstd]["format"], config.paths[goldstd]["annotations"], entity_type,
+                                   config.paths[goldstd]["text"] )
+    precision, recall = get_results(final_results, model, goldset, {}, [])
     print precision, recall
 
 

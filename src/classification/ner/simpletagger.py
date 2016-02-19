@@ -357,6 +357,9 @@ def create_entity(tokens, sid, did, text, score, etype, **kwargs):
     elif etype == "protein" or "prot" in etype.lower():
         e = ProteinEntity(tokens, sid, text=text, did=did,score=score,
                           eid=kwargs.get("eid"), subtype=kwargs.get("subtype"), nextword=kwargs.get("nextword"))
+    elif etype == "dna": #TODO: DNA entity?
+        e = ProteinEntity(tokens, sid, text=text, did=did,score=score,
+                          eid=kwargs.get("eid"), subtype=kwargs.get("subtype"), nextword=kwargs.get("nextword"))
     elif etype == "event":
          e = EventEntity(tokens, sid, text=text, did=did,score=score,
                          eid=kwargs.get("eid"), subtype=kwargs.get("subtype"), nextword=kwargs.get("nextword"),

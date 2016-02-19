@@ -34,7 +34,7 @@ def get_gold_ann_set(corpus_type, gold_path, entity_type, text_path):
     elif corpus_type == "pubmed":
         goldset = get_unique_gold_ann_set(gold_path)
     elif corpus_type == "genia":
-        goldset = get_genia_gold_ann_set(gold_path)
+        goldset = get_genia_gold_ann_set(gold_path, entity_type)
     elif corpus_type == "ddi-mirna":
         goldset = get_ddi_mirna_gold_ann_set(gold_path, entity_type)
     elif corpus_type == "mirtex":

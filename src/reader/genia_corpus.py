@@ -12,7 +12,7 @@ from text.document import Document
 from text.sentence import Sentence
 
 type_match = {"G#protein": "protein",
-              "G#DNA": "DNA"}
+              "G#DNA": "dna"}
 
 class GeniaCorpus(Corpus):
     def __init__(self, corpusdir, **kwargs):
@@ -86,7 +86,7 @@ class GeniaCorpus(Corpus):
                         continue
                     entity_type = sem.split("_")[0]
                     if etype == "all" or type_match.get(entity_type) == etype:
-                        eid = this_sentence.tag_entity(estart, eend, entity_type,
+                        eid = this_sentence.tag_entity(estart, eend, type_match.get(entity_type),
                                                      text=e.text)
                         if eid is None:
                             print "did not add this entity: {}".format(e.text)
@@ -104,7 +104,7 @@ class GeniaCorpus(Corpus):
         #    print s, len(all_entities[s])
 
 
-def get_genia_gold_ann_set(goldann):
+def get_genia_gold_ann_set(goldann, etype):
     gold_offsets = set()
     soup = BeautifulSoup(codecs.open(goldann, 'r', "utf-8"), 'html.parser')
     docs = soup.find_all("article")
@@ -117,21 +117,17 @@ def get_genia_gold_ann_set(goldann):
         sentences = doc.abstract.find_all("sentence")
         for si, s in enumerate(sentences):
             stext = s.get_text()
-            sentities = s.find_all("cons")
+            sentities = s.find_all("cons", recursive=False)
             lastindex = 0
             for ei, e in enumerate(sentities):
                 estart = stext.find(e.text, lastindex) + doc_offset # relative to document
                 eend = estart + len(e.text)
-                sems = e.get("sem")
-                if sems is None or len(sems.split(" ")) > 1: # parent cons, skip
-                    continue
-                sem = sems
-                # print sem
-                if sem.endswith(")"):
-                    sem = sem[:-1]
+                sem = e.get("sem")
                 if sem.startswith("("):
-                    sem = sem[1:]
-                if sem.startswith("G#protein"):
+                    #TODO: Deal with overlapping entities
+                    continue
+                entity_type = sem.split("_")[0]
+                if etype == "all" or type_match.get(entity_type) == etype:
                     gold_offsets.add((did, estart, eend, e.text))
                 # etext = doc_text[estart:eend]
                 # logging.info("gold annotation: {}".format(e.text))
