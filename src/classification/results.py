@@ -4,6 +4,9 @@ import os
 import time
 import argparse
 import sys
+
+from text.corpus import Corpus
+
 sys.path.append(os.path.abspath(os.path.dirname(__file__) + '../..'))
 from config import config
 from text.offset import Offset, perfect_overlap, contained_by, Offsets
@@ -51,7 +54,7 @@ class ResultsNER(object):
     def __init__(self, name):
         self.entities = {}
         self.name = name
-        self.corpus = None
+        self.corpus = Corpus(self.name)
 
     def get_ensemble_results(self, ensemble, corpus, model):
         """

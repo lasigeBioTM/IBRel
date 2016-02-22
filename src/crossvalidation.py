@@ -8,6 +8,7 @@ import sys
 from classification.ner.crfsuitener import CrfSuiteModel
 from classification.ner.simpletagger import feature_extractors
 from classification.ner.stanfordner import StanfordNERModel
+from classification.results import ResultsNER
 from config import config
 from evaluate import get_gold_ann_set, get_results
 # from postprocessing.chebi_resolution import add_chebi_mappings
@@ -21,6 +22,8 @@ def run_crossvalidation(goldstd, corpus, model, cv, crf="stanford", entity_type=
     size = int(len(doclist)/cv)
     sublists = chunks(doclist, size)
     p, r = [], []
+    all_results = ResultsNER(model)
+    all_results.path = model + "_results"
     for nlist in range(cv):
         testids = sublists[nlist]
         trainids = list(itertools.chain.from_iterable(sublists[:nlist]))
@@ -59,7 +62,8 @@ def run_crossvalidation(goldstd, corpus, model, cv, crf="stanford", entity_type=
         final_results = test_model.test(test_corpus)
         final_results.basepath = basemodel + "_results"
         final_results.path = basemodel
-
+        all_results.entities.update(final_results.entities)
+        all_results.corpus.documents.update(final_results.corpus.documents)
         # validate
         """if config.use_chebi:
             logging.info('CV{} - VALIDATE'.format(nlist))
@@ -87,8 +91,7 @@ def run_crossvalidation(goldstd, corpus, model, cv, crf="stanford", entity_type=
     print "recall: average={}  all={}".format(str(ravg), '|'.join([str(rr) for rr in r]))
     goldset = get_gold_ann_set(config.paths[goldstd]["format"], config.paths[goldstd]["annotations"], entity_type,
                                    config.paths[goldstd]["text"] )
-    precision, recall = get_results(final_results, model, goldset, {}, [])
-    print precision, recall
+    get_results(all_results, model, goldset, {}, [])
 
 
 def chunks(l, n):
