@@ -85,8 +85,8 @@ class GeniaCorpus(Corpus):
                         #TODO: Deal with overlapping entities
                         continue
                     entity_type = sem.split("_")[0]
-                    if etype == "all" or type_match.get(entity_type) == etype:
-                        eid = this_sentence.tag_entity(estart, eend, type_match.get(entity_type),
+                    if etype == "all" or type_match.get(entity_type, "entity") == etype:
+                        eid = this_sentence.tag_entity(estart, eend, type_match.get(entity_type, "entity"),
                                                      text=e.text)
                         if eid is None:
                             print "did not add this entity: {}".format(e.text)

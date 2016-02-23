@@ -77,10 +77,12 @@ def compare_results(offsets, goldoffsets, corpus, getwords=True):
         fpcounter = collections.Counter(fpwords)
         for w in fpcounter.most_common(10):
             report.append(w[0] + ": " + str(w[1]))
+        report.append(">\n")
         report.append("Common FNs")
         fncounter = collections.Counter(fnwords)
         for w in fncounter.most_common(10):
             report.append(w[0] + ": " + str(w[1]))
+        report.append(">\n")
 
     for d in list(alldocs):
         report.append(d)
@@ -193,14 +195,16 @@ def get_results(results, models, gold_offsets, ths, rules, compare_text=True):
     reportlines, tps, fps, fns = compare_results(set(offsets), gold_offsets, results.corpus, getwords=compare_text)
     with codecs.open(results.path + "_report.txt", 'w', "utf-8") as reportfile:
         print "writing report to {}_report.txt".format(results.path)
-        reportfile.write("TPs: {!s}\nFPs: {!s}\n FNs: {!s}\n".format(len(tps), len(fps), len(fns)))
+        reportfile.write("TPs: {!s}\nFPs: {!s}\nFNs: {!s}\n".format(len(tps), len(fps), len(fns)))
+        reportfile.write(">\n")
         if len(tps) == 0:
             precision = 0
             recall = 0
         else:
             precision = len(tps)/(len(tps) + len(fps))
             recall = len(tps)/(len(tps) + len(fns))
-        reportfile.write("Precision: {!s}\n Recall: {!s}\n".format(precision, recall))
+        reportfile.write("Precision: {!s}\nRecall: {!s}\n".format(precision, recall))
+        reportfile.write(">\n")
         for line in reportlines:
             reportfile.write(line + '\n')
     print "Precision: {}".format(precision)

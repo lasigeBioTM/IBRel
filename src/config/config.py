@@ -64,8 +64,17 @@ genia_base = "corpora/GENIA_term_3.02/"
 genia_sample_base = "corpora/genia_sample/"
 mirnacorpus_base = "corpora/miRNACorpus/"
 mirtex_base = "corpora/miRTex/"
-
+jnlpba_base = "corpora/JNLPBA/"
 paths = {
+    'jnlpba_train':{ # pre processed genia corpus
+
+    },
+    'jnlpba_test':{
+        'text': jnlpba_base + "test/Genia4EReval1.raw",
+        'annotations': jnlpba_base + "test/Genia4EReval1.iob2",
+        'corpus': "data/Genia4EReval1.raw.pickle",
+        'format': "jnlpba"
+    },
     'miRNACorpus_train':{
         'text': mirnacorpus_base + "miRNA-Train-Corpus.xml",
         'annotations': mirnacorpus_base + "miRNA-Train-Corpus.xml",

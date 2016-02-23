@@ -16,24 +16,30 @@ from evaluate import get_gold_ann_set, get_results
 from text.corpus import Corpus
 
 
-def run_crossvalidation(goldstd, corpus, model, cv, crf="stanford", entity_type="all"):
+def run_crossvalidation(goldstd, corpus, model, cv, crf="stanford", entity_type="all", cvlog="cv.log"):
+    logfile = open(cvlog, 'w')
     doclist = corpus.documents.keys()
     random.shuffle(doclist)
     size = int(len(doclist)/cv)
     sublists = chunks(doclist, size)
+    logging.debug("Chunks:")
+    logging.debug(sublists)
     p, r = [], []
     all_results = ResultsNER(model)
     all_results.path = model + "_results"
     for nlist in range(cv):
+        testids, trainids = None, None
         testids = sublists[nlist]
         trainids = list(itertools.chain.from_iterable(sublists[:nlist]))
         trainids += list(itertools.chain.from_iterable(sublists[nlist+1:]))
+        train_corpus, test_corpus = None, None
         print 'CV{} - test set: {}; train set: {}'.format(nlist, len(testids), len(trainids))
-        train_corpus = Corpus(corpus.path, documents={did: corpus.documents[did] for did in trainids})
-        test_corpus = Corpus(corpus.path, documents={did: corpus.documents[did] for did in testids})
-        test_entities = len(test_corpus.get_all_entities("goldstandard"))
-        train_entities = len(train_corpus.get_all_entities("goldstandard"))
-        logging.info("test set entities: {}; train set entities: {}".format(test_entities, train_entities))
+        train_corpus = Corpus(corpus.path + "_train", documents={did: corpus.documents[did] for did in trainids})
+        test_corpus = Corpus(corpus.path + "_test", documents={did: corpus.documents[did] for did in testids})
+        # logging.debug("train corpus docs: {}".format("\n".join(train_corpus.documents.keys())))
+        #test_entities = len(test_corpus.get_all_entities("goldstandard"))
+        #train_entities = len(train_corpus.get_all_entities("goldstandard"))
+        #logging.info("test set entities: {}; train set entities: {}".format(test_entities, train_entities))
         basemodel = model + "_cv{}".format(nlist)
         logging.debug('CV{} - test set: {}; train set: {}'.format(nlist, len(test_corpus.documents), len(train_corpus.documents)))
         '''for d in train_corpus.documents:
@@ -43,6 +49,7 @@ def run_crossvalidation(goldstd, corpus, model, cv, crf="stanford", entity_type=
         # train
         logging.info('CV{} - TRAIN'.format(nlist))
         # train_model = StanfordNERModel(basemodel)
+        train_model = None
         if crf == "stanford":
             train_model = StanfordNERModel(basemodel, entity_type)
         elif crf == "crfsuite":
@@ -52,14 +59,17 @@ def run_crossvalidation(goldstd, corpus, model, cv, crf="stanford", entity_type=
 
         # test
         logging.info('CV{} - TEST'.format(nlist))
-        # test_model = StanfordNERModel(basemodel)
+        test_model = None
         if crf == "stanford":
             test_model = StanfordNERModel(basemodel, entity_type)
         elif crf == "crfsuite":
             test_model = CrfSuiteModel(basemodel, entity_type)
-        test_model.load_tagger()
+        test_model.load_tagger(port=9191+nlist)
         test_model.load_data(test_corpus, feature_extractors.keys(), mode="test")
-        final_results = test_model.test(test_corpus)
+        final_results = None
+        final_results = test_model.test(test_corpus, port=9191+nlist)
+        if crf == "stanford":
+            test_model.kill_process()
         final_results.basepath = basemodel + "_results"
         final_results.path = basemodel
         all_results.entities.update(final_results.entities)
@@ -114,7 +124,7 @@ def main():
                       help="format path")
     parser.add_argument("--annotations", dest="annotations")
     parser.add_argument("--tag", dest="tag", default="0", help="Tag to identify the text.")
-    parser.add_argument("--cv", dest="cv", default=5, help="Number of folds.")
+    parser.add_argument("--cv", dest="cv", default=5, help="Number of folds.", type=int)
     parser.add_argument("--models", dest="models", help="model destination path, without extension")
     parser.add_argument("--entitytype", dest="etype", help="type of entities to be considered", default="all")
     parser.add_argument("--doctype", dest="doctype", help="type of document to be considered", default="all")

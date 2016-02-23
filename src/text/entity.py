@@ -73,6 +73,8 @@ class Entity(object):
         dic["sentence_offset"] = self.start
         return dic
 
+    def validate(self, ths, rules, *args, **kwargs):
+        return True
 
 class Entities(object):
     """Group of entities related to a text"""

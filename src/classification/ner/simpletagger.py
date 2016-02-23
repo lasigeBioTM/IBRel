@@ -4,6 +4,7 @@ import unicodedata
 from classification.model import Model
 from text.chemical_entity import element_base, ChemicalEntity
 from text.chemical_entity import amino_acids
+from text.entity import Entity
 from text.mirna_entity import MirnaEntity
 from text.protein_entity import ProteinEntity
 from text.time_entity import TimeEntity
@@ -231,17 +232,17 @@ class SimpleTaggerModel(Model):
                 for i in range(len(sentence.tokens)):
                     if sentence.tokens[i].text:
                         tokensubtype = sentence.tokens[i].tags.get("goldstandard_subtype", "none")
-                        if fname in sentence.tokens[i].features:
-                            tokenfeatures = sentence.tokens[i].features[fname]
+                        # if fname in sentence.tokens[i].features:
+                        #     tokenfeatures = sentence.tokens[i].features[fname]
                             #logging.info("loaded features from corpus: %s" % tokenfeatures)
-                            if etype == "all":
-                                tokenlabel = sentence.tokens[i].tags.get("goldstandard", "other")
-                            else:
-                                tokenlabel = sentence.tokens[i].tags.get("goldstandard_" + type, "other")
-                        else:
-                            tokenfeatures, tokenlabel = self.generate_features(sentence, i, flist, etype)
-                            savecorpus = True
-                            sentence.tokens[i].features[fname] = tokenfeatures[:]
+                        #     if etype == "all":
+                        #         tokenlabel = sentence.tokens[i].tags.get("goldstandard", "other")
+                        #     else:
+                        #         tokenlabel = sentence.tokens[i].tags.get("goldstandard_" + type, "other")
+                        # else:
+                        tokenfeatures, tokenlabel = self.generate_features(sentence, i, flist, etype)
+                        # savecorpus = True
+                        sentence.tokens[i].features[fname] = tokenfeatures[:]
                         # if tokenlabel != "other":
                         #      logging.debug("%s %s" % (tokenfeatures, tokenlabel))
                         sentencefeatures.append(tokenfeatures)
@@ -368,6 +369,11 @@ def create_entity(tokens, sid, did, text, score, etype, **kwargs):
          e = TimeEntity(tokens, sid, text=text, did=did,score=score,
                         eid=kwargs.get("eid"), subtype=kwargs.get("subtype"), nextword=kwargs.get("nextword"),
                         original_id=kwargs.get("original_id"))
+    else:
+        e = Entity(tokens, sid, text=text, did=did,score=score,
+                        eid=kwargs.get("eid"), subtype=kwargs.get("subtype"), nextword=kwargs.get("nextword"),
+                        original_id=kwargs.get("original_id"))
+        e.type = "all"
     return e
 
 
