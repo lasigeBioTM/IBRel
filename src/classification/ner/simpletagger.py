@@ -4,6 +4,7 @@ import unicodedata
 from classification.model import Model
 from text.chemical_entity import element_base, ChemicalEntity
 from text.chemical_entity import amino_acids
+from text.dna_entity import DNAEntity
 from text.entity import Entity
 from text.mirna_entity import MirnaEntity
 from text.protein_entity import ProteinEntity
@@ -358,8 +359,8 @@ def create_entity(tokens, sid, did, text, score, etype, **kwargs):
     elif etype == "protein" or "prot" in etype.lower():
         e = ProteinEntity(tokens, sid, text=text, did=did,score=score,
                           eid=kwargs.get("eid"), subtype=kwargs.get("subtype"), nextword=kwargs.get("nextword"))
-    elif etype == "dna": #TODO: DNA entity?
-        e = ProteinEntity(tokens, sid, text=text, did=did,score=score,
+    elif etype == "dna":
+        e = DNAEntity(tokens, sid, text=text, did=did,score=score,
                           eid=kwargs.get("eid"), subtype=kwargs.get("subtype"), nextword=kwargs.get("nextword"))
     elif etype == "event":
          e = EventEntity(tokens, sid, text=text, did=did,score=score,
