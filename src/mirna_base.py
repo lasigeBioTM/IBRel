@@ -7,7 +7,8 @@ import time
 import pprint
 from fuzzywuzzy import process
 from config import config
-
+pp = pprint.PrettyPrinter(indent=2)
+MIRBASE = Namespace("http://www.mirbase.org/")
 class MirbaseDB(object):
     def __init__(self, db_path):
         self.g = ConjunctiveGraph()
@@ -15,100 +16,112 @@ class MirbaseDB(object):
         self.choices = set()
 
     def create_graph(self):
-        self.g.open(self.path, create=True)
-        with open("data/miRNA.dat") as datfile:
-            mirbase = datfile.read().strip()
-        data = self.parse_mirbase(mirbase)
+        self.g.open(self.path + "data.rdf", create=True)
+        data = self.parse_mirbase(self.path)
         #g = ConjunctiveGraph(store="SPARQLUpdateStore")
-        ns = Namespace("http://www.mirbase.org/cgi-bin/mirna_entry.pl?acc=")
         # g.bind()
         mirna_class = URIRef("http://purl.obolibrary.org/obo/SO_0000276")
-        for mirna in data:
-            if "AC" not in  data[mirna]:
-                print "NO AC", mirna, data[mirna].keys()
-                continue
-            acc = data[mirna]["AC"][0][:-1]
-            mirna_instance = URIRef(ns + str(acc))
+        for mid in data:
+            mirna_instance = URIRef(MIRBASE + data[mid]["acc"])
             self.g.add((mirna_instance, RDF.type, mirna_class))
-            label = Literal(mirna)
+            label = Literal(data[mid]["name"])
             self.g.add((mirna_instance, RDFS.label, label))
+            description = Literal(data[mid]["description"])
+            self.g.add((mirna_instance, RDFS.comment, description))
+            for p in data[mid]["previous_names"]:
+                if p.strip():
+                    previous_name = Literal(p)
+                    self.g.add((mirna_instance, MIRBASE["previous_acc"], previous_name))
+            for mature in data[mid]["mature"]:
+                mature_instance = URIRef(MIRBASE + data[mid]["mature"][mature]["acc"])
+                self.g.add((mature_instance, RDF.type, mirna_class))
+                mature_label = Literal(data[mid]["mature"][mature]["name"])
+                self.g.add((mature_instance, RDFS.label, label))
+                for mature_p in data[mid]["mature"][mature]["previous_names"]:
+                    if mature_p.strip():
+                        mature_previous_name = Literal(mature_p)
+                        self.g.add((mature_instance, MIRBASE["previous_acc"], mature_previous_name))
+                self.g.add((mirna_instance, MIRBASE["stemloopOf"], mature_instance))
 
 
-    def parse_mirbase(self, mirbase):
+    def parse_mirbase(self, mirbase_root):
         mirna_dic = {}
-        mirnas = mirbase.strip().split(r"//")
-        for m in mirnas:
-            if len(m) > 0:
-                props = m.strip().split("\nXX\n")
-                mirname = props[0].split()[1]
-                if not mirname.startswith("hsa"):
+        with open(mirbase_root + "mirna.txt") as mirnas:
+            for m in mirnas:
+                props = m.strip().split("\t")
+                mname = props[2]
+                mid = props[0]
+                macc = props[1]
+                mdesc = props[4]
+                mprev = props[3].split(";")
+                if int(props[-1]) != 22: # not homo sapiens
                     continue
-                mirna_dic[mirname] = {}
-                for p in props[1:]:
-                    plines = p.split("\n")
-                    if p.startswith("SQ"):
-                        # print p
-                        mirna_dic[mirname]["SQ"] = []
-                        for l in plines[1:]:
-                            seqs = l.split()
-                            for s in seqs:
-                                if s.isalpha():
-                                    mirna_dic[mirname]["SQ"].append(s)
-                    elif p.startswith("FH"):
-                        current_location = ""
-                        for l in plines[1:]:
-                            values = l.split()
-                            if l.startswith("FH"):
-                                continue
-                            if values[1] == "miRNA":
-                                current_location = values[2]
-                                mirna_dic[mirname][current_location] = {}
-                            elif values[1] == "modified_base":
-                                continue
-                            elif current_location != "":
-                                if "=" not in values[1]:
-                                    continue
-                                prop = values[1].split("=")
-                                prop_name = prop[0][1:]
-                                mirna_dic[mirname][current_location][prop_name] = prop[1][1:-1]
-                    else:
-                        for l in plines:
-                            if len(l) > 0:
-                                values = l.split()
-                                if values[0].startswith("R"):
-                                    continue
-                                if values[0] not in mirna_dic[mirname]:
-                                    mirna_dic[mirname][values[0]] = []
-                                mirna_dic[mirname][values[0]].append(" ".join(values[1:]))
+                mirna_dic[mid] = {}
+                mirna_dic[mid]["name"] = mname
+                mirna_dic[mid]["acc"] = macc
+                mirna_dic[mid]["previous_names"] = mprev
+                mirna_dic[mid]["description"] = mdesc
+        mature_dic = {}
+        with open(mirbase_root + "mirna_mature.txt") as mirnas:
+            for m in mirnas:
+                props = m.strip().split("\t")
+                mname = props[1]
+                mid = props[0]
+                macc = props[3]
+                # mdesc = props[4]
+                mprev = props[2].split(";")
+                if not mname.startswith("hsa-"): # not homo sapiens
+                    continue
+                mature_dic[mid] = {}
+                mature_dic[mid]["name"] = mname
+                mature_dic[mid]["previous_names"] = mprev
+                mature_dic[mid]["acc"] = macc
+        with open(mirbase_root + "mirna_pre_mature.txt") as mirnas:
+            for m in mirnas:
+                props = m.strip().split("\t")
+                mid, matureid = props[:2]
+                if mid in mirna_dic:
+                    if "mature" not in mirna_dic[mid]:
+                        mirna_dic[mid]["mature"] = {}
+                    mirna_dic[mid]["mature"][matureid] = mature_dic[matureid]
+        # pp.pprint(mirna_dic)
         return mirna_dic
 
     def map_label(self, label):
+        label = label.lower()
+        label = label.replace("microrna", "mir")
+        label = label.replace("mirna", "mir")
+        if not label.startswith("hsa-"):
+            label = "hsa-" + label
+
         result = process.extractOne(label, self.choices)
         # result = process.extract(label, choices, limit=3)
-        if result[1] != 100:
-            print label, result
-            if label[-1].isdigit():
-                label += "a"
-            else:
-                label += "-1"
-            result = process.extractOne(label, self.choices)
-            if result[1] != 100:
-                if label[-1].isdigit():
-                    label += "a"
-                else:
-                    label += "-1"
-                    result = process.extractOne(label, self.choices)
-            print "revised:", label, result
+        """if result[1] != 100:
+            print
+            print "original:", label.encode("utf-8"), result
+            # if label[-1].isdigit():
+            #     label += "a"
+            # else:
+            new_label = label + "-1"
+            revised_result = process.extractOne(new_label, self.choices)
+            if revised_result[1] != 100:
+                new_label = label + "a"
+                revised_result = process.extractOne(new_label, self.choices)
+            if revised_result[1] > result[1]:
+                result = revised_result
+                print "revised:", label.encode("utf-8"), result"""
+
         return result
 
 
     def load_graph(self):
-        self.g.load(self.path)
-        print "Opened graph with {} triples".format(len(self.g))
+        self.g.load(self.path + "data.rdf")
+        # print "Opened graph with {} triples".format(len(self.g))
         self.choices = [str(l) for l in self.g.objects(predicate=RDFS.label)]
+        self.choices += [str(l) for l in self.g.objects(predicate=MIRBASE["previous_acc"])]
 
     def save_graph(self):
-        self.g.serialize(self.path, format='pretty-xml')
+        self.g.serialize(self.path + "data.rdf", format='pretty-xml')
         print 'Triples in graph after add: ', len(self.g)
         self.g.close()
 
@@ -131,7 +144,6 @@ def main():
     logging.getLogger().setLevel(numeric_level)
     total_time = time.time() - start_time
     logging.info("Total time: %ss" % total_time)
-    pp = pprint.PrettyPrinter(indent=2)
     path = config.mirbase_path
 
 
@@ -140,9 +152,9 @@ def main():
         mirbase.create_graph()
         mirbase.save_graph()
     else:
-        mirbase.load()
+        mirbase.load_graph()
         if options.action == "map":
-            mirbase.map_label(options.label)
+            print mirbase.map_label(options.label)
         elif options.action == "geturi":
             q = prepareQuery('SELECT ?s WHERE { ?s rdfs:label ?label .}', initNs={"rdfs": RDFS })
             l = Literal(options.label)
