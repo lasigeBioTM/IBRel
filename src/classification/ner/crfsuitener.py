@@ -30,12 +30,12 @@ class CrfSuiteModel(SimpleTaggerModel):
         print "done."
 
 
-    def load_tagger(self):
+    def load_tagger(self, port=None):
         logging.info("Loading %s" % self.path + ".model")
         self.tagger = pycrfsuite.Tagger()
         self.tagger.open(self.path + ".model")
 
-    def test(self, corpus):
+    def test(self, corpus, port=None):
         logging.info("Testing with %s" % self.path + ".model")
         #self.predicted = [tagger.tag(xseq) for xseq in self.data]
         for xseq in self.data:

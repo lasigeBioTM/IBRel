@@ -140,3 +140,14 @@ class Corpus(object):
     def get_invalid_sentences(self):
         pass
 
+    def evaluate_normalization(self):
+        scores = []
+        for did in self.documents:
+            for s in self.documents[did].sentences:
+                if "goldstandard" in s.entities.elist:
+                    for e in s.entities.elist.get("goldstandard"):
+                        scores.append(e.normalized_score)
+        print "score average: {}".format(sum(scores)*1.0/len(scores))
+        scores.sort()
+        print scores[0], scores[-1]
+

@@ -1,4 +1,6 @@
 import logging
+
+from mirna_base import MirbaseDB
 from text.entity import Entity
 from config import config
 
@@ -15,7 +17,10 @@ with open(config.stoplist, 'r') as stopfile:
         if w not in mirna_stopwords and len(w) > 1:
             mirna_stopwords.add(w)
 mirna_stopwords.discard("let")
-
+logging.info("Loading miRbase...")
+mirna_graph = MirbaseDB(config.mirbase_path)
+mirna_graph.load_graph()
+logging.info("done.")
 
 class MirnaEntity(Entity):
     def __init__(self, tokens, *args, **kwargs):
@@ -27,6 +32,7 @@ class MirnaEntity(Entity):
         self.mirna_name = 0
         self.sid = kwargs.get("sid")
         self.nextword = kwargs.get("nextword")
+        self.normalize(mirna_graph) #entity is normalized as soon as it is created
 
     def validate(self, ths, rules, *args, **kwargs):
         """
@@ -35,6 +41,7 @@ class MirnaEntity(Entity):
         :return: True if entity does not fall into any of the rules, False if it does
         """
         # logging.debug("using these rules: {}".format(rules))
+        print self.text, self.normalized, self.normalized_score
         words = self.text.split("-")
         '''if len(words) > 2 and len(words[-1]) > 3:
             logging.info("big ending: {}".format(self.text))
@@ -73,3 +80,11 @@ class MirnaEntity(Entity):
             logging.info('-'.join(words) + " -> " + self.text)"""
 
         return True
+
+    def normalize(self, mirna_graph):
+        match = mirna_graph.map_label(self.text)
+        self.normalized = match[0]
+        self.normalized_ref = "mirbase"
+        self.normalized_score = match[1]
+        print self.text.encode("utf-8"), self.normalized, self.normalized_score
+

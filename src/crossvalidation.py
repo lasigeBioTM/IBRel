@@ -72,6 +72,7 @@ def run_crossvalidation(goldstd, corpus, model, cv, crf="stanford", entity_type=
             test_model.kill_process()
         final_results.basepath = basemodel + "_results"
         final_results.path = basemodel
+
         all_results.entities.update(final_results.entities)
         all_results.corpus.documents.update(final_results.corpus.documents)
         # validate
