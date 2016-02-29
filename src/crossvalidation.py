@@ -16,7 +16,7 @@ from evaluate import get_gold_ann_set, get_results
 from text.corpus import Corpus
 
 
-def run_crossvalidation(goldstd, corpus, model, cv, crf="stanford", entity_type="all", cvlog="cv.log"):
+def run_crossvalidation(goldstd_list, corpus, model, cv, crf="stanford", entity_type="all", cvlog="cv.log"):
     logfile = open(cvlog, 'w')
     doclist = corpus.documents.keys()
     random.shuffle(doclist)
@@ -85,11 +85,12 @@ def run_crossvalidation(goldstd, corpus, model, cv, crf="stanford", entity_type=
         # evaluate
         logging.info('CV{} - EVALUATE'.format(nlist))
         test_goldset = set()
-        goldset = get_gold_ann_set(config.paths[goldstd]["format"], config.paths[goldstd]["annotations"], entity_type,
-                                   config.paths[goldstd]["text"] )
-        for g in goldset:
-            if g[0] in testids:
-                test_goldset.add(g)
+        for gs in goldstd_list:
+            goldset = get_gold_ann_set(config.paths[gs]["format"], config.paths[gs]["annotations"], entity_type,
+                                       config.paths[gs]["text"] )
+            for g in goldset:
+                if g[0] in testids:
+                    test_goldset.add(g)
         precision, recall = get_results(final_results, basemodel, test_goldset, {}, [])
         # evaluation = run_chemdner_evaluation(config.paths[goldstd]["cem"], basemodel + "_results.txt", "-t")
         # values = evaluation.split("\n")[1].split('\t')
@@ -100,9 +101,13 @@ def run_crossvalidation(goldstd, corpus, model, cv, crf="stanford", entity_type=
     ravg = sum(r)/cv
     print "precision: average={} all={}".format(str(pavg), '|'.join([str(pp) for pp in p]))
     print "recall: average={}  all={}".format(str(ravg), '|'.join([str(rr) for rr in r]))
-    goldset = get_gold_ann_set(config.paths[goldstd]["format"], config.paths[goldstd]["annotations"], entity_type,
-                                   config.paths[goldstd]["text"] )
-    get_results(all_results, model, goldset, {}, [])
+    all_goldset = set()
+    for gs in goldstd_list:
+        goldset = get_gold_ann_set(config.paths[gs]["format"], config.paths[gs]["annotations"], entity_type,
+                                       config.paths[gs]["text"] )
+        for g in goldset:
+            all_goldset.add(g)
+    get_results(all_results, model, all_goldset, {}, [])
 
 
 def chunks(l, n):
@@ -160,7 +165,7 @@ def main():
         logging.info("loading corpus %s" % corpus_path)
         this_corpus = pickle.load(open(corpus_path, 'rb'))
         corpus.documents.update(this_corpus.documents)
-    run_crossvalidation(corpus_name, corpus, options.models, options.cv, options.crf, options.etype)
+    run_crossvalidation(options.goldstd, corpus, options.models, options.cv, options.crf, options.etype)
 
     total_time = time.time() - start_time
     logging.info("Total time: %ss" % total_time)
