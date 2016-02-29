@@ -225,7 +225,7 @@ class Entities(object):
                     exclude = [perfect_overlap]
                     if "contained_by" in rules:
                         exclude.append(contained_by)
-                    toadd, v, alt = offsets.add_offset(eid_offset, exclude_if=exclude)
+                    toadd, v, overlapped, to_exclude = offsets.add_offset(eid_offset, exclude_this_if=exclude, exclude_others_if=[])
                     if toadd:
                         spans.append((e.dstart, e.dend, e.text))
                         # logging.info("added {}".format(e.text))

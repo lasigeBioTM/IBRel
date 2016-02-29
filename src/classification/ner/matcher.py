@@ -1,7 +1,8 @@
 import logging
 import pickle
 import re
-from text.offset import partial_overlap_after, partial_overlap_before, contained_by, perfect_overlap, Offsets, Offset
+from text.offset import partial_overlap_after, partial_overlap_before, contained_by, perfect_overlap, Offsets, Offset, \
+    contains
 
 
 class MatcherModel(object):
@@ -74,21 +75,20 @@ class MatcherModel(object):
             did_count += 1
         return corpus, elist
 
-    def tag_sentence(self, sentence, entity_type):
-        exclude_if = (partial_overlap_after, partial_overlap_before, contained_by, perfect_overlap)
-        offsets = Offsets()
+    def tag_sentence(self, sentence, entity_type, offsets=None):
+        exclude_this_if = (partial_overlap_after, partial_overlap_before, contained_by, perfect_overlap)
+        exclude_others_if = (contains,)
+        if not offsets:
+            offsets = Offsets()
         for pattern in self.p:
             iterator = pattern.finditer(sentence.text)
             for match in iterator:
                 offset = Offset(*match.span(2))
                 logging.info(match.group(2))
-                toadd = offsets.add_offset(offset, exclude_if)
+                toadd, v, overlapping, to_exclude = offsets.add_offset(offset, exclude_this_if, exclude_others_if)
                 if toadd:
+                    # print sentence.sid, (offset.start,offset.end), [(o.start, o.end) for o in offsets.offsets]
                     sentence.tag_entity(offset.start, offset.end, etype=entity_type, source=self.path)
-
-    def tag_sentence_alt(self, sentence):
-        exclude_if = (partial_overlap_after, partial_overlap_before, contained_by, perfect_overlap)
-        offsets = Offsets()
-        iterator = self.p.finditer(sentence.text)
-        for match in iterator:
-            print match.groups()
+                    for o in to_exclude:
+                        # print "excluding {}-{}".format(o.start,o.end)
+                        sentence.exclude_entity(o.start, o.end, self.path)

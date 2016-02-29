@@ -77,26 +77,33 @@ class Offsets(object):
     def __iter__(self):
         return self
 
-    def add_offset(self, o, exclude_if):
+    def add_offset(self, o, exclude_this_if, exclude_others_if):
         """
         Check if offset is not repeated or overlapped and add.
         :param o: Offset object
         :return:
         """
-        alt = ""
+        overlapping = []
+        to_exclude = []
         v = 0
         toadd = True
         for oi, oo in enumerate(self.offsets):
             over = o.overlap(oo)
-            if over in exclude_if:
+            if over in exclude_this_if:
                 toadd = False
                 v = over
-                alt = oo.text
+                overlapping.append(oo)
                 break
+            elif over in exclude_others_if:
+                toadd = True
+                v = over
+                to_exclude.append(oo)
             #if over not in (no_overlap,perfect_overlap):
             #    logging.info("Overlap of %s:%s:%s:%s and %s:%s:%s:%s = %s" % (o.text, o.start, o.end, o.sid,
             #                                                            oo.text, oo.start, oo.end, o.sid, over))
         if toadd:
             self.offsets.add(o)
+            for oo in to_exclude:
+                self.offsets.remove(oo)
         #logging.info(str(len(self.offsets)))
-        return toadd, v, alt
+        return toadd, v, overlapping, to_exclude

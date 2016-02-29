@@ -119,6 +119,26 @@ class Sentence(object):
         if subtype == "tlink":
             self.pairs.add_pair(TLink(entity1, entity2, original_id=kwargs.get("original_id"),
                                      did=self.did, pid=pid, rtype=subtype), source)
+    def exclude_entity(self, start, end, source):
+        """
+        Exclude all entities matching start-end relative to sentence
+        :param start:
+        :param end:
+        """
+        to_delete = []
+        for e in self.entities.elist[source]:
+            if e.start == start and e.end == end:
+                to_delete.append(e)
+                for t in e.tokens:
+                    tagkeys = t.tags.keys()
+                    for tag in tagkeys:
+                        if tag.startswith(source):
+                            del t.tags[tag]
+        for e in to_delete:
+            print "removing {}".format(e)
+            self.entities.elist[source].remove(e)
+            print [(ee.start, ee.end) for ee in self.entities.elist[source]]
+
 
     def tag_entity(self, start, end, etype, entity=None, source="goldstandard", **kwargs):
         """Find the tokens that match this entity. start and end are relative to the sentence.
