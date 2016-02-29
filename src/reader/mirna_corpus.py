@@ -99,7 +99,7 @@ class MirnaCorpus(Corpus):
                         if entity_type and (etype == "all" or (etype != "all" and etype == entity_type)):
                             this_sentence.tag_entity(offsets[0], offsets[-1], entity_type,
                                                      text=entity.get("text"))
-        self.evaluate_normalization()
+        # self.evaluate_normalization()
 
 def get_ddi_mirna_gold_ann_set(goldpath, entitytype):
     logging.info("loading gold standard... {}".format(goldpath))

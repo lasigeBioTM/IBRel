@@ -76,6 +76,9 @@ class Entity(object):
     def validate(self, ths, rules, *args, **kwargs):
         return True
 
+    def normalize(self):
+        pass
+
 class Entities(object):
     """Group of entities related to a text"""
 
@@ -88,6 +91,7 @@ class Entities(object):
         """
         Add an entity to this entity group, indexed to esource
         """
+        #entity.normalize()
         if esource not in self.elist:
             self.elist[esource] = []
         if esource + "_" + entity.type not in self.elist:

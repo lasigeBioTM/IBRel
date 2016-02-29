@@ -14,6 +14,7 @@ class MirbaseDB(object):
         self.g = ConjunctiveGraph()
         self.path = db_path
         self.choices = set()
+        self.labels = {}
 
     def create_graph(self):
         self.g.open(self.path + "data.rdf", create=True)
@@ -117,8 +118,14 @@ class MirbaseDB(object):
     def load_graph(self):
         self.g.load(self.path + "data.rdf")
         # print "Opened graph with {} triples".format(len(self.g))
-        self.choices = [str(l) for l in self.g.objects(predicate=RDFS.label)]
-        self.choices += [str(l) for l in self.g.objects(predicate=MIRBASE["previous_acc"])]
+        self.get_label_to_acc()
+        self.choices = self.labels.keys()
+
+    def get_label_to_acc(self):
+        for subj, pred, obj in self.g.triples((None, RDFS.label, None)):
+            self.labels[str(obj)] = str(subj)
+        for subj, pred, obj in self.g.triples((None, RDFS.label, None)):
+            self.labels[str(obj)] = str(subj)
 
     def save_graph(self):
         self.g.serialize(self.path + "data.rdf", format='pretty-xml')

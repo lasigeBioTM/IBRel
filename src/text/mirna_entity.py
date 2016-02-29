@@ -32,7 +32,6 @@ class MirnaEntity(Entity):
         self.mirna_name = 0
         self.sid = kwargs.get("sid")
         self.nextword = kwargs.get("nextword")
-        self.normalize(mirna_graph) #entity is normalized as soon as it is created
 
     def validate(self, ths, rules, *args, **kwargs):
         """
@@ -41,7 +40,7 @@ class MirnaEntity(Entity):
         :return: True if entity does not fall into any of the rules, False if it does
         """
         # logging.debug("using these rules: {}".format(rules))
-        print self.text, self.normalized, self.normalized_score
+        # logging.debug("{}=>{}:{}".format(self.text.encode("utf-8"), self.normalized, self.normalized_score))
         words = self.text.split("-")
         '''if len(words) > 2 and len(words[-1]) > 3:
             logging.info("big ending: {}".format(self.text))
@@ -81,10 +80,13 @@ class MirnaEntity(Entity):
 
         return True
 
-    def normalize(self, mirna_graph):
-        match = mirna_graph.map_label(self.text)
-        self.normalized = match[0]
-        self.normalized_ref = "mirbase"
-        self.normalized_score = match[1]
-        print self.text.encode("utf-8"), self.normalized, self.normalized_score
+    def normalize(self):
+        if self.text.isalpha():
+            self.normalized = "microrna"
+            self.normalized_score = 100
+            self.normalized_ref = "text"
+        else:
+            self.normalized, self.normalized_score= mirna_graph.map_label(self.text)
+            self.normalized_ref = "mirbase"
+        logging.debug("{}=>{}:{}".format(self.text.encode("utf-8"), self.normalized, self.normalized_score))
 

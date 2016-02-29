@@ -71,7 +71,7 @@ class MirtexCorpus(Corpus):
                                 sentence.tag_entity(start, end, type_match[entity_type], text=etext)
                             else:
                                 print "could not find sentence for this span: {}-{}".format(dstart, dend)
-        self.evaluate_normalization()
+        # self.evaluate_normalization()
 
 
 def get_mirtex_gold_ann_set(goldpath, entitytype):
