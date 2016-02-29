@@ -21,6 +21,7 @@ class MirnaCorpus(Corpus):
     def __init__(self, corpusdir, **kwargs):
         super(MirnaCorpus, self).__init__(corpusdir, **kwargs)
         self.subtypes = ["miRNA", "disease", "protein"]
+        self.rel_types = ["Specific_miRNAs-Genes/Proteins"]
 
     def load_corpus(self, corenlpserver, process=True):
         # self.path is just one file with every document
@@ -89,16 +90,30 @@ class MirnaCorpus(Corpus):
                         print [s.sid for s in self.documents[did].sentences]
                         sys.exit()
                         #continue
+                    original_to_eids = {}
                     for entity in sentence.findall('entity'):
-                        eid = entity.get('id')
+                        original_eid = entity.get('id')
                         entity_offset = entity.get('charOffset')
                         offsets = self.getOffsets(entity_offset)
                         entity_type = type_match.get(entity.get("type"))
                         #print this_sentence.text[offsets[0]:offsets[-1]], entity.get("text")
                         #if "protein" in entity_type.lower() or "mirna" in entity_type.lower():
                         if entity_type and (etype == "all" or (etype != "all" and etype == entity_type)):
-                            this_sentence.tag_entity(offsets[0], offsets[-1], entity_type,
-                                                     text=entity.get("text"))
+                            eid = this_sentence.tag_entity(offsets[0], offsets[-1], entity_type,
+                                                     text=entity.get("text"), original_id=original_eid)
+                            original_to_eids[original_eid] = eid
+                    for pair in sentence.findall('pair'):
+                        p_type = pair.get("type")
+                        p_true = pair.get("interaction")
+                        if p_type in self.rel_types and p_true == "True":
+                            p_e1 = pair.get("e1")
+                            p_e2 = pair.get("e2")
+                            source = None
+                            for e in this_sentence.entities.elist["goldstandard"]:
+                                if e.eid == original_to_eids[p_e1]:
+                                    source = e
+                            if e:
+                                source.targets.append(original_to_eids[p_e2])
         # self.evaluate_normalization()
 
 def get_ddi_mirna_gold_ann_set(goldpath, entitytype):

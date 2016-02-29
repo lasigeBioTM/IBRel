@@ -83,7 +83,7 @@ class JSREKernel(KernelModel):
         #    sys.exit()
         #logging.debug("done.")
 
-    def generatejSREdata(self, corpus, savefile, train=False, pairtypes=("event", "event")):
+    def generatejSREdata(self, corpus, savefile, train=False, pairtypes=("mirna", "protein")):
         if os.path.isfile(self.temp_dir + savefile + ".txt"):
             print "removed old data"
             os.remove(self.temp_dir + savefile + ".txt")
@@ -104,70 +104,67 @@ class JSREKernel(KernelModel):
                     # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
             
             for pair in itertools.combinations(doc_entities, 2):
-                if "[end" in corpus.documents[did].text[pair[0].dstart:pair[1].dend] or "\n\n" in corpus.documents[did].text[pair[0].dstart:pair[1].dend]:
+                #logging.debug(pair)
+                e1id = pair[0].eid
+                e2id = pair[1].eid
+                pid = did + ".p" + str(pcount)
+                # self.pairs[pid] = (e1id, e2id)
+                self.pairs[pid] = pair
+                sentence1 = corpus.documents[did].get_sentence(pair[0].sid)
+                #sentence1 = sentence
+                # logging.info("{}  {}-{} => {}-{}".format(sentence.sid, e1id, pair[0].text, e2id, pair[1].text))
+                if sentence1 is None:
+                    # print pair[0].sid, "not found"
+                    # print "pair", e1id, e2id, "ignored"
+                    # print pair[0].text, pair[1].text
+                    # logging.info("{} not found - ignored {}-{} => {}-{}".format(pair[0].sid, e1id, pair[0].text, e2id, pair[1].text))
                     continue
-                elif (pair[0].type, pair[1].type) == pairtypes:
-                    #logging.debug(pair)
-                    e1id = pair[0].eid
-                    e2id = pair[1].eid
-                    pid = did + ".p" + str(pcount)
-                    # self.pairs[pid] = (e1id, e2id)
-                    self.pairs[pid] = pair
-                    sentence1 = corpus.documents[did].get_sentence(pair[0].sid)
-                    #sentence1 = sentence
-                    # logging.info("{}  {}-{} => {}-{}".format(sentence.sid, e1id, pair[0].text, e2id, pair[1].text))
-                    if sentence1 is None:
-                        # print pair[0].sid, "not found"
-                        # print "pair", e1id, e2id, "ignored"
-                        # print pair[0].text, pair[1].text
-                        # logging.info("{} not found - ignored {}-{} => {}-{}".format(pair[0].sid, e1id, pair[0].text, e2id, pair[1].text))
-                        continue
-                    # first_token = pair[0].tokens[0].order
-                    # last_token = pair[1].tokens[-1].order
-                    # tokens1 = [t for t in sentence1.tokens[first_token:last_token+1]]
-                    tokens1 = [t for t in sentence1.tokens]
-                    tokens_text1 = [t.text for t in tokens1]
+                # first_token = pair[0].tokens[0].order
+                # last_token = pair[1].tokens[-1].order
+                # tokens1 = [t for t in sentence1.tokens[first_token:last_token+1]]
+                tokens1 = [t for t in sentence1.tokens]
+                tokens_text1 = [t.text for t in tokens1]
 
-                    #print pairtext,
-                    if e2id not in pair[0].targets:
-                        trueddi = 0
-                    else:
-                        trueddi = 1
+                #print pairtext,
+                if e2id not in pair[0].targets:
+                    trueddi = 0
+                else:
+                    trueddi = 1
 
-                    #print pairtext
-                    pos1 = [t.pos for t in tokens1]
-                    lemmas1 = [t.lemma for t in tokens1]
-                    ner1 = [t.tag for t in tokens1]
+                #print pairtext
+                pos1 = [t.pos for t in tokens1]
+                lemmas1 = [t.lemma for t in tokens1]
+                ner1 = [t.tag for t in tokens1]
 
-                    #logging.debug("{} {} {} {}".format(len(tokens1), len(pos), len(lemmas), len(ner)))
-                    tokens_text1, pos1, lemmas1, ner1 = self.blind_all_entities(tokens_text1, sentence1.entities.elist["goldstandard"],
-                                                                      [e1id, e2id], pos1, lemmas1, ner1)
+                #logging.debug("{} {} {} {}".format(len(tokens1), len(pos), len(lemmas), len(ner)))
+                tokens_text1, pos1, lemmas1, ner1 = self.blind_all_entities(tokens_text1, sentence1.entities.elist["goldstandard"],
+                                                                  [e1id, e2id], pos1, lemmas1, ner1)
 
-                    # logging.debug("{} {} {} {}".format(len(pair_text), len(pos), len(lemmas), len(ner)))
-                    #logging.debug("generating jsre lines...")
-                    #for i in range(len(pairinstances)):
-                        #body = generatejSRE_line(pairinstances[i], pos, stems, ner)
-                    if pair[0].sid != pair[1].sid:
-                        sentence2 = corpus.documents[did].get_sentence(pair[1].sid)
-                        tokens2 = [t for t in sentence2.tokens]
-                        tokens_text2 = [t.text for t in tokens2]
-                        pos2 = [t.pos for t in tokens2]
-                        lemmas2 = [t.lemma for t in tokens2]
-                        ner2 = [t.tag for t in tokens2]
-                        tokens_text2, pos2, lemmas2, ner2 = self.blind_all_entities(tokens_text2, sentence2.entities.elist["goldstandard"],
-                                                                      [e1id, e2id], pos2, lemmas2, ner2)
-                        pair_text = tokens_text1 + tokens_text2
-                        pos = pos1 + pos2
-                        ner = ner1 + ner2
-                        lemmas = lemmas1 + lemmas2
-                    else:
-                        pair_text = tokens_text1
-                        pos = pos1
-                        ner = ner1
-                        lemmas = lemmas1
-                    body = self.generatejSRE_line(pair_text, pos, lemmas, ner)
-                    examplelines.append(str(trueddi) + '\t' + pid + '.i' + '0\t' + body + '\n')
-                    pcount += 1
+                # logging.debug("{} {} {} {}".format(len(pair_text), len(pos), len(lemmas), len(ner)))
+                #logging.debug("generating jsre lines...")
+                #for i in range(len(pairinstances)):
+                    #body = generatejSRE_line(pairinstances[i], pos, stems, ner)
+                if pair[0].sid != pair[1].sid:
+                    sentence2 = corpus.documents[did].get_sentence(pair[1].sid)
+                    tokens2 = [t for t in sentence2.tokens]
+                    tokens_text2 = [t.text for t in tokens2]
+                    pos2 = [t.pos for t in tokens2]
+                    lemmas2 = [t.lemma for t in tokens2]
+                    ner2 = [t.tag for t in tokens2]
+                    tokens_text2, pos2, lemmas2, ner2 = self.blind_all_entities(tokens_text2, sentence2.entities.elist["goldstandard"],
+                                                                  [e1id, e2id], pos2, lemmas2, ner2)
+                    pair_text = tokens_text1 + tokens_text2
+                    pos = pos1 + pos2
+                    ner = ner1 + ner2
+                    lemmas = lemmas1 + lemmas2
+                else:
+                    pair_text = tokens_text1
+                    pos = pos1
+                    ner = ner1
+                    lemmas = lemmas1
+                body = self.generatejSRE_line(pair_text, pos, lemmas, ner)
+                examplelines.append(str(trueddi) + '\t' + pid + '.i' + '0\t' + body + '\n')
+                pcount += 1
             logging.debug("writing {} lines to file...".format(len(examplelines)))
             with codecs.open(self.temp_dir + savefile + ".txt", 'a', "utf-8") as trainfile:
                 for l in examplelines:
