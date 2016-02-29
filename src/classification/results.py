@@ -4,10 +4,8 @@ import os
 import time
 import argparse
 import sys
-
-from text.corpus import Corpus
-
 sys.path.append(os.path.abspath(os.path.dirname(__file__) + '../..'))
+from text.corpus import Corpus
 from config import config
 from text.offset import Offset, perfect_overlap, contained_by, Offsets
 
@@ -157,26 +155,31 @@ class ResultSetNER(object):
         return final_results
 
 
-def combine_results(models, results, resultsname):
+def combine_results(modelname, results, resultsname, etype, models):
     all_results = ResultsNER(resultsname)
+    # first results are used as reference
     all_results.corpus = results[0].corpus
     for r in results:
         print r.path
         for did in r.corpus.documents:
             for sentence in r.corpus.documents[did].sentences:
+                ref_sentence = all_results.corpus.documents[did].get_sentence(sentence.sid)
                 if sentence.entities:
                     offsets = Offsets()
-                    if resultsname not in all_results.corpus.documents[did].get_sentence(sentence.sid).entities.elist:
-                        all_results.corpus.documents[did].get_sentence(sentence.sid).entities.elist[resultsname] = []
+                    if modelname not in ref_sentence.entities.elist:
+                        all_results.corpus.documents[did].get_sentence(sentence.sid).entities.elist[modelname] = []
                     for s in sentence.entities.elist:
+                        # print s
                         if s in models:
+                            # print s
                             for e in sentence.entities.elist[s]:
-                                eid_offset = Offset(e.dstart, e.dend, text=e.text, sid=e.sid)
-                                exclude = [perfect_overlap]
-                                toadd, v, alt = offsets.add_offset(eid_offset, exclude_if=exclude)
-                                if toadd:
-                                    # print r.path, e.text
-                                    all_results.corpus.documents[did].get_sentence(sentence.sid).entities.elist[resultsname].append(e)
+                                if e.type == etype:
+                                    eid_offset = Offset(e.dstart, e.dend, text=e.text, sid=e.sid)
+                                    exclude = [perfect_overlap]
+                                    toadd, v, alt = offsets.add_offset(eid_offset, exclude_if=exclude)
+                                    if toadd:
+                                        # print "added:", r.path, s, e.text
+                                        ref_sentence.entities.elist[modelname].append(e)
     return all_results
 
 def main():
@@ -190,6 +193,7 @@ def main():
                       help="format path")
     parser.add_argument("--results", dest="results", help="Results object pickle.",  nargs='+')
     parser.add_argument("--models", dest="models", help="model destination path, without extension",  nargs='+')
+    parser.add_argument("--finalmodel", dest="finalmodel", help="model destination path, without extension") #,  nargs='+')
     parser.add_argument("--ensemble", dest="ensemble", help="name/path of ensemble classifier", default="combined")
     parser.add_argument("--log", action="store", dest="loglevel", default="WARNING", help="Log level")
     parser.add_argument("-o", "--output", action="store", dest="output")
@@ -227,7 +231,7 @@ def main():
         logging.info("combining results...")
         #new_name = "_".join([m.split("/")[-1] for m in options.results])
         #print new_name
-        results = combine_results(options.models, results_list, options.output)
+        results = combine_results(options.finalmodel, results_list, options.output, options.etype, options.models)
         results.save(options.output + ".pickle")
 
     """elif options.action in ("train_ensemble", "test_ensemble"):
