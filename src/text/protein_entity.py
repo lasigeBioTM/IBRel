@@ -19,12 +19,12 @@ with open(config.stoplist, 'r') as stopfile:
 
 
 class ProteinEntity(Entity):
-    def __init__(self, tokens, *args, **kwargs):
+    def __init__(self, tokens, sid, *args, **kwargs):
         # Entity.__init__(self, kwargs)
         super(ProteinEntity, self).__init__(tokens, *args, **kwargs)
         self.type = "protein"
         self.subtype = kwargs.get("subtype")
-        # print self.sid
+        self.sid = sid
 
     tf_regex = re.compile(r"\A[A-Z]+\d*\w*\d*\Z")
 

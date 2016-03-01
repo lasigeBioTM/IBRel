@@ -23,14 +23,14 @@ mirna_graph.load_graph()
 logging.info("done.")
 
 class MirnaEntity(Entity):
-    def __init__(self, tokens, *args, **kwargs):
+    def __init__(self, tokens, sid, *args, **kwargs):
         # Entity.__init__(self, kwargs)
         super(MirnaEntity, self).__init__(tokens, **kwargs)
         self.type = "mirna"
         self.subtype = kwargs.get("subtype")
         self.mirna_acc = None
         self.mirna_name = 0
-        self.sid = kwargs.get("sid")
+        self.sid = sid
         self.nextword = kwargs.get("nextword")
 
     def validate(self, ths, rules, *args, **kwargs):

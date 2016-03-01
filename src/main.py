@@ -192,7 +192,7 @@ considered when coadministering with megestrol acetate.''',
             models.train_types()
         elif options.actions == "train_relations":
             if options.kernel == "jsre":
-                model = JSREKernel(corpus)
+                model = JSREKernel(corpus, (options.pairtype1, options.pairtype2))
             elif options.kernel == "svmtk":
                 model = SVMTKernel(corpus)
             model.train()
