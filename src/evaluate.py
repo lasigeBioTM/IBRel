@@ -15,6 +15,7 @@ from reader.chemdner_corpus import get_chemdner_gold_ann_set, run_chemdner_evalu
 from reader.genia_corpus import get_genia_gold_ann_set
 from reader.mirna_corpus import get_ddi_mirna_gold_ann_set
 from reader.mirtext_corpus import get_mirtex_gold_ann_set
+from reader.tempEval_corpus import get_thymedata_gold_ann_set
 
 if config.use_chebi:
     from postprocessing import chebi_resolution
@@ -22,11 +23,7 @@ if config.use_chebi:
 from postprocessing.ensemble_ner import EnsembleNER
 from classification.results import ResultsNER
 
-from reader.tempEval_corpus import get_thymedata_gold_ann_set, write_tempeval_results, \
-    run_anafora_evaluation
-
-
-def get_gold_ann_set(corpus_type, gold_path, entity_type, text_path):
+def get_gold_ann_set(corpus_type, gold_path, entity_type, pair_type, text_path):
     if corpus_type == "chemdner":
         goldset = get_chemdner_gold_ann_set(gold_path)
     elif corpus_type == "tempeval":
@@ -36,7 +33,7 @@ def get_gold_ann_set(corpus_type, gold_path, entity_type, text_path):
     elif corpus_type == "genia":
         goldset = get_genia_gold_ann_set(gold_path, entity_type)
     elif corpus_type == "ddi-mirna":
-        goldset = get_ddi_mirna_gold_ann_set(gold_path, entity_type)
+        goldset = get_ddi_mirna_gold_ann_set(gold_path, entity_type, pair_type)
     elif corpus_type == "mirtex":
         goldset = get_mirtex_gold_ann_set(gold_path, entity_type)
     return goldset
@@ -66,13 +63,13 @@ def compare_results(offsets, goldoffsets, corpus, getwords=True):
     tps = offsets & goldoffsets
     fps = offsets - goldoffsets
     fns = goldoffsets - offsets
-    fpreport, fpwords = get_report(fps, corpus, getwords=getwords)
-    fnreport, fnwords = get_report(fns, corpus, getwords=getwords)
-    tpreport, tpwords = get_report(tps, corpus, getwords=getwords)
-    alldocs = set(fpreport.keys())
-    alldocs = alldocs.union(fnreport.keys())
-    alldocs = alldocs.union(tpreport.keys())
-    if getwords:
+    # fpreport, fpwords = get_report(fps, corpus, getwords=getwords)
+    # fnreport, fnwords = get_report(fns, corpus, getwords=getwords)
+    # tpreport, tpwords = get_report(tps, corpus, getwords=getwords)
+    # alldocs = set(fpreport.keys())
+    # alldocs = alldocs.union(fnreport.keys())
+    # alldocs = alldocs.union(tpreport.keys())
+    """if getwords:
         report.append("Common FPs")
         fpcounter = collections.Counter(fpwords)
         for w in fpcounter.most_common(10):
@@ -94,7 +91,7 @@ def compare_results(offsets, goldoffsets, corpus, getwords=True):
                 report.append("FP:%s" % x)
         if d in fnreport:
             for x in fnreport[d]:
-                report.append("FN:%s" % x)
+                report.append("FN:%s" % x)"""
 
     return report, tps, fps, fns
 
@@ -174,6 +171,26 @@ def get_list_results(results, models, goldset, ths, rules):
                 reportfile.write(line + '\n')
 
 
+def get_relations_results(results, model, gold_pairs, ths, rules, compare_text=True):
+    system_pairs = []
+    for did in results.corpus.documents:
+        for p in results.document_pairs[did].pairs:
+            if p.recognized_by.get(model) == 1:
+                pair = (did, (p.entities[0].dstart, p.entities[0].dend), (p.entities[1].dstart, p.entities[1].dend))
+                system_pairs.append(pair)
+                print pair
+                break
+    reportlines, tps, fps, fns = compare_results(set(system_pairs), gold_pairs, results.corpus, getwords=compare_text)
+    if len(tps) == 0:
+        precision = 0
+        recall = 0
+    else:
+        precision = len(tps)/(len(tps) + len(fps))
+        recall = len(tps)/(len(tps) + len(fns))
+    print "Precision: {}".format(precision)
+    print "Recall: {}".format(recall)
+    return precision, recall
+
 def get_results(results, models, gold_offsets, ths, rules, compare_text=True):
     """
     Write a report file with basic stats
@@ -236,6 +253,7 @@ def main():
                         nargs='+', help="aditional features for ensemble classifier")
     parser.add_argument("--doctype", dest="doctype", help="type of document to be considered", default="all")
     parser.add_argument("--entitytype", dest="etype", help="type of entities to be considered", default="all")
+    parser.add_argument("--pairtype", dest="ptype", help="type of pairs to be considered", default=None)
     parser.add_argument("--external", action="store_true", default=False, help="Run external evaluation script, depends on corpus type")
     options = parser.parse_args()
 
@@ -268,7 +286,7 @@ def main():
         if "annotations" in config.paths[options.goldstd]:
             logging.info("loading gold standard %s" % config.paths[options.goldstd]["annotations"])
             goldset = get_gold_ann_set(config.paths[options.goldstd]["format"], config.paths[options.goldstd]["annotations"],
-                                       options.etype,  config.paths[options.goldstd]["text"])
+                                       options.etype, options.ptype, config.paths[options.goldstd]["text"])
         else:
             goldset = None
         logging.info("using thresholds: chebi > {!s} ssm > {!s}".format(options.chebi, options.ssm))
@@ -276,7 +294,10 @@ def main():
         results.path = options.results
         ths = {"chebi": options.chebi, "ssm": options.ssm}
         if options.action == "evaluate":
-            get_results(results, options.models, goldset, ths, options.rules)
+            if options.ptype:
+                get_relations_results(results, options.models, goldset[1], ths, options.rules)
+            else:
+                get_results(results, options.models, goldset, ths, options.rules)
             #if options.bceval:
             #    write_chemdner_files(results, options.models, goldset, ths, options.rules)
             #    evaluation = run_chemdner_evaluation(config.paths[options.goldstd]["cem"],
@@ -285,13 +306,6 @@ def main():
         elif options.action == "evaluate_list": # ignore the spans, the gold standard is a list of unique entities
             get_list_results(results, options.models, goldset, ths, options.rules)
 
-    elif options.action == "evaluate_tempeval":
-        results.load_corpus(options.goldstd)
-        results.path = options.results
-        write_tempeval_results(results, options.models, {}, options.rules)
-        if "test" not in options.goldstd:
-            precision, recall = get_results(results, options.models, goldset, {}, options.rules, compare_text=True)
-            evaluation = run_anafora_evaluation(config.paths[options.goldstd]["annotations"], options.results)
     total_time = time.time() - start_time
     logging.info("Total time: %ss" % total_time)
 if __name__ == "__main__":

@@ -116,9 +116,11 @@ class MirnaCorpus(Corpus):
                                 source.targets.append(original_to_eids[p_e2])
         # self.evaluate_normalization()
 
-def get_ddi_mirna_gold_ann_set(goldpath, entitytype):
+def get_ddi_mirna_gold_ann_set(goldpath, entitytype, pairtype):
     logging.info("loading gold standard... {}".format(goldpath))
     gold_offsets = set()
+    gold_pairs = set()
+    original_id_to_offset = {}
     with open(goldpath, 'r') as xml:
         #parse DDI corpus file
         t = time.time()
@@ -136,12 +138,17 @@ def get_ddi_mirna_gold_ann_set(goldpath, entitytype):
                     offsets = entity_offset.split("-")
                     start, end = int(offsets[0]) + len(doctext), int(offsets[1]) + len(doctext) + 1
                     etype = type_match.get(entity.get("type"))
+                    original_id_to_offset[entity.get("id")] = (start, end)
                     #print this_sentence.text[offsets[0]:offsets[-1]], entity.get("text")
                     #if "protein" in entity_type.lower() or "mirna" in entity_type.lower():
                     if etype == entitytype:
                         gold_offsets.add((did, start, end, entity.get("text")))
+                for pair in sentence.findall('pair'):
+                    p_type = pair.get("type")
+                    p_true = pair.get("interaction")
+                    if p_type == pairtype and p_true == "True":
+                        gold_pairs.add((did, original_id_to_offset[pair.get("e1")], original_id_to_offset[pair.get("e2")]))
 
                 doctext += " " + sentence_text # generate the full text of this document
-    logging.debug(gold_offsets)
-    logging.debug(len(gold_offsets))
-    return gold_offsets
+    # logging.debug(gold_pairs)
+    return gold_offsets, gold_pairs
