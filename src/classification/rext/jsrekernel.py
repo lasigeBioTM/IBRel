@@ -73,15 +73,28 @@ class JSREKernel(KernelModel):
 
     def test(self, outputfile="jsre_results.txt"):
         print " ".join(self.test_jsre)
-        #jsrecall = Popen(self.test_jsre, stdout=PIPE, stderr=PIPE)
-        #res = jsrecall.communicate()
+        jsrecall = Popen(self.test_jsre, stdout=PIPE, stderr=PIPE)
+        res = jsrecall.communicate()
         #logging.debug(res[0].strip().split('\n')[-2:])
         #os.system(' '.join(jsrecommand))
-        #if not os.path.isfile(self.temp_dir + outputfile):
-        #    print "something went wrong with JSRE!"
-        #    print res
-        #    sys.exit()
-        #logging.debug("done.")
+        if not os.path.isfile(self.temp_dir + outputfile):
+            print "something went wrong with JSRE!"
+            print res
+            sys.exit()
+        logging.debug("done.")
+
+    def get_sentence_instance(self, sentence, e1id, e2id):
+        tokens = [t for t in sentence.tokens]
+        # first_token = pair[0].tokens[0].order
+        # last_token = pair[1].tokens[-1].order
+        # tokens1 = [t for t in sentence1.tokens[first_token:last_token+1]]
+        tokens_text = [t.text for t in tokens]
+        pos = [t.pos for t in tokens]
+        lemmas = [t.lemma for t in tokens]
+        ner = [t.tag for t in tokens]
+        #logging.debug("{} {} {} {}".format(len(tokens1), len(pos), len(lemmas), len(ner)))
+        return self.blind_all_entities(tokens_text, sentence.entities.elist["goldstandard"],
+                                       [e1id, e2id], pos, lemmas, ner)
 
     def generatejSREdata(self, corpus, savefile, train=False, pairtypes=("mirna", "protein")):
         if os.path.isfile(self.temp_dir + savefile + ".txt"):
@@ -91,6 +104,7 @@ class JSREKernel(KernelModel):
         # get all entities of this document
         # doc_entities = []
         pcount = 0
+        truepcount = 0
         for i, did in enumerate(corpus.documents):
             examplelines = []
             doc_entities = []
@@ -101,7 +115,6 @@ class JSREKernel(KernelModel):
                 if 'goldstandard' in sentence.entities.elist:
                     sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
                     # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
-            
                     for pair in itertools.combinations(sentence_entities, 2):
                         if pair[0].type == pairtypes[0] and pair[1].type == pairtypes[1]:
                             logging.debug(pair)
@@ -113,32 +126,7 @@ class JSREKernel(KernelModel):
                             sentence1 = corpus.documents[did].get_sentence(pair[0].sid)
                             #sentence1 = sentence
                             # logging.info("{}  {}-{} => {}-{}".format(sentence.sid, e1id, pair[0].text, e2id, pair[1].text))
-                            if sentence1 is None:
-                                # print pair[0].sid, "not found"
-                                # print "pair", e1id, e2id, "ignored"
-                                # print pair[0].text, pair[1].text
-                                logging.info("{} not found - ignored {}-{} => {}-{}".format(pair[0].sid, e1id, pair[0].text, e2id, pair[1].text))
-                                continue
-                            # first_token = pair[0].tokens[0].order
-                            # last_token = pair[1].tokens[-1].order
-                            # tokens1 = [t for t in sentence1.tokens[first_token:last_token+1]]
-                            tokens1 = [t for t in sentence1.tokens]
-                            tokens_text1 = [t.text for t in tokens1]
-
-                            #print pairtext,
-                            if e2id not in pair[0].targets:
-                                trueddi = 0
-                            else:
-                                trueddi = 1
-
-                            #print pairtext
-                            pos1 = [t.pos for t in tokens1]
-                            lemmas1 = [t.lemma for t in tokens1]
-                            ner1 = [t.tag for t in tokens1]
-
-                            #logging.debug("{} {} {} {}".format(len(tokens1), len(pos), len(lemmas), len(ner)))
-                            tokens_text1, pos1, lemmas1, ner1 = self.blind_all_entities(tokens_text1, sentence1.entities.elist["goldstandard"],
-                                                                              [e1id, e2id], pos1, lemmas1, ner1)
+                            tokens_text, pos, lemmas, ner = self.get_sentence_instance(sentence, e1id, e2id)
 
                             # logging.debug("{} {} {} {}".format(len(pair_text), len(pos), len(lemmas), len(ner)))
                             #logging.debug("generating jsre lines...")
@@ -146,23 +134,17 @@ class JSREKernel(KernelModel):
                                 #body = generatejSRE_line(pairinstances[i], pos, stems, ner)
                             if pair[0].sid != pair[1].sid:
                                 sentence2 = corpus.documents[did].get_sentence(pair[1].sid)
-                                tokens2 = [t for t in sentence2.tokens]
-                                tokens_text2 = [t.text for t in tokens2]
-                                pos2 = [t.pos for t in tokens2]
-                                lemmas2 = [t.lemma for t in tokens2]
-                                ner2 = [t.tag for t in tokens2]
-                                tokens_text2, pos2, lemmas2, ner2 = self.blind_all_entities(tokens_text2, sentence2.entities.elist["goldstandard"],
-                                                                              [e1id, e2id], pos2, lemmas2, ner2)
-                                pair_text = tokens_text1 + tokens_text2
-                                pos = pos1 + pos2
-                                ner = ner1 + ner2
-                                lemmas = lemmas1 + lemmas2
-                            else:
-                                pair_text = tokens_text1
-                                pos = pos1
-                                ner = ner1
-                                lemmas = lemmas1
-                            body = self.generatejSRE_line(pair_text, pos, lemmas, ner)
+                                tokens_text2, pos2, lemmas2, ner2 = self.get_sentence_instance(sentence2, e1id, e2id)
+                                tokens_text += tokens_text2
+                                pos += pos2
+                                ner += ner2
+                                lemmas += lemmas2
+
+                            trueddi = 0
+                            if e2id in pair[0].targets:
+                                trueddi = 1
+                                truepcount += 1
+                            body = self.generatejSRE_line(tokens_text, pos, lemmas, ner)
                             examplelines.append(str(trueddi) + '\t' + pid + '.i' + '0\t' + body + '\n')
                             pcount += 1
             logging.debug("writing {} lines to file...".format(len(examplelines)))
@@ -171,6 +153,7 @@ class JSREKernel(KernelModel):
                     #print l
                     trainfile.write(l)
                 # logging.info("wrote " + temp_dir + savefile)
+        logging.info("True/total relations:{}/{} ({})".format(truepcount, pcount, str(1.0*truepcount/pcount)))
 
     def generatejSRE_line(self, pairtext, pos, lemmas, ner):
         candidates = [False,False]
@@ -242,7 +225,7 @@ class JSREKernel(KernelModel):
         with open(self.temp_dir + resultfile, 'r') as resfile:
             pred = resfile.readlines()
 
-        with open(self.temp_dir + examplesfile, 'r') as trainfile:
+        with codecs.open(self.temp_dir + examplesfile, 'r', 'utf-8') as trainfile:
             original = trainfile.readlines()
 
         if len(pred) != len(original):
@@ -271,7 +254,7 @@ class JSREKernel(KernelModel):
                 print "p=2!"
                 p = 1
             if p == 1:
-                did = pid.split(".")[0]
+                did = '.'.join(pid.split(".")[:-1])
                 pair = corpus.documents[did].add_relation(self.pairs[pid][0], self.pairs[pid][1], "tlink", relation=True)
                 #pair = self.get_pair(pid, corpus)
                 results.pairs[pid] = pair
