@@ -27,8 +27,10 @@ class ResultsRE(object):
         # because the full corpus is already saved on a diferent pickle
         logging.info("Saving results to {}".format(path))
         reduced_corpus = {}
+        npairs = 0
         for did in self.corpus.documents:
             self.document_pairs[did] = self.corpus.documents[did].pairs
+            npairs += len(self.document_pairs[did].pairs)
             reduced_corpus[did] = {}
             for sentence in self.corpus.documents[did].sentences:
                 reduced_corpus[did][sentence.sid] = sentence.entities

@@ -99,6 +99,7 @@ considered when coadministering with megestrol acetate.''',
     parser.add_argument("--tag", dest="tag", default="0", help="Tag to identify the text.")
     parser.add_argument("--models", dest="models", help="model destination path, without extension")
     parser.add_argument("--entitytype", dest="etype", help="type of entities to be considered", default="all")
+    parser.add_argument("--pairtype", dest="ptype", help="type of pairs to be considered", default="all")
     parser.add_argument("--doctype", dest="doctype", help="type of document to be considered", default="all")
     parser.add_argument("--annotated", action="store_true", default=False, dest="annotated",
                       help="True if the input has <entity> tags.")
@@ -265,7 +266,7 @@ considered when coadministering with megestrol acetate.''',
             elif options.kernel == "svmtk":
                 model = SVMTKernel(corpus)
             elif options.kernel == "rules":
-                model = RuleClassifier(corpus)
+                model = RuleClassifier(corpus, options.ptype)
             model.load_classifier()
             model.test()
             results = model.get_predictions(corpus)

@@ -11,7 +11,7 @@ import sys
 from config.config import geniass_path
 from text.sentence import Sentence
 from text.token2 import Token2
-from classification.rext.relations import Pairs
+from classification.rext.relations import Pairs, Pair
 
 from text.tlink import TLink
 
@@ -143,8 +143,10 @@ class Document(object):
         if subtype == "tlink":
             pair = TLink(entity1, entity2, relation=relation, original_id=kwargs.get("original_id"),
                                      did=self.did, pid=pid, rtype=subtype)
-            self.pairs.add_pair(pair, source)
-            return pair
+        else:
+            pair = Pair((entity1, entity2), subtype)
+        self.pairs.add_pair(pair, source)
+        return pair
 
     def get_space_between_sentences(self, totalchars):
         """

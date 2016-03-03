@@ -50,7 +50,7 @@ def get_unique_gold_ann_set(goldann):
     return gold
 
 
-def compare_results(offsets, goldoffsets, corpus, getwords=True):
+def compare_results(offsets, goldoffsets, corpus, getwords=True, evaltype="entity"):
     """
     Compare system results with a gold standard
     :param offsets: system results, offset tuples (did, start, end, text)
@@ -60,16 +60,19 @@ def compare_results(offsets, goldoffsets, corpus, getwords=True):
     """
     #TODO: check if size of offsets and goldoffsets tuples is the same
     report = []
+    if not getwords:
+        offsets = set([x[:-1] for x in offsets])
+        goldoffsets = set([x[:-1] for x in goldoffsets])
     tps = offsets & goldoffsets
     fps = offsets - goldoffsets
     fns = goldoffsets - offsets
-    # fpreport, fpwords = get_report(fps, corpus, getwords=getwords)
-    # fnreport, fnwords = get_report(fns, corpus, getwords=getwords)
-    # tpreport, tpwords = get_report(tps, corpus, getwords=getwords)
-    # alldocs = set(fpreport.keys())
-    # alldocs = alldocs.union(fnreport.keys())
-    # alldocs = alldocs.union(tpreport.keys())
-    """if getwords:
+    fpreport, fpwords = get_report(fps, corpus, getwords=getwords)
+    fnreport, fnwords = get_report(fns, corpus, getwords=getwords)
+    tpreport, tpwords = get_report(tps, corpus, getwords=getwords)
+    alldocs = set(fpreport.keys())
+    alldocs = alldocs.union(fnreport.keys())
+    alldocs = alldocs.union(tpreport.keys())
+    if getwords:
         report.append("Common FPs")
         fpcounter = collections.Counter(fpwords)
         for w in fpcounter.most_common(10):
@@ -91,12 +94,12 @@ def compare_results(offsets, goldoffsets, corpus, getwords=True):
                 report.append("FP:%s" % x)
         if d in fnreport:
             for x in fnreport[d]:
-                report.append("FN:%s" % x)"""
+                report.append("FN:%s" % x)
 
     return report, tps, fps, fns
 
 
-def get_report(results, corpus, restype="TP", getwords=True):
+def get_report(results, corpus, getwords=True):
     """
         Get more information from CHEMDNER results.
         :return: Lines to write to a report file, word that appear in this set
@@ -112,8 +115,7 @@ def get_report(results, corpus, restype="TP", getwords=True):
         if t[0] != "" and t[0] not in corpus.documents:
             logging.info("this doc is not in the corpus! %s" % t[0])
             continue
-        start, end = t[1], t[2]
-        start, end = str(start), str(end)
+        start, end = str(t[1]), str(t[2])
         if getwords:
             # doctext = corpus.documents[x[0]].text
 
@@ -173,20 +175,34 @@ def get_list_results(results, models, goldset, ths, rules):
 
 def get_relations_results(results, model, gold_pairs, ths, rules, compare_text=True):
     system_pairs = []
+    pcount = 0
+    ptrue = 0
+    npairs = 0
     for did in results.corpus.documents:
+        npairs += len(results.document_pairs[did].pairs)
         for p in results.document_pairs[did].pairs:
+            pcount += 1
             if p.recognized_by.get(model) == 1:
-                pair = (did, (p.entities[0].dstart, p.entities[0].dend), (p.entities[1].dstart, p.entities[1].dend))
+                ptrue += 1
+                pair = (did, (p.entities[0].dstart, p.entities[0].dend), (p.entities[1].dstart, p.entities[1].dend),
+                        "{}=>{}".format(p.entities[0].text, p.entities[1].text))
                 system_pairs.append(pair)
-                print pair
-                break
+    print pcount, ptrue, npairs
+    if not compare_text:
+        gold_pairs = [(o[0], o[1], o[2], "") for o in gold_pairs]
     reportlines, tps, fps, fns = compare_results(set(system_pairs), gold_pairs, results.corpus, getwords=compare_text)
-    if len(tps) == 0:
-        precision = 0
-        recall = 0
-    else:
-        precision = len(tps)/(len(tps) + len(fps))
-        recall = len(tps)/(len(tps) + len(fns))
+    with codecs.open(results.path + "_report.txt", 'w', "utf-8") as reportfile:
+        print "writing report to {}_report.txt".format(results.path)
+        reportfile.write("TPs: {!s}\nFPs: {!s}\nFNs: {!s}\n".format(len(tps), len(fps), len(fns)))
+        reportfile.write(">\n")
+        if len(tps) == 0:
+            precision, recall = 0, 0
+        else:
+            precision, recall = len(tps)/(len(tps) + len(fps)), len(tps)/(len(tps) + len(fns))
+        reportfile.write("Precision: {!s}\nRecall: {!s}\n".format(precision, recall))
+        reportfile.write(">\n")
+        for line in reportlines:
+            reportfile.write(line + '\n')
     print "Precision: {}".format(precision)
     print "Recall: {}".format(recall)
     return precision, recall
