@@ -35,6 +35,9 @@ class Sentence(object):
         self.tokens = []
         self.regex_tokens = re.compile(r'(-|/|\\|\+|\.|\w+)')
 
+    def tokenize_words(self):
+        pass
+
 
     def process_corenlp_sentence(self, corenlpres):
 
@@ -85,7 +88,7 @@ class Sentence(object):
                                         "characterOffsetEnd": charoffset_end,
                                         "pos": t["pos"],
                                         "ner": t["ner"],
-                                        "lemma": t["lemma"]}
+                                        "lemma": t["lemma"][charoffset_begin:charoffset_end]}
                             self.create_newtoken(ts, ts_props)
 
                 else:
