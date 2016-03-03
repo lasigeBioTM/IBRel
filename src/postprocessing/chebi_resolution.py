@@ -275,7 +275,7 @@ def add_chebi_mappings(results, source):
                     #if s != source:
                     #    logging.info("processing %s" % s)
                     for entity in sentence.entities.elist[s]:
-                        chebi_info = chebi_resolution.find_chebi_term3(entity.text.encode("utf-8"))
+                        chebi_info = find_chebi_term3(entity.text.encode("utf-8"))
                         entity.chebi_id = chebi_info[0]
                         entity.chebi_name = chebi_info[1]
                         entity.chebi_score = chebi_info[2]

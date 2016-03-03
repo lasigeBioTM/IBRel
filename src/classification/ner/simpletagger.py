@@ -4,12 +4,8 @@ import unicodedata
 from classification.model import Model
 from text.chemical_entity import element_base, ChemicalEntity
 from text.chemical_entity import amino_acids
-from text.dna_entity import DNAEntity
 from text.entity import Entity
-from text.mirna_entity import MirnaEntity
-from text.protein_entity import ProteinEntity
-from text.time_entity import TimeEntity
-from text.event_entity import EventEntity
+
 
 feature_extractors = {# "text": lambda x, i: x.tokens[i].text,
                       "prefix3": lambda x, i: x.tokens[i].text[:3],
@@ -197,7 +193,7 @@ class SimpleTaggerModel(Model):
         self.sentences = []
         self.etype = etype
 
-    def load_data(self, corpus, flist, etype="all", mode="train", doctype="all"):
+    def load_data(self, corpus, flist, etype="all", doctype="all"):
         """
             Load the data from the corpus to the format required by crfsuite.
             Generate the following variables:
@@ -217,15 +213,6 @@ class SimpleTaggerModel(Model):
             # logging.debug("processing doc %s/%s" % (didx, len(corpus.documents)))
             for si, sentence in enumerate(corpus.documents[did].sentences):
                 # skip if no entities in this sentence
-                if sentence.sid in corpus.documents[did].invalid_sids:
-                    logging.debug("Invalid sentence: {} - {}".format(sentence.sid, sentence.text))
-                    continue
-                if sentence.sid in corpus.documents[did].title_sids:
-                    logging.debug("Title sentence: {} - {}".format(sentence.sid, sentence.text))
-                    continue
-                if mode == "train" and "goldstandard" not in sentence.entities.elist:
-                    # logging.debug("Skipped sentence without entities: {}".format(sentence.sid))
-                    continue
                 sentencefeatures = []
                 sentencelabels = []
                 sentencetokens = []
