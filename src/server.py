@@ -4,12 +4,11 @@ import json
 
 __author__ = 'Andre'
 import bottle
-from corenlp import StanfordCoreNLP
+from pycorenlp import StanfordCoreNLP
 import xml.etree.ElementTree as ET
 import xml.dom.minidom as minidom
 import logging
 import codecs
-from bottledaemon import daemon_run
 import cPickle as pickle
 import random
 import string
@@ -18,9 +17,6 @@ from text.document import Document
 from text.corpus import Corpus
 from classification.ner.taggercollection import TaggerCollection
 from classification.ner.simpletagger import SimpleTaggerModel, feature_extractors
-from classification.results import ResultsNER
-from postprocessing import chebi_resolution
-from postprocessing.ssm import get_ssm
 from postprocessing.ensemble_ner import EnsembleNER
 from reader import pubmed
 from classification.rext.relations import Pair
@@ -33,8 +29,7 @@ from postprocessing.ssm import add_ssm_score
 class IICEServer(object):
 
     def __init__(self, basemodel, ensemble_model, submodels):
-        self.corenlpserver = StanfordCoreNLP(corenlp_path=config.corenlp_dir,
-                                            properties=config.corenlp_dir + "default.properties")
+        self.corenlp = StanfordCoreNLP(config.corenlp_dir)
         self.basemodel = basemodel
         self.ensemble_model = ensemble_model
         self.subtypes = submodels
@@ -145,7 +140,7 @@ class IICEServer(object):
         test_corpus = Corpus("")
         newdoc = Document(text, process=False, did="d0", title="Test document")
         newdoc.sentence_tokenize("biomedical")
-        newdoc.process_document(self.corenlpserver, "biomedical")
+        newdoc.process_document(self.corenlp, "biomedical")
         test_corpus.documents["d0"] = newdoc
         return test_corpus
 

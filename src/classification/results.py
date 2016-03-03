@@ -27,10 +27,8 @@ class ResultsRE(object):
         # because the full corpus is already saved on a diferent pickle
         logging.info("Saving results to {}".format(path))
         reduced_corpus = {}
-        npairs = 0
         for did in self.corpus.documents:
             self.document_pairs[did] = self.corpus.documents[did].pairs
-            npairs += len(self.document_pairs[did].pairs)
             reduced_corpus[did] = {}
             for sentence in self.corpus.documents[did].sentences:
                 reduced_corpus[did][sentence.sid] = sentence.entities
@@ -120,13 +118,13 @@ class ResultsNER(object):
             for sentence in self.corpus.documents[did].sentences:
                 #logging.debug(sentence.sid)
                 sentence.entities.combine_entities(basemodel, name)
-                for e in sentence.entities.elist[name]:
+                """for e in sentence.entities.elist[name]:
                     total += 1
                     #logging.info("{} - {}".format(e.text, e.score))
                     if len(e.recognized_by) > 1:
                         scores += sum(e.score.values())/len(e.score.values())
                     elif len == 1:
-                        scores += e.score.values()[0]
+                        scores += e.score.values()[0]"""
                     #if e.score < 0.8:
                     #    logging.info("{0} score of {1}".format(e.text.encode("utf-8"),
                     #                                            e.score))

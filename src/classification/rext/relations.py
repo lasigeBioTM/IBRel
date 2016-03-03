@@ -12,8 +12,6 @@ import xml.etree.ElementTree as ET
 import warnings
 import tarfile
 
-from sklearn.cross_validation import KFold
-
 import kernelmodels
 
 TRUE_DDI = 'trueDDI'

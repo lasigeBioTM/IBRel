@@ -16,7 +16,8 @@ def main():
         else:
             text = sys.argv[1]
         data = {"text": text, "format": "json"}
-        r = requests.post('http://10.10.4.63:8080/iice/chemical/entities', json=data)
+        # r = requests.post('http://10.10.4.63:8080/iice/chemical/entities', json=data)
+        r = requests.post('http://127.0.0.1:8080/iice/chemical/entities', json=data)
         print r.text
         print r.url
         if len(sys.argv) > 2 and sys.argv[2] == "int":
