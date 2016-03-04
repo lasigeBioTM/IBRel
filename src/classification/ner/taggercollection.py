@@ -31,7 +31,7 @@ class TaggerCollection(object):
             self.types = ["all"] + self.CHEMDNER_TYPES
         elif basepath.split("/")[-1].startswith("gpro"):
             self.types = self.GPRO_TYPES + ["all"]
-        self.basemodel = StanfordNERModel(self.basepath)
+        self.basemodel = StanfordNERModel(self.basepath, "all")
 
     def train_types(self):
         """
@@ -49,7 +49,7 @@ class TaggerCollection(object):
 
     def load_models(self):
         for i, t in enumerate(self.types):
-            model = StanfordNERModel(self.basepath + "_" + t, subtypes=self.basemodel.subtypes)
+            model = StanfordNERModel(self.basepath + "_" + t, t, subtypes=self.basemodel.subtypes)
             model.load_tagger(self.baseport + i)
             self.models[t] = model
 
@@ -70,7 +70,7 @@ class TaggerCollection(object):
         """
         # TODO: parallelize
         results = ResultSetNER(corpus, self.basepath)
-        self.basemodel.load_data(corpus, feature_extractors.keys(), subtype="all", mode="test")
+        self.basemodel.load_data(corpus, feature_extractors.keys())
         all_results = []
         tasks = [(self.models[t], t, corpus, self.basemodel, self.basepath, self.baseport + i) for i, t in enumerate(self.types)]
 

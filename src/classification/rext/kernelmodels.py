@@ -9,8 +9,6 @@ import pickle
 import operator
 from time import time
 #from pandas import DataFrame
-import numpy as np
-from scipy.stats import mode
 import platform
 import re
 
@@ -19,14 +17,6 @@ import nltk.data
 from nltk.tree import Tree
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.corpus import wordnet
-
-from sklearn.pipeline import Pipeline
-from sklearn.cross_validation import KFold
-from sklearn import svm
-from sklearn.feature_extraction.text import CountVectorizer
-import sklearn.metrics as skm
-from sklearn.preprocessing import normalize
-from sklearn.preprocessing import MinMaxScaler
 
 import relations
 
@@ -114,7 +104,7 @@ class KernelModel(object):
                 # tokens = tokens[:first_token] + ["#candidatea#"] + tokens[first_token:]
                 # tokens = tokens[:first_token] + ["#candidatea#"] + tokens[first_token+1:]
                 tokens[first_token] = "#candidatea#"
-                # tokens[0] = "#candidatea#"
+                #tokens[0] = "#candidatea#"
                 # pos = pos[:first_token] + [pos[first_token]] + pos[:first_token]
                 # lemmas = lemmas[:first_token] + [lemmas[first_token]] + lemmas[:first_token]
                 # ner = ner[:first_token] + [ner[first_token]] + ner[:first_token]
