@@ -19,7 +19,7 @@ from classification.ner.taggercollection import TaggerCollection
 from classification.ner.simpletagger import SimpleTaggerModel, feature_extractors
 from postprocessing.ensemble_ner import EnsembleNER
 from reader import pubmed
-from classification.rext.relations import Pair
+from text.pair import Pair
 from config import config
 from postprocessing.chebi_resolution import add_chebi_mappings
 from postprocessing.ssm import add_ssm_score

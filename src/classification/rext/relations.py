@@ -1,16 +1,12 @@
 #!/usr/bin/env python -W ignore::ModuleDeprecationWarning
 #train and evaluate ML model for DDI classification based on the DDI corpus
-import sys
-import os
-from optparse import OptionParser
-import pickle
-import time
-import numpy as np
-from subprocess import Popen, PIPE
 import logging
-import xml.etree.ElementTree as ET
-import warnings
+import os
+import pickle
+import sys
 import tarfile
+import time
+from optparse import OptionParser
 
 import kernelmodels
 
@@ -24,47 +20,6 @@ ENSEMBLE_PRED = "ensemble_pred"
 
 FINAL_PRED = 'final_pred'
 allclassifiers = [SLK_PRED, SST_PRED, "all", ""]
-
-class Pair(object):
-    """Relation between two entities from the same sentence"""
-    def __init__(self, entities, relation, *args, **kwargs):
-        self.sid = kwargs.get("sid")
-        self.did = kwargs.get("did")
-        self.pid = kwargs.get("pid")
-        self.entities = entities
-        self.eids = (entities[0].eid, entities[1].eid)
-        self.relation = relation
-        self.recognized_by = {}
-        self.score = 0
-
-    def get_dic(self):
-        dic = {}
-        dic["eid1"] = self.eids[0]
-        dic["eid2"] = self.eids[0]
-        dic["pid"] = self.pid
-        dic["relation"] = self.relation
-
-class Pairs(object):
-    """ List of pairs related to a sentence
-    """
-    def __init__(self, **kwargs):
-        self.pairs = []
-        self.sid = kwargs.get("sid")
-        self.did = kwargs.get("did")
-
-    def get_dic(self):
-        dic = []
-        for p in self.pairs:
-            dic.append(p.get_dic())
-        return dic
-
-    def add_pair(self, pair, psource):
-            # logging.debug("created new entry %s for %s" % (esource, self.sid))
-        #if entity in self.elist[esource]:
-        #    logging.info("Repeated entity! %s", entity.eid)
-        # print pair.relation, pair.entities
-        pair.recognized_by[psource] = 1
-        self.pairs.append(pair)
 
 
 def getSentenceID(pair):

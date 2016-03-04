@@ -6,13 +6,18 @@ from xml.etree import ElementTree as ET
 import re
 import pprint
 from classification.ner.stanfordner import stanford_coding
+from text.protein_entity import ProteinEntity
 
 from token2 import Token2
 from entity import Entities
 from classification.ner.simpletagger import create_entity
-from classification.rext.relations import Pairs
+from text.pair import Pair, Pairs
 from classification.rext import ddi_kernels
 from classification.rext import relations
+from text.chemical_entity import ChemicalEntity
+from text.mirna_entity import MirnaEntity
+from text.event_entity import EventEntity
+from text.time_entity import TimeEntity
 from text.tlink import TLink
 
 pp = pprint.PrettyPrinter(indent=2)
@@ -29,6 +34,9 @@ class Sentence(object):
         self.depparse = None
         self.tokens = []
         self.regex_tokens = re.compile(r'(-|/|\\|\+|\.|\w+)')
+
+    def tokenize_words(self):
+        pass
 
 
     def process_corenlp_sentence(self, corenlpres):
@@ -80,7 +88,7 @@ class Sentence(object):
                                         "characterOffsetEnd": charoffset_end,
                                         "pos": t["pos"],
                                         "ner": t["ner"],
-                                        "lemma": t["lemma"]}
+                                        "lemma": t["lemma"][charoffset_begin:charoffset_end]}
                             self.create_newtoken(ts, ts_props)
 
                 else:
@@ -112,8 +120,13 @@ class Sentence(object):
         else:
             pid = self.sid + ".p0"
         if subtype == "tlink":
-            self.pairs.add_pair(TLink(entity1, entity2, original_id=kwargs.get("original_id"),
-                                     did=self.did, pid=pid, rtype=subtype), source)
+            p = TLink(entity1, entity2, original_id=kwargs.get("original_id"),
+                                     did=self.did, pid=pid, rtype=subtype)
+        else:
+            p = Pair((entity1, entity2), subtype)
+        self.pairs.add_pair(p, source)
+        return p
+
     def exclude_entity(self, start, end, source):
         """
         Exclude all entities matching start-end relative to sentence
