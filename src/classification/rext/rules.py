@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 import logging
 import sys
 import itertools
@@ -7,12 +8,13 @@ from classification.results import ResultsRE
 
 
 class RuleClassifier(KernelModel):
-    def __init__(self, corpus, rules=["same_line", "list_items", "dist", "same_text", "all"]):
+    def __init__(self, corpus, ptype, rules=["same_line", "list_items", "dist", "same_text", "all"]):
         """
         Rule based classifier
         rules: List of rules to use
         """
         self.rules = rules
+        self.ptype = ptype
         self.corpus = corpus
         self.pairs = {}
         self.pids = {}
@@ -23,68 +25,45 @@ class RuleClassifier(KernelModel):
         pass
 
     def test(self):
+        pcount = 0
+        ptrue = 0
         for i, did in enumerate(self.corpus.documents):
-            if "path" in did:
-                continue
             doc_entities = []
-            pcount = 0
             logging.info("{} {}/{}".format(did, i, len(self.corpus.documents)))
             for sentence in self.corpus.documents[did].sentences:
                 if 'goldstandard' in sentence.entities.elist:
                     sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
                     # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
-                    doc_entities += sentence_entities
-            for pair in itertools.combinations(doc_entities, 2):
-                pid = did + ".p" + str(pcount)
-                if pair[0].dstart < pair[1].dstart:
-                    e1 = pair[0]
-                    e2 = pair[1]
-                else:
-                    e1 = pair[1]
-                    e2 = pair[0]
-                self.pids[pid] = pair
-                sid1 = e1.sid
-                sid2 = e2.sid
-                sentence1 = self.corpus.documents[did].get_sentence(e1.sid)
-                sentence2 = self.corpus.documents[did].get_sentence(e2.sid)
-                self.pairs[pid] = 0
-                # if sid1 != sid2:
-                #     self.pairs[pair.pid] = -1
-                # if the two entities are mentioned in the same line, assume it's true
-                # if e1.text.upper() == "HISTORY":
-                    # print e1.text.upper(), sentence2.text[1], e2.text, self.corpus.documents[did].text[e1.dstart:e2.dend]
-                    # print e2.text, "=>", sentence2.text
-                    # print "###", self.corpus.documents[did].text[e1.dstart:e2.dend]
-                between_text = self.corpus.documents[did].text[e1.dstart:e2.dend]
-                if "\n" not in between_text: # same line
-                    #if int(e1.eid.split("e")[-1])+1 == int(e2.eid.split("e")[-1]):
-                    #    self.pairs[pid] += 1
-                    if e2.dstart - e1.dend < 50:
-                        self.pairs[pid] += 1
-                if re.match(".*\s\d+\s.*", between_text):
-                    self.pairs[pid] += 1                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
-                elif "[end" not in between_text:
-                    if e1.text.upper() == "HISTORY" and (sentence2.text[1] == "." or sentence2.text[1] == ")"):
-                        self.pairs[pid] += 1
-                        # print self.corpus.documents[did].text[e1.dstart:e2.dend]
-                    # elif len(sentence2.text) < 20:
-                    #     self.pairs[pid] += 1
-                    #elif e2.dstart - e1.dend < 10:
-                    #     self.pairs[pid] += 1
-
-                pcount += 1
+                    # doc_entities += sentence_entities
+                    for pair in itertools.combinations(sentence_entities, 2):
+                        pid = did + ".p" + str(pcount)
+                        self.pids[pid] = pair
+                        self.pairs[pid] = 0
+                        # sentence1 = self.corpus.documents[did].get_sentence(e1.sid)
+                        # sentence2 = self.corpus.documents[did].get_sentence(e2.sid)
+                        # logging.info("relation: {}=>{}".format(pair[0].type, pair[1].type))
+                        if pair[0].type == "mirna" and pair[1].type == "protein":
+                            # logging.info("mirna-dna relation: {}=>{}".format(pair[0].text, pair[1].text))
+                            self.pairs[pid] = 1
+                            ptrue += 1
+                        elif pair[0].type == "protein" and pair[1].type == "mirna":
+                            self.pids[pid] = (pair[1], pair[0])
+                            self.pairs[pid] = 1
+                            ptrue += 1
+                        pcount += 1
 
 
 
     def get_predictions(self, corpus):
         results = ResultsRE("")
+        print len(self.pids)
         for p, pid in enumerate(self.pids):
             if self.pairs[pid] < 1:
                 # pair.recognized_by["rules"] = -1
                 pass
             else:
-                did = pid.split(".")[0]
-                pair = corpus.documents[did].add_relation(self.pids[pid][0], self.pids[pid][1], "tlink", relation=True)
+                did = ".".join(pid.split(".")[:-1])
+                pair = corpus.documents[did].add_relation(self.pids[pid][0], self.pids[pid][1], self.ptype, relation=True)
                 #pair = self.get_pair(pid, corpus)
                 results.pairs[pid] = pair
                 pair.recognized_by["rules"] = 1
