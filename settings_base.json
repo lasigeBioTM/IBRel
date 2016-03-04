@@ -9,6 +9,8 @@
   "go_user": "",
   "go_pw": "",
   "go_db": "",
+  "use_mirbase": false,
+  "mirbase_path": "",
   "host_ip": "127.0.0.1",
   "geniass_path": "./bin/geniass",
   "florchebi_path": "./bin",

@@ -6,7 +6,6 @@ def main():
         vals = json.load(settings)
         for k in vals:
             vals[k] = raw_input("{0}? (current: {1})".format(k, vals[k])) or vals[k]
-    shutil.copy("bin/default.properties", vals["corenlp_dir"])
     shutil.copy("bin/base.prop", vals["stanford_ner_dir"])
     with open("settings.json", "w") as settings:
         json.dump(vals, settings, sort_keys=True, indent=4)
@@ -35,7 +34,10 @@ with open("settings.json") as settings:
     stanford_ner_train_ram = vals["stanford_ner_train_ram"]
     stanford_ner_test_ram = vals["stanford_ner_test_ram"]
     stoplist = vals["stoplist"]
-    mirbase_path = vals["mirbase_path"]
+    use_mirbase = vals["use_mirbase"]
+    if use_mirbase:
+        mirbase_path = vals["mirbase_path"]
+
 
 if use_chebi or use_go:
     import MySQLdb
