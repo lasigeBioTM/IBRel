@@ -23,9 +23,9 @@ class Pair(object):
         dic["relation"] = self.relation
 
     def validate(self):
-        if " and " == self.between_text:
+        """if " and " == self.between_text:
             logging.info("skipped {}".format(self.between_text))
-            return False
+            return False"""
         return True
 
 

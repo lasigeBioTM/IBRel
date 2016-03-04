@@ -146,7 +146,6 @@ class Document(object):
             pair = TLink(entity1, entity2, relation=relation, original_id=kwargs.get("original_id"),
                                      did=self.did, pid=pid, rtype=subtype, between_text=between_text)
         else:
-            print between_text
             pair = Pair((entity1, entity2), subtype, did=self.did, pid=pid, original_id=kwargs.get("original_id"), between_text=between_text)
         self.pairs.add_pair(pair, source)
         return pair

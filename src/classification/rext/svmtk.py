@@ -20,17 +20,17 @@ from classification.results import ResultsRE
 
 class SVMTKernel(KernelModel):
 
-    def __init__(self, corpus, modelname="svm_tk_classifier.model"):
+    def __init__(self, corpus, relationtype, modelname="svm_tk_classifier.model"):
         super(SVMTKernel, self).__init__()
         self.modelname = modelname
         self.test_svmtk = []
         self.pids = {}
         # self.lmtzr = WordNetLemmatizer()
         self.stemmer = PorterStemmer()
-        self.generate_data(corpus)
+        self.generate_data(corpus, pairtypes=relationtype)
 
 
-    def generate_data(self, corpus):
+    def generate_data(self, corpus, pairtypes=("mirna", "protein")):
         if os.path.isfile(self.temp_dir + self.modelname + ".txt"):
             os.remove(self.temp_dir + self.modelname + ".txt")
         xerrors = 0
@@ -44,40 +44,52 @@ class SVMTKernel(KernelModel):
             logging.info("{} {}/{}".format(did, i, len(corpus.documents)))
             for sentence in corpus.documents[did].sentences:
                 if 'goldstandard' in sentence.entities.elist:
-                    sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"] if entity.type == "event"]
+                    sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
                     # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
                     for pair in itertools.combinations(sentence_entities, 2):
-                        sid1 = pair[0].sid
-                        sid2 = pair[1].sid
-                        pid = did + ".p" + str(pcount)
-                        if sid1 != sid2:
-                            sentence1 = corpus.documents[did].get_sentence(sid1)
-                            tree1 = self.mask_entity(sentence1, Tree.fromstring(sentence1.parsetree), pair[0], "candidate1")
-                            sentence2 = corpus.documents[did].get_sentence(sid2)
-                            tree2 = self.mask_entity(sentence2, Tree.fromstring(sentence2.parsetree), pair[1], "candidate2")
-                            tree = self.join_trees(tree1, tree2)
-                        else:
-                            sentence1 = corpus.documents[did].get_sentence(sid1)
+                        if pair[0].type == pairtypes[0] and pair[1].type == pairtypes[1] or pair[1].type == pairtypes[0] and pair[0].type == pairtypes[1]:
+                            # logging.debug(pair)
+                            if pair[0].type == pairtypes[0]:
+                                e1id = pair[0].eid
+                                e2id = pair[1].eid
+                            else:
+                                e1id = pair[1].eid
+                                e2id = pair[0].eid
+                                pair = (pair[1], pair[0])
+                            pid = did + ".p" + str(pcount)
+                            """if sid1 != sid2:
+                                sentence1 = corpus.documents[did].get_sentence(sid1)
+                                tree1 = self.mask_entity(sentence1, Tree.fromstring(sentence1.parsetree), pair[0], "candidate1")
+                                sentence2 = corpus.documents[did].get_sentence(sid2)
+                                tree2 = self.mask_entity(sentence2, Tree.fromstring(sentence2.parsetree), pair[1], "candidate2")
+                                tree = self.join_trees(tree1, tree2)
+                            else:"""
+                            sentence1 = corpus.documents[did].get_sentence(pair[0].sid)
+                            if sentence1.parsetree == "SENTENCE_SKIPPED_OR_UNPARSABLE":
+                                logging.info("skipped {}=>{} on sentence {}-{}".format(pair[0].text, pair[1].text, sentence1.sid, sentence1.text))
+                                continue
                             tree = Tree.fromstring(sentence1.parsetree)
+                            if "candidate1" in sentence1.parsetree:
+                                logging.info(sentence1.parsetree)
                             tree = self.mask_entity(sentence1, tree, pair[0], "candidate1")
                             tree = self.mask_entity(sentence1, tree, pair[1], "candidate2")
                             # if tree[0] != '(':
                             #     tree = '(S (' + tree + ' NN))'
                             #this depends on the version of nlkt
 
-                        tree, found = self.get_path(tree)
-                        #if len(docs[sid][ddi.SENTENCE_ENTITIES]) > 20:
-                            #print line
-                        #    line = "1 |BT| (ROOT (NP (NN candidatedrug) (, ,) (NN candidatedrug))) |ET|"
-                        #    xerrors += 1
-                        #else:
-                        # tree = self.normalize_leaves(tree)
-                        line = self.get_svm_train_line(tree, pair)
-                        if pair[1].eid not in pair[0].targets:
-                            line = '-' + line
-                        self.pids[pid] = pair
-                        doc_lines.append(line)
-                        pcount += 1
+                            tree, found = self.get_path(tree)
+                            #if len(docs[sid][ddi.SENTENCE_ENTITIES]) > 20:
+                                #print line
+                            #    line = "1 |BT| (ROOT (NP (NN candidatedrug) (, ,) (NN candidatedrug))) |ET|"
+                            #    xerrors += 1
+                            #else:
+                            # tree = self.normalize_leaves(tree)
+                            line = self.get_svm_train_line(tree, pair)
+                            if pair[1].eid not in pair[0].targets:
+                                line = '-' + line
+                            self.pids[pid] = pair
+                            doc_lines.append(line)
+                            pcount += 1
             logging.debug("writing {} lines to file...".format(len(doc_lines)))
             with codecs.open(self.temp_dir + self.modelname + ".txt", 'a', "utf-8") as train:
                 for l in doc_lines:
@@ -88,7 +100,7 @@ class SVMTKernel(KernelModel):
         if os.path.isfile(self.basedir + self.modelname):
             os.remove(self.basedir + self.modelname)
         svmlightargs = ["./bin/svm-light-TK-1.2/svm-light-TK-1.2.1/svm_learn", "-t", "5",
-                              # "-L", "0.6", "-T", "2", "-S", "2", "-g", "1",
+                               "-L", "0.5", "-T", "2", "-S", "2", "-g", "1",
                               "-D", "1", "-C", "T", self.temp_dir + self.modelname + ".txt",
                               self.basedir + self.modelname]
         print " ".join(svmlightargs)
@@ -147,11 +159,11 @@ class SVMTKernel(KernelModel):
             # results.pairs[pid] = pair
             if float(score) < 0:
                 # pair.recognized_by["svmtk"] = -1
-                # logging.debug(score)
+                logging.info(score)
                 pass
             else:
-                did = pid.split(".")[0]
-                pair = corpus.documents[did].add_relation(self.pids[pid][0], self.pids[pid][1], "tlink", relation=True)
+                did = ".".join(pid.split(".")[:-1])
+                pair = corpus.documents[did].add_relation(self.pids[pid][0], self.pids[pid][1], "pair", relation=True)
                 #pair = self.get_pair(pid, corpus)
                 results.pairs[pid] = pair
                 pair.recognized_by["svmtk"] = 1
@@ -200,11 +212,13 @@ class SVMTKernel(KernelModel):
         found = False
         entity_token_index = entity.tokens[0].order
         leaves_pos = tree.treepositions('leaves')
+        # logging.info("replace {} with {}".format(match_text, label))
         if entity_token_index == 0: # if the entity is the first in the sentence, it's easy
             tree[leaves_pos[0]] = label
             return tree
         if entity_token_index > 0: # otherwise we have to search because the tokenization may be different
             ref_token = sentence.tokens[entity_token_index - 1].text
+            # logging.info("replace {}|({}) with {}".format(ref_token, match_text, label))
             # ref_token is used to prevent from matching with the same text but corresponding to a different entity
             # in this case, it is the previous token
             for pos in leaves_pos:
@@ -221,6 +235,7 @@ class SVMTKernel(KernelModel):
         if entity_token_index < sentence.tokens[-1].order and not found:
             for ipos, pos in enumerate(leaves_pos[:-1]):
                 ref_token = sentence.tokens[entity_token_index + 1].text
+                # logging.info("replace ({})|{} with {}".format(match_text, ref_token, label))
                 next_pos = leaves_pos[ipos+1]
                 next_text = tree[next_pos]
                 if tree[pos] == match_text and (next_text in ref_token or ref_token in next_text):
@@ -230,7 +245,7 @@ class SVMTKernel(KernelModel):
                     tree[pos] = label
                     return tree
 
-        logging.debug("entity not found: |{}|{}|{}| in |{}|".format(entity_token_index, ref_token, match_text, str(tree)))
+        logging.debug("entity not found: |{}|{}|{}|{} in |{}|".format(entity_token_index, ref_token, match_text, label, str(tree)))
         return tree
 
     def normalize_leaves(self, tree):

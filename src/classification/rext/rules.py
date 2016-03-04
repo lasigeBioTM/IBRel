@@ -56,7 +56,7 @@ class RuleClassifier(KernelModel):
 
     def get_predictions(self, corpus):
         results = ResultsRE("")
-        print len(self.pids)
+        # print len(self.pids)
         for p, pid in enumerate(self.pids):
             if self.pairs[pid] < 1:
                 # pair.recognized_by["rules"] = -1

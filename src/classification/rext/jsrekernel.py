@@ -255,7 +255,7 @@ class JSREKernel(KernelModel):
                 p = 1
             if p == 1:
                 did = '.'.join(pid.split(".")[:-1])
-                pair = corpus.documents[did].add_relation(self.pairs[pid][0], self.pairs[pid][1], "tlink", relation=True)
+                pair = corpus.documents[did].add_relation(self.pairs[pid][0], self.pairs[pid][1], "pair", relation=True)
                 #pair = self.get_pair(pid, corpus)
                 results.pairs[pid] = pair
 

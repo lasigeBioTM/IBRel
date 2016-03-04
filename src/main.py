@@ -195,7 +195,7 @@ considered when coadministering with megestrol acetate.''',
             if options.kernel == "jsre":
                 model = JSREKernel(corpus, (options.pairtype1, options.pairtype2))
             elif options.kernel == "svmtk":
-                model = SVMTKernel(corpus)
+                model = SVMTKernel(corpus, (options.pairtype1, options.pairtype2))
             model.train()
         # testing
         elif options.actions == "test":
@@ -264,7 +264,7 @@ considered when coadministering with megestrol acetate.''',
             if options.kernel == "jsre":
                 model = JSREKernel(corpus, (options.pairtype1, options.pairtype2))
             elif options.kernel == "svmtk":
-                model = SVMTKernel(corpus)
+                model = SVMTKernel(corpus, (options.pairtype1, options.pairtype2))
             elif options.kernel == "rules":
                 model = RuleClassifier(corpus, options.ptype)
             model.load_classifier()
