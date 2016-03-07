@@ -19,6 +19,7 @@ from classification.ner.taggercollection import TaggerCollection
 from classification.results import ResultsNER, ResultSetNER
 from classification.rext.jsrekernel import JSREKernel
 from classification.rext.rules import RuleClassifier
+from classification.rext.stanfordre import StanfordRE
 from classification.rext.svmtk import SVMTKernel
 from config import config
 from reader.chebi_corpus import ChebiCorpus
@@ -196,6 +197,8 @@ considered when coadministering with megestrol acetate.''',
                 model = JSREKernel(corpus, (options.pairtype1, options.pairtype2))
             elif options.kernel == "svmtk":
                 model = SVMTKernel(corpus, (options.pairtype1, options.pairtype2))
+            elif options.kernel == "stanfordre":
+                model = StanfordRE(corpus, (options.pairtype1, options.pairtype2))
             model.train()
         # testing
         elif options.actions == "test":
@@ -267,6 +270,8 @@ considered when coadministering with megestrol acetate.''',
                 model = SVMTKernel(corpus, (options.pairtype1, options.pairtype2))
             elif options.kernel == "rules":
                 model = RuleClassifier(corpus, options.ptype)
+            elif options.kernel == "stanfordre":
+                model = StanfordRE(corpus, options.ptype)
             model.load_classifier()
             model.test()
             results = model.get_predictions(corpus)

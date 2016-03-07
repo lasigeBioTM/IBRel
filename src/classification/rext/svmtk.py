@@ -8,7 +8,7 @@ import re
 
 import itertools
 
-from classification.rext.kernelmodels import KernelModel
+from classification.rext.kernelmodels import ReModel
 # from nltk import WordNetLemmatizer
 from nltk.stem.porter import *
 from nltk.tree import Tree
@@ -18,7 +18,7 @@ from classification.rext import relations
 from classification.results import ResultsRE
 
 
-class SVMTKernel(KernelModel):
+class SVMTKernel(ReModel):
 
     def __init__(self, corpus, relationtype, modelname="svm_tk_classifier.model"):
         super(SVMTKernel, self).__init__()

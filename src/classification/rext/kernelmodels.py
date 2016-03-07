@@ -20,7 +20,7 @@ from nltk.corpus import wordnet
 
 import relations
 
-class KernelModel(object):
+class ReModel(object):
     def __init__(self):
         self.basedir = "models/kernel_models/"
         self.temp_dir = "temp/"

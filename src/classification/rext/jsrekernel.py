@@ -2,7 +2,7 @@ from __future__ import unicode_literals
 import os
 import logging
 import sys
-from classification.rext.kernelmodels import KernelModel
+from classification.rext.kernelmodels import ReModel
 from subprocess import Popen, PIPE
 import platform
 import itertools
@@ -10,7 +10,7 @@ import codecs
 from classification.results import ResultsRE
 
 
-class JSREKernel(KernelModel):
+class JSREKernel(ReModel):
 
     def __init__(self, corpus, relationtype, modelname="slk_classifier.model"):
         super(JSREKernel, self).__init__()

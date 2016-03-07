@@ -3,11 +3,11 @@ import logging
 import sys
 import itertools
 import re
-from classification.rext.kernelmodels import KernelModel
+from classification.rext.kernelmodels import ReModel
 from classification.results import ResultsRE
 
 
-class RuleClassifier(KernelModel):
+class RuleClassifier(ReModel):
     def __init__(self, corpus, ptype, rules=["same_line", "list_items", "dist", "same_text", "all"]):
         """
         Rule based classifier
