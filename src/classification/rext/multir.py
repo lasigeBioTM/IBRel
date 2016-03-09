@@ -27,22 +27,20 @@ class MultiR(ReModel):
         nentities = 0
         doc = multir_pb.Document()
         doc.filename = modelname
-        for i, did in enumerate(corpus.documents):
-            for sentence in corpus.documents[did].sentences:
-                if 'goldstandard' in sentence.entities.elist:
-                    sent = doc.sentences.add()
-                    for token in sentence.tokens:
-                        tok = sent.tokens.add()
-                        tok.word = token.text
-                        tok.tag = token.pos
-                        token.ner = token.tag
-                    for entity in sentence.entities.elist.get("goldstandard"):
-                        ent = sent.mentions.add()
-                        ent.id = nentities
-                        ent.from_ = entity.start
-                        ent.to = entity.end
-                        ent.label = entity.text
-                        nentities += 1
+        for sentence in corpus.get_sentences("goldstandard"):
+            sent = doc.sentences.add()
+            for token in sentence.tokens:
+                tok = sent.tokens.add()
+                tok.word = token.text
+                tok.tag = token.pos
+                token.ner = token.tag
+            for entity in sentence.entities.elist.get("goldstandard"):
+                ent = sent.mentions.add()
+                ent.id = nentities
+                ent.from_ = entity.start
+                ent.to = entity.end
+                ent.label = entity.text
+                nentities += 1
         # Write the new address book back to disk.
         f = open("train.pb.gz", "wb")
         f.write(doc.SerializeToString())

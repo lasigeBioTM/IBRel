@@ -36,60 +36,56 @@ class SVMTKernel(ReModel):
         xerrors = 0
 
             #print pairs
-        for i, did in enumerate(corpus.documents):
-            if "path" in did:
-                continue
+        for sentence in corpus.get_sentences("goldstandard"):
             doc_lines = []
             pcount = 0
-            logging.info("{} {}/{}".format(did, i, len(corpus.documents)))
-            for sentence in corpus.documents[did].sentences:
-                if 'goldstandard' in sentence.entities.elist:
-                    sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
-                    # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
-                    for pair in itertools.combinations(sentence_entities, 2):
-                        if pair[0].type == pairtypes[0] and pair[1].type == pairtypes[1] or pair[1].type == pairtypes[0] and pair[0].type == pairtypes[1]:
-                            # logging.debug(pair)
-                            if pair[0].type == pairtypes[0]:
-                                e1id = pair[0].eid
-                                e2id = pair[1].eid
-                            else:
-                                e1id = pair[1].eid
-                                e2id = pair[0].eid
-                                pair = (pair[1], pair[0])
-                            pid = did + ".p" + str(pcount)
-                            """if sid1 != sid2:
-                                sentence1 = corpus.documents[did].get_sentence(sid1)
-                                tree1 = self.mask_entity(sentence1, Tree.fromstring(sentence1.parsetree), pair[0], "candidate1")
-                                sentence2 = corpus.documents[did].get_sentence(sid2)
-                                tree2 = self.mask_entity(sentence2, Tree.fromstring(sentence2.parsetree), pair[1], "candidate2")
-                                tree = self.join_trees(tree1, tree2)
-                            else:"""
-                            sentence1 = corpus.documents[did].get_sentence(pair[0].sid)
-                            if sentence1.parsetree == "SENTENCE_SKIPPED_OR_UNPARSABLE":
-                                logging.info("skipped {}=>{} on sentence {}-{}".format(pair[0].text, pair[1].text, sentence1.sid, sentence1.text))
-                                continue
-                            tree = Tree.fromstring(sentence1.parsetree)
-                            if "candidate1" in sentence1.parsetree:
-                                logging.info(sentence1.parsetree)
-                            tree = self.mask_entity(sentence1, tree, pair[0], "candidate1")
-                            tree = self.mask_entity(sentence1, tree, pair[1], "candidate2")
-                            # if tree[0] != '(':
-                            #     tree = '(S (' + tree + ' NN))'
-                            #this depends on the version of nlkt
+            logging.info("{}".format(sentence.sid))
+            sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
+            # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
+            for pair in itertools.combinations(sentence_entities, 2):
+                if pair[0].type == pairtypes[0] and pair[1].type == pairtypes[1] or pair[1].type == pairtypes[0] and pair[0].type == pairtypes[1]:
+                    # logging.debug(pair)
+                    if pair[0].type == pairtypes[0]:
+                        e1id = pair[0].eid
+                        e2id = pair[1].eid
+                    else:
+                        e1id = pair[1].eid
+                        e2id = pair[0].eid
+                        pair = (pair[1], pair[0])
+                    pid = sentence.did + ".p" + str(pcount)
+                    """if sid1 != sid2:
+                        sentence1 = corpus.documents[did].get_sentence(sid1)
+                        tree1 = self.mask_entity(sentence1, Tree.fromstring(sentence1.parsetree), pair[0], "candidate1")
+                        sentence2 = corpus.documents[did].get_sentence(sid2)
+                        tree2 = self.mask_entity(sentence2, Tree.fromstring(sentence2.parsetree), pair[1], "candidate2")
+                        tree = self.join_trees(tree1, tree2)
+                    else:"""
+                    sentence1 = corpus.documents[sentence.did].get_sentence(pair[0].sid)
+                    if sentence1.parsetree == "SENTENCE_SKIPPED_OR_UNPARSABLE":
+                        logging.info("skipped {}=>{} on sentence {}-{}".format(pair[0].text, pair[1].text, sentence1.sid, sentence1.text))
+                        continue
+                    tree = Tree.fromstring(sentence1.parsetree)
+                    if "candidate1" in sentence1.parsetree:
+                        logging.info(sentence1.parsetree)
+                    tree = self.mask_entity(sentence1, tree, pair[0], "candidate1")
+                    tree = self.mask_entity(sentence1, tree, pair[1], "candidate2")
+                    # if tree[0] != '(':
+                    #     tree = '(S (' + tree + ' NN))'
+                    #this depends on the version of nlkt
 
-                            tree, found = self.get_path(tree)
-                            #if len(docs[sid][ddi.SENTENCE_ENTITIES]) > 20:
-                                #print line
-                            #    line = "1 |BT| (ROOT (NP (NN candidatedrug) (, ,) (NN candidatedrug))) |ET|"
-                            #    xerrors += 1
-                            #else:
-                            # tree = self.normalize_leaves(tree)
-                            line = self.get_svm_train_line(tree, pair)
-                            if pair[1].eid not in pair[0].targets:
-                                line = '-' + line
-                            self.pids[pid] = pair
-                            doc_lines.append(line)
-                            pcount += 1
+                    tree, found = self.get_path(tree)
+                    #if len(docs[sid][ddi.SENTENCE_ENTITIES]) > 20:
+                        #print line
+                    #    line = "1 |BT| (ROOT (NP (NN candidatedrug) (, ,) (NN candidatedrug))) |ET|"
+                    #    xerrors += 1
+                    #else:
+                    # tree = self.normalize_leaves(tree)
+                    line = self.get_svm_train_line(tree, pair)
+                    if pair[1].eid not in pair[0].targets:
+                        line = '-' + line
+                    self.pids[pid] = pair
+                    doc_lines.append(line)
+                    pcount += 1
             logging.debug("writing {} lines to file...".format(len(doc_lines)))
             with codecs.open(self.temp_dir + self.modelname + ".txt", 'a', "utf-8") as train:
                 for l in doc_lines:

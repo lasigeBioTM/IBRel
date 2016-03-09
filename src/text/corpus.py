@@ -151,3 +151,11 @@ class Corpus(object):
         scores.sort()
         print scores[0], scores[-1]
 
+    def get_sentences(self, hassource=None):
+        for did in self.documents:
+            for sentence in self.documents[did].sentences:
+                if hassource and 'goldstandard' in sentence.entities.elist:
+                    yield sentence
+                elif hassource is None:
+                    yield sentence
+

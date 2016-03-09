@@ -102,51 +102,47 @@ class JSREKernel(ReModel):
         # doc_entities = []
         pcount = 0
         truepcount = 0
-        for i, did in enumerate(corpus.documents):
+        for sentence in corpus.get_sentences("goldstandard"):
             examplelines = []
-            doc_entities = []
-            logging.info("{} {}/{}".format(did, i, len(corpus.documents)))
-            for sentence in corpus.documents[did].sentences:
-                if 'goldstandard' in sentence.entities.elist:
-                    sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
-                    # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
-                    for pair in itertools.combinations(sentence_entities, 2):
-                        if pair[0].type == pairtypes[0] and pair[1].type == pairtypes[1] or pair[1].type == pairtypes[0] and pair[0].type == pairtypes[1]:
-                            # logging.debug(pair)
-                            if pair[0].type == pairtypes[0]:
-                                e1id = pair[0].eid
-                                e2id = pair[1].eid
-                            else:
-                                e1id = pair[1].eid
-                                e2id = pair[0].eid
-                                pair = (pair[1], pair[0])
-                            pid = did + ".p" + str(pcount)
-                            # self.pairs[pid] = (e1id, e2id)
-                            self.pairs[pid] = pair
-                            # sentence1 = corpus.documents[did].get_sentence(pair[0].sid)
-                            #sentence1 = sentence
-                            # logging.info("{}  {}-{} => {}-{}".format(sentence.sid, e1id, pair[0].text, e2id, pair[1].text))
-                            tokens_text, pos, lemmas, ner = self.get_sentence_instance(sentence, e1id, e2id, pair)
+            sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
+            # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
+            for pair in itertools.combinations(sentence_entities, 2):
+                if pair[0].type == pairtypes[0] and pair[1].type == pairtypes[1] or pair[1].type == pairtypes[0] and pair[0].type == pairtypes[1]:
+                    # logging.debug(pair)
+                    if pair[0].type == pairtypes[0]:
+                        e1id = pair[0].eid
+                        e2id = pair[1].eid
+                    else:
+                        e1id = pair[1].eid
+                        e2id = pair[0].eid
+                        pair = (pair[1], pair[0])
+                    pid = sentence.did + ".p" + str(pcount)
+                    # self.pairs[pid] = (e1id, e2id)
+                    self.pairs[pid] = pair
+                    # sentence1 = corpus.documents[did].get_sentence(pair[0].sid)
+                    #sentence1 = sentence
+                    # logging.info("{}  {}-{} => {}-{}".format(sentence.sid, e1id, pair[0].text, e2id, pair[1].text))
+                    tokens_text, pos, lemmas, ner = self.get_sentence_instance(sentence, e1id, e2id, pair)
 
-                            # logging.debug("{} {} {} {}".format(len(pair_text), len(pos), len(lemmas), len(ner)))
-                            #logging.debug("generating jsre lines...")
-                            #for i in range(len(pairinstances)):
-                                #body = generatejSRE_line(pairinstances[i], pos, stems, ner)
-                            if pair[0].sid != pair[1].sid:
-                                sentence2 = corpus.documents[did].get_sentence(pair[1].sid)
-                                tokens_text2, pos2, lemmas2, ner2 = self.get_sentence_instance(sentence2, e1id, e2id, pair)
-                                tokens_text += tokens_text2
-                                pos += pos2
-                                ner += ner2
-                                lemmas += lemmas2
+                    # logging.debug("{} {} {} {}".format(len(pair_text), len(pos), len(lemmas), len(ner)))
+                    #logging.debug("generating jsre lines...")
+                    #for i in range(len(pairinstances)):
+                        #body = generatejSRE_line(pairinstances[i], pos, stems, ner)
+                    if pair[0].sid != pair[1].sid:
+                        sentence2 = corpus.documents[sentence.did].get_sentence(pair[1].sid)
+                        tokens_text2, pos2, lemmas2, ner2 = self.get_sentence_instance(sentence2, e1id, e2id, pair)
+                        tokens_text += tokens_text2
+                        pos += pos2
+                        ner += ner2
+                        lemmas += lemmas2
 
-                            trueddi = 0
-                            if e2id in pair[0].targets:
-                                trueddi = 1
-                                truepcount += 1
-                            body = self.generatejSRE_line(tokens_text, pos, lemmas, ner)
-                            examplelines.append(str(trueddi) + '\t' + pid + '.i' + '0\t' + body + '\n')
-                            pcount += 1
+                    trueddi = 0
+                    if e2id in pair[0].targets:
+                        trueddi = 1
+                        truepcount += 1
+                    body = self.generatejSRE_line(tokens_text, pos, lemmas, ner)
+                    examplelines.append(str(trueddi) + '\t' + pid + '.i' + '0\t' + body + '\n')
+                    pcount += 1
             logging.debug("writing {} lines to file...".format(len(examplelines)))
             with codecs.open(self.temp_dir + savefile + ".txt", 'a', "utf-8") as trainfile:
                 for l in examplelines:

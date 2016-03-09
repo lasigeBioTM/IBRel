@@ -24,7 +24,6 @@ class StanfordRE(ReModel):
         self.corpus = corpus
 
     def generate_data(self, corpus, modelname, pairtypes):
-        # TODO: refactor this part to corpus class
         if os.path.isfile(self.temp_dir + modelname + ".txt"):
             print "removed old data"
             os.remove(self.temp_dir + modelname + ".txt")
@@ -34,55 +33,51 @@ class StanfordRE(ReModel):
         pcount = 0
         truepcount = 0
         ns = 0
-        for i, did in enumerate(corpus.documents):
-            examplelines = []
-            doc_entities = []
-            logging.info("{} {}/{}".format(did, i, len(corpus.documents)))
-            for sentence in corpus.documents[did].sentences:
-                if 'goldstandard' in sentence.entities.elist:
-                    nt_to_entity = {}
-                    for e in sentence.entities.elist['goldstandard']:
-                        # TODO: merge tokens of entity
-                        nt = str(e.tokens[0].order)
-                        nt_to_entity[nt] = e
-                    # print nt_to_entity
-                    # ns = sentence.sid.split("s")[-1]
-                    for t in sentence.tokens:
-                        nt = str(t.order)
-                        # print nt, nt in nt_to_entity
-                        if nt in nt_to_entity:
-                            # print nt, nt_to_entity[nt], nt_to_entity[nt].type
-                            #l = [str(ns), nt_to_entity[nt].type, nt, "O", t.pos, t.text, "O", "O", "O"]
-                            # TODO: change other to entitiy name
-                            l = [str(ns), "Other", nt, "O", t.pos, t.text, "O", "O", "O"]
-                        else:
-                            # print nt, nt_to_entity
-                            l = [str(ns), "O", nt, "O", t.pos, t.text, "O", "O", "O"]
-                        trainlines.append(l)
-                    trainlines.append([""])
-                    sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
-                    # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
-                    for pair in itertools.combinations(sentence_entities, 2):
-                        if pair[0].type == pairtypes[0] and pair[1].type == pairtypes[1] or pair[1].type == pairtypes[0] and pair[0].type == pairtypes[1]:
-                            # logging.debug(pair)
-                            if pair[0].type == pairtypes[0]:
-                                e1id = pair[0].eid
-                                e2id = pair[1].eid
-                            else:
-                                e1id = pair[1].eid
-                                e2id = pair[0].eid
-                                pair = (pair[1], pair[0])
-                            pid = did + ".p" + str(pcount)
-                            # self.pairs[pid] = (e1id, e2id)
-                            self.pairs[pid] = pair
-                            if e2id in pair[0].targets:
-                                truepcount += 1
-                                nt1 = str(pair[0].tokens[0].order)
-                                nt2 = str(pair[1].tokens[0].order)
-                                trainlines.append([nt1, nt2, "+".join(pairtypes)])
-                        pcount += 1
-                    trainlines.append([""])
-                    ns += 1
+        for sentence in corpus.get_sentences("goldstandard"):
+            logging.info("{}".format(sentence.sid))
+            nt_to_entity = {}
+            for e in sentence.entities.elist['goldstandard']:
+                # TODO: merge tokens of entity
+                nt = str(e.tokens[0].order)
+                nt_to_entity[nt] = e
+            # print nt_to_entity
+            # ns = sentence.sid.split("s")[-1]
+            for t in sentence.tokens:
+                nt = str(t.order)
+                # print nt, nt in nt_to_entity
+                if nt in nt_to_entity:
+                    # print nt, nt_to_entity[nt], nt_to_entity[nt].type
+                    #l = [str(ns), nt_to_entity[nt].type, nt, "O", t.pos, t.text, "O", "O", "O"]
+                    # TODO: change other to entitiy name
+                    l = [str(ns), "Other", nt, "O", t.pos, t.text, "O", "O", "O"]
+                else:
+                    # print nt, nt_to_entity
+                    l = [str(ns), "O", nt, "O", t.pos, t.text, "O", "O", "O"]
+                trainlines.append(l)
+            trainlines.append([""])
+            sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
+            # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
+            for pair in itertools.combinations(sentence_entities, 2):
+                if pair[0].type == pairtypes[0] and pair[1].type == pairtypes[1] or pair[1].type == pairtypes[0] and pair[0].type == pairtypes[1]:
+                    # logging.debug(pair)
+                    if pair[0].type == pairtypes[0]:
+                        e1id = pair[0].eid
+                        e2id = pair[1].eid
+                    else:
+                        e1id = pair[1].eid
+                        e2id = pair[0].eid
+                        pair = (pair[1], pair[0])
+                    pid = sentence.did + ".p" + str(pcount)
+                    # self.pairs[pid] = (e1id, e2id)
+                    self.pairs[pid] = pair
+                    if e2id in pair[0].targets:
+                        truepcount += 1
+                        nt1 = str(pair[0].tokens[0].order)
+                        nt2 = str(pair[1].tokens[0].order)
+                        trainlines.append([nt1, nt2, "+".join(pairtypes)])
+                pcount += 1
+                trainlines.append([""])
+                ns += 1
 
 
 

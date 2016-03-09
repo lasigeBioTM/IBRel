@@ -27,30 +27,27 @@ class RuleClassifier(ReModel):
     def test(self):
         pcount = 0
         ptrue = 0
-        for i, did in enumerate(self.corpus.documents):
-            doc_entities = []
-            logging.info("{} {}/{}".format(did, i, len(self.corpus.documents)))
-            for sentence in self.corpus.documents[did].sentences:
-                if 'goldstandard' in sentence.entities.elist:
-                    sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
-                    # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
-                    # doc_entities += sentence_entities
-                    for pair in itertools.combinations(sentence_entities, 2):
-                        pid = did + ".p" + str(pcount)
-                        self.pids[pid] = pair
-                        self.pairs[pid] = 0
-                        # sentence1 = self.corpus.documents[did].get_sentence(e1.sid)
-                        # sentence2 = self.corpus.documents[did].get_sentence(e2.sid)
-                        # logging.info("relation: {}=>{}".format(pair[0].type, pair[1].type))
-                        if pair[0].type == "mirna" and pair[1].type == "protein":
-                            # logging.info("mirna-dna relation: {}=>{}".format(pair[0].text, pair[1].text))
-                            self.pairs[pid] = 1
-                            ptrue += 1
-                        elif pair[0].type == "protein" and pair[1].type == "mirna":
-                            self.pids[pid] = (pair[1], pair[0])
-                            self.pairs[pid] = 1
-                            ptrue += 1
-                        pcount += 1
+        for sentence in self.corpus.get_sentences("goldstandard"):
+            logging.info("{} {}/{}".format(sentence.sid))
+            sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
+            # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
+            # doc_entities += sentence_entities
+            for pair in itertools.combinations(sentence_entities, 2):
+                pid = sentence.did + ".p" + str(pcount)
+                self.pids[pid] = pair
+                self.pairs[pid] = 0
+                # sentence1 = self.corpus.documents[did].get_sentence(e1.sid)
+                # sentence2 = self.corpus.documents[did].get_sentence(e2.sid)
+                # logging.info("relation: {}=>{}".format(pair[0].type, pair[1].type))
+                if pair[0].type == "mirna" and pair[1].type == "protein":
+                    # logging.info("mirna-dna relation: {}=>{}".format(pair[0].text, pair[1].text))
+                    self.pairs[pid] = 1
+                    ptrue += 1
+                elif pair[0].type == "protein" and pair[1].type == "mirna":
+                    self.pids[pid] = (pair[1], pair[0])
+                    self.pairs[pid] = 1
+                    ptrue += 1
+                pcount += 1
 
 
 
