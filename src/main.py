@@ -20,6 +20,7 @@ from classification.results import ResultsNER, ResultSetNER
 from classification.rext.jsrekernel import JSREKernel
 from classification.rext.multir import MultiR
 from classification.rext.rules import RuleClassifier
+from classification.rext.scikitre import ScikitRE
 from classification.rext.stanfordre import StanfordRE
 from classification.rext.svmtk import SVMTKernel
 from config import config
@@ -111,8 +112,8 @@ considered when coadministering with megestrol acetate.''',
                         choices=["stanford", "crfsuite"])
     parser.add_argument("--log", action="store", dest="loglevel", default="WARNING", help="Log level")
     parser.add_argument("--kernel", action="store", dest="kernel", default="svmtk", help="Kernel for relation extraction")
-    parser.add_argument("--pairtype1", action="store", dest="pairtype1")
-    parser.add_argument("--pairtype2", action="store", dest="pairtype2")
+    parser.add_argument("--etype1", action="store", dest="etype1")
+    parser.add_argument("--etype2", action="store", dest="etype2")
     options = parser.parse_args()
 
     # set logger
@@ -195,13 +196,15 @@ considered when coadministering with megestrol acetate.''',
             models.train_types()
         elif options.actions == "train_relations":
             if options.kernel == "jsre":
-                model = JSREKernel(corpus, (options.pairtype1, options.pairtype2))
+                model = JSREKernel(corpus, (options.etype1, options.etype2))
             elif options.kernel == "svmtk":
-                model = SVMTKernel(corpus, (options.pairtype1, options.pairtype2))
+                model = SVMTKernel(corpus, (options.etype1, options.etype2))
             elif options.kernel == "stanfordre":
-                model = StanfordRE(corpus, (options.pairtype1, options.pairtype2))
+                model = StanfordRE(corpus, (options.etype1, options.etype2))
             elif options.kernel == "multir":
-                model = MultiR(corpus, (options.pairtype1, options.pairtype2))
+                model = MultiR(corpus, (options.etype1, options.etype2))
+            elif options.kernel == "scikit":
+                model = ScikitRE(corpus, (options.etype1, options.etype2))
             model.train()
         # testing
         elif options.actions == "test":
@@ -268,13 +271,15 @@ considered when coadministering with megestrol acetate.''',
             final_results.save(options.output[1] + ".pickle")
         elif options.actions == "test_relations":
             if options.kernel == "jsre":
-                model = JSREKernel(corpus, (options.pairtype1, options.pairtype2))
+                model = JSREKernel(corpus, (options.etype1, options.etype2))
             elif options.kernel == "svmtk":
-                model = SVMTKernel(corpus, (options.pairtype1, options.pairtype2))
+                model = SVMTKernel(corpus, (options.etype1, options.etype2))
             elif options.kernel == "rules":
                 model = RuleClassifier(corpus, options.ptype)
             elif options.kernel == "stanfordre":
                 model = StanfordRE(corpus, options.ptype)
+            elif options.kernel == "scikit":
+                model = ScikitRE(corpus, (options.etype1, options.etype2))
             model.load_classifier()
             model.test()
             results = model.get_predictions(corpus)
