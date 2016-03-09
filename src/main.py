@@ -18,6 +18,7 @@ from classification.ner.stanfordner import StanfordNERModel
 from classification.ner.taggercollection import TaggerCollection
 from classification.results import ResultsNER, ResultSetNER
 from classification.rext.jsrekernel import JSREKernel
+from classification.rext.multir import MultiR
 from classification.rext.rules import RuleClassifier
 from classification.rext.stanfordre import StanfordRE
 from classification.rext.svmtk import SVMTKernel
@@ -199,6 +200,8 @@ considered when coadministering with megestrol acetate.''',
                 model = SVMTKernel(corpus, (options.pairtype1, options.pairtype2))
             elif options.kernel == "stanfordre":
                 model = StanfordRE(corpus, (options.pairtype1, options.pairtype2))
+            elif options.kernel == "multir":
+                model = MultiR(corpus, (options.pairtype1, options.pairtype2))
             model.train()
         # testing
         elif options.actions == "test":
