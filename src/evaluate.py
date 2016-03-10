@@ -35,7 +35,7 @@ def get_gold_ann_set(corpus_type, gold_path, entity_type, pair_type, text_path):
     elif corpus_type == "ddi-mirna":
         goldset = get_ddi_mirna_gold_ann_set(gold_path, entity_type, pair_type)
     elif corpus_type == "mirtex":
-        goldset = get_mirtex_gold_ann_set(gold_path, entity_type)
+        goldset = get_mirtex_gold_ann_set(gold_path, entity_type, pair_type)
     return goldset
 
 
@@ -47,7 +47,7 @@ def get_unique_gold_ann_set(goldann):
     """
     with codecs.open(goldann, 'r', 'utf-8') as goldfile:
         gold = [line.strip() for line in goldfile if line.strip()]
-    return gold
+    return gold, None
 
 
 def compare_results(offsets, goldoffsets, corpus, getwords=True, evaltype="entity"):
@@ -315,14 +315,17 @@ def main():
             if options.ptype:
                 get_relations_results(results, options.models, goldset[1], ths, options.rules)
             else:
-                get_results(results, options.models, goldset, ths, options.rules)
+                get_results(results, options.models, goldset[0], ths, options.rules)
             #if options.bceval:
             #    write_chemdner_files(results, options.models, goldset, ths, options.rules)
             #    evaluation = run_chemdner_evaluation(config.paths[options.goldstd]["cem"],
             #                                         options.results + ".tsv")
             #    print evaluation
         elif options.action == "evaluate_list": # ignore the spans, the gold standard is a list of unique entities
-            get_list_results(results, options.models, goldset, ths, options.rules)
+            if options.ptype:
+                get_list_results(results, options.models, goldset[1], ths, options.rules)
+            else:
+                get_list_results(results, options.models, goldset[0], ths, options.rules)
 
     total_time = time.time() - start_time
     logging.info("Total time: %ss" % total_time)

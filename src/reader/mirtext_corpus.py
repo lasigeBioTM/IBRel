@@ -74,7 +74,7 @@ class MirtexCorpus(Corpus):
         # self.evaluate_normalization()
 
 
-def get_mirtex_gold_ann_set(goldpath, entitytype):
+def get_mirtex_gold_ann_set(goldpath, entitytype, pairtype):
     logging.info("loading gold standard... {}".format(goldpath))
     annfiles = [goldpath + '/' + f for f in os.listdir(goldpath) if f.endswith('.ann')]
     gold_offsets = set()
@@ -88,4 +88,10 @@ def get_mirtex_gold_ann_set(goldpath, entitytype):
                         if entitytype == type_match[etype]:
                             dstart, dend = int(dstart), int(dend)
                             gold_offsets.add((did, dstart, dend, etext))
-    return gold_offsets
+    gold_relations = set()
+    with open(goldpath + "/" + "annotations.csv") as afile:
+        for l in afile:
+            v = l.strip().split(";")
+            if v[-1] == pairtype:
+                gold_relations.add((v[0], v[1], v[2]))
+    return gold_offsets, gold_relations
