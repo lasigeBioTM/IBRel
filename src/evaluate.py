@@ -35,7 +35,7 @@ def get_gold_ann_set(corpus_type, gold_path, entity_type, pair_type, text_path):
     elif corpus_type == "ddi-mirna":
         goldset = get_ddi_mirna_gold_ann_set(gold_path, entity_type, pair_type)
     elif corpus_type == "mirtex":
-        goldset = get_mirtex_gold_ann_set(gold_path, entity_type)
+        goldset = get_mirtex_gold_ann_set(gold_path, entity_type, pair_type)
     return goldset
 
 
@@ -47,7 +47,7 @@ def get_unique_gold_ann_set(goldann):
     """
     with codecs.open(goldann, 'r', 'utf-8') as goldfile:
         gold = [line.strip() for line in goldfile if line.strip()]
-    return gold
+    return gold, None
 
 
 def compare_results(offsets, goldoffsets, corpus, getwords=True, evaltype="entity"):
@@ -61,8 +61,8 @@ def compare_results(offsets, goldoffsets, corpus, getwords=True, evaltype="entit
     #TODO: check if size of offsets and goldoffsets tuples is the same
     report = []
     if not getwords:
-        offsets = set([x[:-1] for x in offsets])
-        goldoffsets = set([x[:-1] for x in goldoffsets])
+        offsets = set([x[:3] for x in offsets])
+        goldoffsets = set([x[:3] for x in goldoffsets])
     tps = offsets & goldoffsets
     fps = offsets - goldoffsets
     fns = goldoffsets - offsets
@@ -137,7 +137,7 @@ def get_report(results, corpus, getwords=True):
     return report, words
 
 
-def get_list_results(results, models, goldset, ths, rules):
+def get_list_results(results, models, goldset, ths, rules, mode="ner"):
     """
     Write results files considering only unique entities, as well as a report file with basic stats
     :param results: ResultsNER object
@@ -147,13 +147,14 @@ def get_list_results(results, models, goldset, ths, rules):
     :param rules: Validation rules
     """
     print "saving results to {}".format(results.path + ".tsv")
-    allentities = results.corpus.get_unique_results(models, ths, rules)
-    print "{} unique entities".format(len(allentities))
+
+    sysresults = results.corpus.get_unique_results(models, ths, rules, mode)
+    print "{} unique entries".format(len(sysresults))
     with codecs.open(results.path + "_final.tsv", 'w', 'utf-8') as outfile:
-        outfile.write('\n'.join(allentities))
+        outfile.write('\n'.join(['\t'.join(x) for x in sysresults]))
     if goldset:
-        lineset = set([("", l.lower(), "1") for l in allentities])
-        goldset = set([("", g.lower(), "1") for g in goldset])
+        lineset = set([(l[0], l[1].lower(), l[2].lower()) for l in sysresults])
+        goldset = set([(g[0], g[1].lower(), g[2].lower()) for g in goldset])
         reportlines, tps, fps, fns = compare_results(lineset, goldset, results.corpus, getwords=False)
         with codecs.open(results.path + "_report.txt", 'w', "utf-8") as reportfile:
             reportfile.write("TPs: {!s}\nFPs: {!s}\n FNs: {!s}\n".format(len(tps), len(fps), len(fns)))
@@ -315,14 +316,17 @@ def main():
             if options.ptype:
                 get_relations_results(results, options.models, goldset[1], ths, options.rules)
             else:
-                get_results(results, options.models, goldset, ths, options.rules)
+                get_results(results, options.models, goldset[0], ths, options.rules)
             #if options.bceval:
             #    write_chemdner_files(results, options.models, goldset, ths, options.rules)
             #    evaluation = run_chemdner_evaluation(config.paths[options.goldstd]["cem"],
             #                                         options.results + ".tsv")
             #    print evaluation
         elif options.action == "evaluate_list": # ignore the spans, the gold standard is a list of unique entities
-            get_list_results(results, options.models, goldset, ths, options.rules)
+            if options.ptype:
+                get_list_results(results, options.models, goldset[1], ths, options.rules, mode="re")
+            else:
+                get_list_results(results, options.models, goldset[0], ths, options.rules)
 
     total_time = time.time() - start_time
     logging.info("Total time: %ss" % total_time)

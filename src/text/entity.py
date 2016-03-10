@@ -118,8 +118,9 @@ class Entities(object):
                         exclude.append(contained_by)
                     toadd, v, alt = offsets.add_offset(eid_offset, exclude_if=exclude)
                     if toadd:
-                        entities.add(e.text)
+                        entities.add((e.text,))
         return entities
+
 
     def write_chemdner_results(self, source, outfile, ths={"ssm":0.0}, rules=[], totalentities=0):
         """

@@ -158,7 +158,7 @@ considered when coadministering with megestrol acetate.''',
         corpus = pickle.load(open(corpus_path, 'rb'))
         logging.debug("loading annotations...")
         corpus.clear_annotations(options.etype)
-        corpus.load_annotations(corpus_ann, options.etype)
+        corpus.load_annotations(corpus_ann, options.etype, options.ptype)
         # corpus.get_invalid_sentences()
         corpus.save(config.paths[options.goldstd]["corpus"])
     else:

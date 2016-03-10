@@ -37,12 +37,20 @@ class Corpus(object):
         pickle.dump(self, open(savedir, "wb"))
         logging.info("saved corpus to " + savedir)
 
-    def get_unique_results(self, source, ths, rules):
-        allentities = set()
+    def get_unique_results(self, source, ths, rules, mode):
+        allentries = set()
         for d in self.documents:
-            doc_entities = self.documents[d].get_unique_results(source, ths, rules)
-            allentities.update(doc_entities)
-        return allentities
+            if mode == "ner":
+                doc_entities = self.documents[d].get_unique_results(source, ths, rules, mode)
+                allentries.update(doc_entities)
+            elif mode == "re":
+                doc_pairs = set()
+                # logging.info(len(self.documents[d].pairs.pairs))
+                for p in self.documents[d].pairs.pairs:
+                    if source in p.recognized_by:
+                        doc_pairs.add((d, p.entities[0].text, p.entities[1].text))
+                allentries.update(doc_pairs)
+        return allentries
 
     def write_chemdner_results(self, source, outfile, ths={"chebi":0.0}, rules=[]):
         """

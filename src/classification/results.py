@@ -44,6 +44,7 @@ class ResultsRE(object):
         for did in corpus.documents:
             for sentence in corpus.documents[did].sentences:
                 sentence.entities = self.corpus[did][sentence.sid]
+            corpus.documents[did].pairs = self.document_pairs[did]
                 #for entity in sentence.entities.elist[options.models]:
                 #    print entity.chebi_score,
 

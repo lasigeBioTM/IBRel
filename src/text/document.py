@@ -141,6 +141,7 @@ class Document(object):
         else:
             pid = self.did + ".p0"
         between_text = self.text[entity1.dend:entity2.start]
+        logging.info("adding {}:{}=>{}".format(pid, entity1.text.decode("utf8"), entity2.text.decode("utf8")))
         # print between_text
         if subtype == "tlink":
             pair = TLink(entity1, entity2, relation=relation, original_id=kwargs.get("original_id"),
@@ -160,13 +161,16 @@ class Document(object):
             totalchars += 1
         return totalchars
 
-    def get_unique_results(self, source, ths, rules):
-        entities = set()
+    def get_unique_results(self, source, ths, rules, mode):
+        entries = set()
         for s in self.sentences:
             if s.entities:
-                sentence_entities = s.entities.get_unique_entities(source, ths, rules)
-                entities.update(sentence_entities)
-        return entities
+                if mode == "ner":
+                    sentence_entries = s.entities.get_unique_entities(source, ths, rules)
+                elif mode == "re":
+                    sentence_entries = s.entities.get_unique_relations(source)
+                entries.update(sentence_entries)
+        return entries
 
     def write_chemdner_results(self, source, outfile, ths={"chebi":0.0}, rules=[]):
         lines = []

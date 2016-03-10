@@ -106,7 +106,7 @@ def get_chemdner_gold_ann_set(goldann="CHEMDNER/CHEMDNER_TEST_ANNOTATION/chemdne
         goldlist.append((x[0], x[1] + ":" + x[2] + ":" + x[3], '1'))
     #print goldlist[0:2]
     goldset = set(goldlist)
-    return goldset
+    return goldset, None
 
 def main():
     start_time = time.time()

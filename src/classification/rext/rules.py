@@ -28,7 +28,7 @@ class RuleClassifier(ReModel):
         pcount = 0
         ptrue = 0
         for sentence in self.corpus.get_sentences("goldstandard"):
-            logging.info("{} {}/{}".format(sentence.sid))
+            # logging.info("{} {}/{}".format(sentence.sid))
             sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
             # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
             # doc_entities += sentence_entities

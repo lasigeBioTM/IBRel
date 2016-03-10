@@ -134,7 +134,7 @@ def get_genia_gold_ann_set(goldann, etype):
 
             doc_text += stext + " "
             doc_offset = len(doc_text)
-    return gold_offsets
+    return gold_offsets, None
 
 def main():
     logging.basicConfig(level=logging.DEBUG)

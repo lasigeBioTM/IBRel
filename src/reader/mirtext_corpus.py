@@ -2,6 +2,8 @@ import logging
 import xml.etree.ElementTree as ET
 import os
 import sys
+
+import itertools
 import progressbar as pb
 import time
 
@@ -48,10 +50,33 @@ class MirtexCorpus(Corpus):
         abs_avg = sum(time_per_abs)*1.0/len(time_per_abs)
         logging.info("average time per abstract: %ss" % abs_avg)
 
-    def load_annotations(self, ann_dir, etype):
+    def load_annotations(self, ann_dir, etype, pairtype="all"):
         annfiles = [ann_dir + '/' + f for f in os.listdir(ann_dir) if f.endswith('.ann')]
         total = len(annfiles)
         time_per_abs = []
+        doc_to_relations = {}
+        with open(ann_dir + "/" + "annotations.tsv") as afile:
+            for l in afile:
+                v = l.strip().split("\t")
+                did = self.path + '/' + v[0]
+                if pairtype == "all" or v[-1] == pairtype:
+                    if did not in doc_to_relations:
+                        doc_to_relations[did] = set()
+                    e1 = v[1].split(";")
+                    for source in e1:
+                        e2 = v[2].split(";")
+                        for target in e2:
+                            doc_to_relations[did].add((source.strip().replace('"', ''),
+                                                        target.strip().replace('"', '')))
+        # print doc_to_relations
+        # print self.documents.keys()
+        # print doc_to_relations.keys()
+        for did in self.documents:
+            self.documents[did].relations = set()
+            if did in doc_to_relations:
+                for r in doc_to_relations[did]:
+                    self.documents[did].relations.add(r)
+                # print did, self.documents[did].relations
         for current, f in enumerate(annfiles):
             logging.debug('%s:%s/%s', f, current + 1, total)
             did = f.split(".")[0]
@@ -71,10 +96,22 @@ class MirtexCorpus(Corpus):
                                 sentence.tag_entity(start, end, type_match[entity_type], text=etext)
                             else:
                                 print "could not find sentence for this span: {}-{}".format(dstart, dend)
+        self.find_relations()
         # self.evaluate_normalization()
 
+    def find_relations(self):
+        # automatically find the relations from the gold standard at sentence level
+        for sentence in self.get_sentences(hassource="goldstandard"):
+            did = sentence.did
+            for pair in itertools.combinations(sentence.entities.elist["goldstandard"], 2):
+                # consider that the first entity may appear before or after the second
+                if (pair[0].text, pair[1].text) in self.documents[did].relations or \
+                   (pair[1].text, pair[0].text) in self.documents[did].relations:
+                    if (pair[1].text, pair[0].text) in self.documents[did].relations:
+                        pair = (pair[1], pair[0])
+                    # logging.info("found relations: {}=>{}".format(pair[0], pair[1]))
 
-def get_mirtex_gold_ann_set(goldpath, entitytype):
+def get_mirtex_gold_ann_set(goldpath, entitytype, pairtype):
     logging.info("loading gold standard... {}".format(goldpath))
     annfiles = [goldpath + '/' + f for f in os.listdir(goldpath) if f.endswith('.ann')]
     gold_offsets = set()
@@ -88,4 +125,17 @@ def get_mirtex_gold_ann_set(goldpath, entitytype):
                         if entitytype == type_match[etype]:
                             dstart, dend = int(dstart), int(dend)
                             gold_offsets.add((did, dstart, dend, etext))
-    return gold_offsets
+    gold_relations = set()
+    with open(goldpath + "/" + "annotations.tsv") as afile:
+        for l in afile:
+            v = l.strip().split("\t")
+            did = goldpath + '/' + v[0]
+            if pairtype == "all" or v[-1] == pairtype:
+                e1 = v[1].split(";")
+                for source in e1:
+                    e2 = v[2].split(";")
+                    for target in e2:
+                        gold_relations.add((did, source, target))
+    return gold_offsets, gold_relations
+
+
