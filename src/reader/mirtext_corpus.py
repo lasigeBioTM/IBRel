@@ -109,7 +109,15 @@ class MirtexCorpus(Corpus):
                    (pair[1].text, pair[0].text) in self.documents[did].relations:
                     if (pair[1].text, pair[0].text) in self.documents[did].relations:
                         pair = (pair[1], pair[0])
-                    # logging.info("found relations: {}=>{}".format(pair[0], pair[1]))
+                    start, end = pair[0].dstart, pair[1].dend
+                    if start > end:
+                        start, end = pair[1].dstart, pair[0].dend
+                    between_text = self.documents[did].text[start:end]
+                    if between_text.count(pair[0].text) > 1 or between_text.count(pair[1].text) > 1:
+                        # print "excluded:", between_text
+                        continue
+                    # print between_text
+                    pair[0].targets.append(pair[1].eid)
 
 def get_mirtex_gold_ann_set(goldpath, entitytype, pairtype):
     logging.info("loading gold standard... {}".format(goldpath))

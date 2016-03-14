@@ -18,7 +18,7 @@ class RuleClassifier(ReModel):
         self.corpus = corpus
         self.pairs = {}
         self.pids = {}
-        self.words = set(["of", "the", "and", "a", "with", "to", "was", "in", "for", "on", "colon", "which", "cm", "mass", "grade", "from", "is", "that", "no"])
+        self.trigger_words = set([])
 
 
     def load_classifier(self):
