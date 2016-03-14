@@ -234,3 +234,9 @@ class Entities(object):
                     else:
                         logging.debug("did not add {}".format(e.text))
         return spans
+
+    def get_entity(self, eid, source="goldstandard"):
+        for e in self.elist[source]:
+            if e.eid == eid:
+                return e
+        print "entity not found:", eid, source
