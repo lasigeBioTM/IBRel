@@ -102,6 +102,19 @@ class SeeDevCorpus(Corpus):
                     etype, sourceid, targetid = ann.split(" ")
                     sourceid = sourceid.split(":")[-1]
                     targetid = targetid.split(":")[-1]
+                    if sourceid not in originalid_to_eid or targetid not in originalid_to_eid:
+                        print "{}: entity not found: {}=>{}".format(did, sourceid, targetid)
+                        print "skipped relation {}".format(etype)
+                        continue
+                    sid1 = '.'.join(sourceid.split(".")[:-1])
+                    sid2 = '.'.join(targetid.split(".")[:-1])
+                    if sid1 != sid2:
+                        print "relation {} between entities on different sentences: {}=>{}".format(etype, sourceid, targetid)
+                        continue
+                    sentence = self.documents[did].get_sentence(sid1)
+                    entity1 = sentence.entities.get_entity(sourceid)
+                    entity1.targets.append((targetid, etype))
+
 
 
 def get_seedev_gold_ann_set(goldpath, entitytype, pairtype):

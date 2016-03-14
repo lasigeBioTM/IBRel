@@ -107,12 +107,9 @@ class MirnaCorpus(Corpus):
                         if p_type in self.rel_types and p_true == "True":
                             p_e1 = pair.get("e1")
                             p_e2 = pair.get("e2")
-                            source = None
-                            for e in this_sentence.entities.elist["goldstandard"]:
-                                if e.eid == original_to_eids[p_e1]:
-                                    source = e
-                            if e:
-                                source.targets.append(original_to_eids[p_e2])
+                            source = this_sentence.entities.get_entity(original_to_eids[p_e1])
+                            if source:
+                                source.targets.append((original_to_eids[p_e2], p_type))
         # self.evaluate_normalization()
 
 def get_ddi_mirna_gold_ann_set(goldpath, entitytype, pairtype):

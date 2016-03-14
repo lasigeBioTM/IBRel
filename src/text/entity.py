@@ -21,7 +21,7 @@ class Entity(object):
         self.dend = tokens[-1].dend
         self.recognized_by = []
         self.subentities = []
-        self.targets = []
+        self.targets = [] # targets should be (eid, relationtype)
         self.score = kwargs.get("score", 0)
         # logging.info("created entity {} with score {}".format(self.text, self.score))
         # print "entity", args, kwargs
