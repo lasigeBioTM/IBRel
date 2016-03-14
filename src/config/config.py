@@ -50,7 +50,27 @@ if use_go:
                               passwd=go_pw,
                               db=go_db)
 
-
+all_entity_types = ("Gene",
+                     "Gene_Family",
+                     "Box",
+                     "Promoter",
+                     "RNA",
+                     "Protein",
+                     "Protein_Family",
+                     "Protein_Complex",
+                     "Protein_Domain",
+                     "Hormone",
+                     "Regulatory_Network",
+                     "Pathway",
+                     "Genotype",
+                     "Tissue",
+                     "Development_Phase",
+                     "Environmental_Factor",
+                     "DNA_Product",
+                     "Functional_Molecule",
+                     "Dynamic_Process",
+                     "Internal_Factor",
+                     "Factor")
 pair_types = {
     "Binds_To":
         {"source_role": "Functional_Molecule",
@@ -79,9 +99,9 @@ pair_types = {
          "target_types": ("Genotype",)},
     "Has_Sequence_Identical_To":
         {"source_role": "Element1",
-         "source_types": ("all",),
+         "source_types": all_entity_types,
          "target_role": "Element2",
-         "target_types": ("all",)},
+         "target_types": all_entity_types},
     "Interacts_with":
         {"source_role": "Agent",
          "source_types": ("Molecule",),
@@ -119,32 +139,32 @@ pair_types = {
          "target_types": ("Genotype",)},
     "Regulates_Accumulation":
         {"source_role": "Agent",
-         "source_types": ("all",),
+         "source_types": all_entity_types,
          "target_role": "Functional_Molecule",
          "target_types": ("Functional_Molecule",)},
     "Regulates_Development_Phase":
         {"source_role": "Agent",
-         "source_types": ("all",),
+         "source_types": all_entity_types,
          "target_role": "Development",
          "target_types": ("Development_Phase",)},
     "Regulates_Expression":
         {"source_role": "Agent",
-         "source_types": ("all",),
+         "source_types": all_entity_types,
          "target_role": "DNA",
          "target_types": ("DNA",)},
     "Regulates_Molecule_Activity":
         {"source_role": "Agent",
-         "source_types": ("all",),
+         "source_types": all_entity_types,
          "target_role": "Molecule",
          "target_types": ("Molecule",)},
     "Regulates_Process":
         {"source_role": "Agent",
-         "source_types": ("all",),
+         "source_types": all_entity_types,
          "target_role": "Process",
          "target_types": ("Dynamic_Process",)},
     "Regulates_Tissue_Development":
         {"source_role": "Agent",
-         "source_types": ("all",),
+         "source_types": all_entity_types,
          "target_role": "Target_Tissue",
          "target_types": ("Tissue",)},
     "Transcribes_Or_Translates_To":
@@ -154,11 +174,9 @@ pair_types = {
          "target_types": ("DNA_Product",)},
     "Is_Linked_To":
         {"source_role": "Agent",
-         "source_types": ("all",),
+         "source_types": all_entity_types,
          "target_role": "Target",
-         "target_types": ("all",)}
-
-
+         "target_types": all_entity_types}
 }
 
 chemdner_base = "CHEMDNER/"

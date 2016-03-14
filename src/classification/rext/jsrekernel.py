@@ -8,20 +8,21 @@ import platform
 import itertools
 import codecs
 from classification.results import ResultsRE
+from config import config
 
 
 class JSREKernel(ReModel):
 
     def __init__(self, corpus, relationtype, modelname="slk_classifier.model"):
         super(JSREKernel, self).__init__()
-        self.modelname = modelname
+        self.modelname = relationtype + "_" + modelname
         self.test_jsre = []
         self.pairs = {}
-        self.generatejSREdata(corpus, modelname, pairtypes=relationtype)
+        self.generatejSREdata(corpus, modelname, pairtype=relationtype)
 
-    def load_classifier(self, inputfile="slk_classifier.model.txt", outputfile="jsre_results.txt"):
-        if os.path.isfile(self.temp_dir + outputfile):
-            os.remove(self.temp_dir + outputfile)
+    def load_classifier(self, relationtype, outputfile="jsre_results.txt"):
+        if os.path.isfile(self.temp_dir + relationtype + "_" + outputfile):
+            os.remove(self.temp_dir + relationtype + "_" + outputfile)
         if not os.path.isfile(self.basedir + self.modelname):
             print "model", self.basedir + self.modelname, "not found"
             sys.exit()
@@ -34,7 +35,8 @@ class JSREKernel(ReModel):
         libs = ["libsvm-2.8.jar", "log4j-1.2.8.jar", "commons-digester.jar", "commons-beanutils.jar", "commons-logging.jar", "commons-collections.jar"]
         classpath = 'bin/jsre/jsre-1.1/bin'+ sep + sep.join(["bin/jsre/jsre-1.1/lib/" + l for l in libs])
         self.test_jsre = ['java', '-mx4g', '-classpath', classpath, "org.itc.irst.tcc.sre.Predict",
-                          self.temp_dir + inputfile, self.basedir + self.modelname, self.temp_dir + outputfile]
+                          self.temp_dir + self.modelname + ".txt", self.basedir + self.modelname,
+                          self.temp_dir + relationtype + "_" + outputfile]
         #print ' '.join(jsrecommand)
 
     def train(self):
@@ -93,13 +95,15 @@ class JSREKernel(ReModel):
         return self.blind_all_entities(tokens_text, sentence.entities.elist["goldstandard"],
                                        [e1id, e2id], pos, lemmas, ner)
 
-    def generatejSREdata(self, corpus, savefile, train=False, pairtypes=("mirna", "protein")):
+    def generatejSREdata(self, corpus, savefile, train=False, pairtype="all"):
         if os.path.isfile(self.temp_dir + savefile + ".txt"):
             print "removed old data"
             os.remove(self.temp_dir + savefile + ".txt")
         examplelines = []
         # get all entities of this document
         # doc_entities = []
+        pairtypes = (config.pair_types[pairtype]["source_types"], config.pair_types[pairtype]["target_types"])
+        print
         pcount = 0
         truepcount = 0
         for sentence in corpus.get_sentences("goldstandard"):
@@ -107,7 +111,9 @@ class JSREKernel(ReModel):
             sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
             # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
             for pair in itertools.combinations(sentence_entities, 2):
-                if pair[0].type == pairtypes[0] and pair[1].type == pairtypes[1] or pair[1].type == pairtypes[0] and pair[0].type == pairtypes[1]:
+                print pair[0].type, pair[1].type, pairtypes
+                if pair[0].type in pairtypes[0] and pair[1].type in pairtypes[1] or\
+                   pair[1].type in pairtypes[0] and pair[0].type in pairtypes[1]:
                     # logging.debug(pair)
                     if pair[0].type == pairtypes[0]:
                         e1id = pair[0].eid
@@ -137,7 +143,8 @@ class JSREKernel(ReModel):
                         lemmas += lemmas2
 
                     trueddi = 0
-                    if e2id in pair[0].targets:
+                    #print (e2id, pairtype), pair[0].targets
+                    if (e2id, pairtype) in pair[0].targets:
                         trueddi = 1
                         truepcount += 1
                     body = self.generatejSRE_line(tokens_text, pos, lemmas, ner)

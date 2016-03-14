@@ -95,7 +95,7 @@ def main():
 
         if options.actions == "train_relations":
             if options.kernel == "jsre":
-                model = JSREKernel(corpus, (options.etype1, options.etype2))
+                model = JSREKernel(corpus, options.ptype)
             elif options.kernel == "svmtk":
                 model = SVMTKernel(corpus, (options.etype1, options.etype2))
             elif options.kernel == "stanfordre":

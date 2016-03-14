@@ -350,13 +350,13 @@ def create_entity(tokens, sid, did, text, score, etype, **kwargs):
     :return: entity
     """
     e = None
-    if etype == "chemical" or "chem" in etype.lower():
+    if etype == "chemical":
         e = ChemicalEntity(tokens, sid, text=text, score=score,
                            did=did, eid=kwargs.get("eid"), subtype=kwargs.get("subtype"))
-    elif etype == "mirna" or "mirna" in etype.lower():
+    elif etype == "mirna":
         e = MirnaEntity(tokens, sid, text=text, did=did, score=score,
                         eid=kwargs.get("eid"), subtype=kwargs.get("subtype"), nextword=kwargs.get("nextword"))
-    elif etype == "protein" or "prot" in etype.lower():
+    elif etype == "protein":
         e = ProteinEntity(tokens, sid, text=text, did=did,score=score,
                           eid=kwargs.get("eid"), subtype=kwargs.get("subtype"), nextword=kwargs.get("nextword"))
     elif etype == "dna":
@@ -374,7 +374,7 @@ def create_entity(tokens, sid, did, text, score, etype, **kwargs):
         e = Entity(tokens, sid, text=text, did=did,score=score,
                         eid=kwargs.get("eid"), subtype=kwargs.get("subtype"), nextword=kwargs.get("nextword"),
                         original_id=kwargs.get("original_id"))
-        e.type = "all"
+        e.type = etype
     return e
 
 
