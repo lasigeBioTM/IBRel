@@ -95,15 +95,14 @@ class JSREKernel(ReModel):
         return self.blind_all_entities(tokens_text, sentence.entities.elist["goldstandard"],
                                        [e1id, e2id], pos, lemmas, ner)
 
-    def generatejSREdata(self, corpus, savefile, train=False, pairtype="all"):
-        if os.path.isfile(self.temp_dir + savefile + ".txt"):
+    def generatejSREdata(self, corpus, train=False, pairtype="all"):
+        if os.path.isfile(self.temp_dir + self.modelname + ".txt"):
             print "removed old data"
-            os.remove(self.temp_dir + savefile + ".txt")
+            os.remove(self.temp_dir + self.modelname + ".txt")
         examplelines = []
         # get all entities of this document
         # doc_entities = []
         pairtypes = (config.pair_types[pairtype]["source_types"], config.pair_types[pairtype]["target_types"])
-        print
         pcount = 0
         truepcount = 0
         for sentence in corpus.get_sentences("goldstandard"):
@@ -151,7 +150,7 @@ class JSREKernel(ReModel):
                     examplelines.append(str(trueddi) + '\t' + pid + '.i' + '0\t' + body + '\n')
                     pcount += 1
             logging.debug("writing {} lines to file...".format(len(examplelines)))
-            with codecs.open(self.temp_dir + savefile + ".txt", 'a', "utf-8") as trainfile:
+            with codecs.open(self.temp_dir + self.modelname + ".txt", 'a', "utf-8") as trainfile:
                 for l in examplelines:
                     #print l
                     trainfile.write(l)
