@@ -44,7 +44,7 @@ class SeeDevCorpus(Corpus):
         for current, f in enumerate(trainfiles):
             #logging.debug('%s:%s/%s', f, current + 1, total)
             print '{}:{}/{}'.format(f, current + 1, total)
-            did = f.split(".")[0]
+            did = f.split(".")[0].split("/")[-1]
             t = time.time()
             with codecs.open(f, 'r', 'utf-8') as txt:
                 doctext = txt.read()
@@ -68,7 +68,7 @@ class SeeDevCorpus(Corpus):
         originalid_to_eid = {}
         for current, f in enumerate(annfiles):
             logging.debug('%s:%s/%s', f, current + 1, total)
-            did = f.split(".")[0]
+            did = f.split(".")[0].split("/")[-1]
             with codecs.open(f, 'r', 'utf-8') as txt:
                 for line in txt:
                     # print line
@@ -86,7 +86,7 @@ class SeeDevCorpus(Corpus):
                         start = dstart - sentence.offset
                         end = dend - sentence.offset
                         eid = sentence.tag_entity(start, end, entity_type, text=etext, original_id=tid)
-                        originalid_to_eid[tid] = eid
+                        originalid_to_eid[did + "." + tid] = eid
                     else:
                         print "{}: could not find sentence for this span: {}-{}|{}".format(did, dstart, dend, etext.encode("utf-8"))
 
@@ -95,25 +95,31 @@ class SeeDevCorpus(Corpus):
         time_per_abs = []
         for current, f in enumerate(annfiles):
             logging.debug('%s:%s/%s', f, current + 1, total)
-            did = f.split(".")[0]
+            did = f.split(".")[0].split("/")[-1]
             with codecs.open(f, 'r', 'utf-8') as txt:
                 for line in txt:
                     eid, ann = line.strip().split("\t")
                     etype, sourceid, targetid = ann.split(" ")
-                    sourceid = sourceid.split(":")[-1]
-                    targetid = targetid.split(":")[-1]
+                    sourceid = did + "." + sourceid.split(":")[-1]
+                    targetid = did + "." + targetid.split(":")[-1]
                     if sourceid not in originalid_to_eid or targetid not in originalid_to_eid:
                         print "{}: entity not found: {}=>{}".format(did, sourceid, targetid)
                         print "skipped relation {}".format(etype)
                         continue
+                    sourceid, targetid = originalid_to_eid[sourceid], originalid_to_eid[targetid]
                     sid1 = '.'.join(sourceid.split(".")[:-1])
                     sid2 = '.'.join(targetid.split(".")[:-1])
-                    if sid1 != sid2:
-                        print "relation {} between entities on different sentences: {}=>{}".format(etype, sourceid, targetid)
+                    #if sid1 != sid2:
+                    #    print "relation {} between entities on different sentences: {}=>{}".format(etype, sourceid, targetid)
+                    #    continue
+                    sentence1 = self.documents[did].get_sentence(sid1)
+                    if sentence1 is None:
+                        print did, sid1, sourceid, targetid, len(self.documents[did].sentences)
                         continue
-                    sentence = self.documents[did].get_sentence(sid1)
-                    entity1 = sentence.entities.get_entity(sourceid)
-                    entity1.targets.append((targetid, etype))
+                    else:
+                        entity1 = sentence1.entities.get_entity(sourceid)
+                        entity1.targets.append((targetid, etype))
+                        print "{}: {}=>{}".format(etype, entity1.text.encode("utf-8"), targetid)
 
 
 
