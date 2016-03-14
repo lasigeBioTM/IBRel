@@ -1,4 +1,7 @@
+import argparse
+import codecs
 import logging
+import pickle
 import xml.etree.ElementTree as ET
 import os
 import sys
@@ -7,6 +10,15 @@ import itertools
 import progressbar as pb
 import time
 
+from pycorenlp import StanfordCoreNLP
+
+from classification.rext.jsrekernel import JSREKernel
+from classification.rext.multir import MultiR
+from classification.rext.rules import RuleClassifier
+from classification.rext.scikitre import ScikitRE
+from classification.rext.stanfordre import StanfordRE
+from classification.rext.svmtk import SVMTKernel
+from config import config
 from text.corpus import Corpus
 from text.document import Document
 from text.sentence import Sentence
@@ -34,7 +46,7 @@ class SeeDevCorpus(Corpus):
             print '{}:{}/{}'.format(f, current + 1, total)
             did = f.split(".")[0]
             t = time.time()
-            with open(f, 'r') as txt:
+            with codecs.open(f, 'r', 'utf-8') as txt:
                 doctext = txt.read()
             newdoc = Document(doctext, process=False, did=did)
             newdoc.sentence_tokenize("biomedical")
@@ -53,13 +65,17 @@ class SeeDevCorpus(Corpus):
         annfiles = [ann_dir + '/' + f for f in os.listdir(ann_dir) if f.endswith('.a1')]
         total = len(annfiles)
         time_per_abs = []
+        originalid_to_eid = {}
         for current, f in enumerate(annfiles):
             logging.debug('%s:%s/%s', f, current + 1, total)
             did = f.split(".")[0]
-            with open(f, 'r') as txt:
+            with codecs.open(f, 'r', 'utf-8') as txt:
                 for line in txt:
                     # print line
                     tid, ann, etext = line.strip().split("\t")
+                    if ";" in ann:
+                        print "multiple offsets:", ann
+                        continue
                     entity_type, dstart, dend = ann.split(" ")
                     # load all entities
                     #if etype == "all" or (etype != "all" and etype == type_match[entity_type]):
@@ -69,11 +85,24 @@ class SeeDevCorpus(Corpus):
                         # e[0] and e[1] are relative to the document, so subtract sentence offset
                         start = dstart - sentence.offset
                         end = dend - sentence.offset
-                        sentence.tag_entity(start, end, entity_type, text=etext, original_id=tid)
+                        eid = sentence.tag_entity(start, end, entity_type, text=etext, original_id=tid)
+                        originalid_to_eid[tid] = eid
                     else:
-                        print "could not find sentence for this span: {}-{}".format(dstart, dend)
+                        print "{}: could not find sentence for this span: {}-{}|{}".format(did, dstart, dend, etext.encode("utf-8"))
 
-        # self.evaluate_normalization()
+        annfiles = [ann_dir + '/' + f for f in os.listdir(ann_dir) if f.endswith('.a2')]
+        total = len(annfiles)
+        time_per_abs = []
+        for current, f in enumerate(annfiles):
+            logging.debug('%s:%s/%s', f, current + 1, total)
+            did = f.split(".")[0]
+            with codecs.open(f, 'r', 'utf-8') as txt:
+                for line in txt:
+                    eid, ann = line.strip().split("\t")
+                    etype, sourceid, targetid = ann.split(" ")
+                    sourceid = sourceid.split(":")[-1]
+                    targetid = targetid.split(":")[-1]
+
 
 def get_seedev_gold_ann_set(goldpath, entitytype, pairtype):
     logging.info("loading gold standard annotations... {}".format(goldpath))
@@ -103,5 +132,3 @@ def get_seedev_gold_ann_set(goldpath, entitytype, pairtype):
                     gold_relations.add((did, source, target))
     return gold_offsets, gold_relations
 
-def main():
-    pass

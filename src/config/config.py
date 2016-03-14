@@ -65,7 +65,21 @@ genia_sample_base = "corpora/genia_sample/"
 mirnacorpus_base = "corpora/miRNACorpus/"
 mirtex_base = "corpora/miRTex/"
 jnlpba_base = "corpora/JNLPBA/"
+seedev_base = "corpora/SeeDev/"
+
 paths = {
+    'seedev_train':{
+        'text': seedev_base + "BioNLP-ST-2016_SeeDev-binary_train/",
+        'annotations': seedev_base + "BioNLP-ST-2016_SeeDev-binary_train/",
+        'corpus': "data/SeeDev-train.txt.pickle",
+        'format': "seedev"
+    },
+    'seedev_dev':{
+        'text': seedev_base + "BioNLP-ST-2016_SeeDev-binary_dev/",
+        'annotations': seedev_base + "BioNLP-ST-2016_SeeDev-binary_dev/",
+        'corpus': "data/SeeDev-dev.txt.pickle",
+        'format': "seedev"
+    },
     'jnlpba_train':{ # pre processed genia corpus
 
     },
