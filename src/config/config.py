@@ -51,6 +51,116 @@ if use_go:
                               db=go_db)
 
 
+pair_types = {
+    "Binds_To":
+        {"source_role": "Functional_Molecule",
+         "source_types": ("Functional_Molecule",),
+         "target_role": "Molecule",
+         "target_types": ("Molecule",)},
+    "Composes_Primary_Structure":
+        {"source_role": "DNA_Part",
+         "source_types": ("Box", "Promoter"),
+         "target_role": "DNA",
+         "target_types": ("DNA",)},
+    "Composes_Protein_Complex":
+        {"source_role": "Amino_Acid_Sequence",
+         "source_types": ("Protein", "Protein_Family", "Protein_Complex", "Protein_Domain"),
+         "target_role": "Protein_Complex",
+         "target_types": ("Protein_Complex",)},
+    "Exists_At_Stage":
+        {"source_role": "Functional_Molecule",
+         "source_types": ("Functional_Molecule",),
+         "target_role": "Development",
+         "target_types": ("Development_Phase",)},
+    "Exists_At_Genotype":
+        {"source_role": "Molecule",
+         "source_types": ("Molecule", "Biological context"),  # mutually exclusive
+         "target_role": "Genotype",
+         "target_types": ("Genotype",)},
+    "Has_Sequence_Identical_To":
+        {"source_role": "Element1",
+         "source_types": ("all",),
+         "target_role": "Element2",
+         "target_types": ("all",)},
+    "Interacts_with":
+        {"source_role": "Agent",
+         "source_types": ("Molecule",),
+         "target_role": "Target",
+         "target_types": ("Molecule",)},
+    "Is_Involved_In_Process":
+        {"source_role": "Participant",
+         "source_types": ("Molecule",),
+         "target_role": "Process",
+         "target_types": ("Dynamic_Process",)},
+    "Is_Localized_In":
+        {"source_role": "Functional_Molecule",
+         "source_types": ("Functional_Molecule", "Dynamic_Process"),
+         "target_role": "Target_Tissue",
+         "target_types": ("Tissue",)},
+    "Is_Member_Of_Family":
+        {"source_role": "Element",
+         "source_types": ("Gene", "Gene_Family", "Protein", "Protein_Domain", "Protein_Family", "RNA"),
+         "target_role": "Family",
+         "target_types": ("Gene_Family", "Protein_Family", "RNA")},
+    "Is_Protein_Domain_Of":
+        {"source_role": "Domain",
+         "source_types": ("Protein_Domain",),
+         "target_role": "Product",
+         "target_types": ("DNA_Product",)},
+    "Occurs_During":
+        {"source_role": "Process",
+         "source_types": ("Dynamic_Process",),
+         "target_role": "Development",
+         "target_types": ("Development_Phase",)},
+    "Occurs_In_Genotype":
+        {"source_role": "Process",
+         "source_types": ("Dynamic_Process",),
+         "target_role": "Genotype",
+         "target_types": ("Genotype",)},
+    "Regulates_Accumulation":
+        {"source_role": "Agent",
+         "source_types": ("all",),
+         "target_role": "Functional_Molecule",
+         "target_types": ("Functional_Molecule",)},
+    "Regulates_Development_Phase":
+        {"source_role": "Agent",
+         "source_types": ("all",),
+         "target_role": "Development",
+         "target_types": ("Development_Phase",)},
+    "Regulates_Expression":
+        {"source_role": "Agent",
+         "source_types": ("all",),
+         "target_role": "DNA",
+         "target_types": ("DNA",)},
+    "Regulates_Molecule_Activity":
+        {"source_role": "Agent",
+         "source_types": ("all",),
+         "target_role": "Molecule",
+         "target_types": ("Molecule",)},
+    "Regulates_Process":
+        {"source_role": "Agent",
+         "source_types": ("all",),
+         "target_role": "Process",
+         "target_types": ("Dynamic_Process",)},
+    "Regulates_Tissue_Development":
+        {"source_role": "Agent",
+         "source_types": ("all",),
+         "target_role": "Target_Tissue",
+         "target_types": ("Tissue",)},
+    "Transcribes_Or_Translates_To":
+        {"source_role": "Source",
+         "source_types": ("DNA", "RNA"),
+         "target_role": "Product",
+         "target_types": ("DNA_Product",)},
+    "Is_Linked_To":
+        {"source_role": "Agent",
+         "source_types": ("all",),
+         "target_role": "Target",
+         "target_types": ("all",)}
+
+
+}
+
 chemdner_base = "CHEMDNER/"
 chemdner_sample_base = "CHEMDNER/CHEMDNER_SAMPLE_JUNE25/"
 
