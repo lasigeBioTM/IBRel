@@ -170,8 +170,8 @@ class Sentence(object):
                 entity.text = newtext
             if "text" in kwargs and newtext != kwargs["text"]:
                 if newtext not in kwargs["text"] and kwargs["text"] not in newtext:
-                    logging.info("not added, text does not match: {}=>{}".format(newtext, kwargs["text"]))
-                    return None
+                    logging.info("text does not match: {}=>{}".format(newtext, kwargs["text"]))
+                    # return None
                 else:
                     logging.info("diferent text:|system {} {} |{}|=>|{}| {} {} input|{} {}".format(tlist[0].start, tlist[-1].end, newtext, kwargs["text"],
                                  start, end, self.sid, self.text))

@@ -240,12 +240,13 @@ class Document(object):
             firstsent = 0
         for i, s in enumerate(self.sentences[firstsent:]):
             if len(s.tokens) == 0:
-                # logging.debug("sentence without tokens: {} {}".format(s.sid, s.text))
+                logging.debug("sentence without tokens: {} {}".format(s.sid, s.text))
                 continue
-            #print s.tokens[0].dstart, s.tokens[-1].dend
             if s.tokens[0].dstart <= start and s.tokens[-1].dend >= end:
                 # print "found it!"
                 return s
+        for s in self.sentences:
+            print s.tokens[0].dstart, s.tokens[-1].dend, s.text
         return None
 
     def get_offsets(self, esource, ths, rules):

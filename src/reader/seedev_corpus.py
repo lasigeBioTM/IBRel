@@ -48,6 +48,7 @@ class SeeDevCorpus(Corpus):
             t = time.time()
             with codecs.open(f, 'r', 'utf-8') as txt:
                 doctext = txt.read()
+            doctext = doctext.replace("\n", " ")
             newdoc = Document(doctext, process=False, did=did)
             newdoc.sentence_tokenize("biomedical")
             if process:
@@ -74,8 +75,9 @@ class SeeDevCorpus(Corpus):
                     # print line
                     tid, ann, etext = line.strip().split("\t")
                     if ";" in ann:
-                        print "multiple offsets:", ann
-                        continue
+                        # print "multiple offsets:", ann
+                        # TODO: use the two parts
+                        ann = ann.split(";")[0] # ignore the second part for now
                     entity_type, dstart, dend = ann.split(" ")
                     # load all entities
                     #if etype == "all" or (etype != "all" and etype == type_match[entity_type]):
@@ -86,9 +88,13 @@ class SeeDevCorpus(Corpus):
                         start = dstart - sentence.offset
                         end = dend - sentence.offset
                         eid = sentence.tag_entity(start, end, entity_type, text=etext, original_id=tid)
+                        if eid is None:
+                            print "no eid!", sentence.sid, start, end, etext, sentence.text
+                            sys.exit()
                         originalid_to_eid[did + "." + tid] = eid
                     else:
                         print "{}: could not find sentence for this span: {}-{}|{}".format(did, dstart, dend, etext.encode("utf-8"))
+                        print
 
         annfiles = [ann_dir + '/' + f for f in os.listdir(ann_dir) if f.endswith('.a2')]
         total = len(annfiles)
@@ -104,22 +110,25 @@ class SeeDevCorpus(Corpus):
                     targetid = did + "." + targetid.split(":")[-1]
                     if sourceid not in originalid_to_eid or targetid not in originalid_to_eid:
                         print "{}: entity not found: {}=>{}".format(did, sourceid, targetid)
+                        # print sorted([e.split(".")[-1] for e in originalid_to_eid if e.startswith(did)])
                         print "skipped relation {}".format(etype)
                         continue
                     sourceid, targetid = originalid_to_eid[sourceid], originalid_to_eid[targetid]
                     sid1 = '.'.join(sourceid.split(".")[:-1])
                     sid2 = '.'.join(targetid.split(".")[:-1])
-                    #if sid1 != sid2:
-                    #    print "relation {} between entities on different sentences: {}=>{}".format(etype, sourceid, targetid)
-                    #    continue
+                    sn1 = int(sid1.split("s")[-1])
+                    sn2 = int(sid2.split("s")[-1])
+                    if abs(sn2 - sn1) > 3:
+                        print "relation {} between entities on distant sentences: {}=>{}".format(etype, sourceid, targetid)
+                        continue
                     sentence1 = self.documents[did].get_sentence(sid1)
                     if sentence1 is None:
-                        print did, sid1, sourceid, targetid, len(self.documents[did].sentences)
+                        print "sentence not found:", did, sid1, sourceid, targetid, len(self.documents[did].sentences)
                         continue
                     else:
                         entity1 = sentence1.entities.get_entity(sourceid)
                         entity1.targets.append((targetid, etype))
-                        print "{}: {}=>{}".format(etype, entity1.text.encode("utf-8"), targetid)
+                        # print "{}: {}=>{}".format(etype, entity1.text.encode("utf-8"), targetid)
 
 
 
