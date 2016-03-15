@@ -79,14 +79,14 @@ all_entity_groups["Factor"] = all_entity_groups["Internal_Factor"] + ("Environme
 pair_types = {
     "Binds_To":
         {"source_role": "Functional_Molecule",
-         "source_types": ("Functional_Molecule",),
+         "source_types": all_entity_groups["Functional_Molecule"],
          "target_role": "Molecule",
-         "target_types": ("Molecule",)},
+         "target_types": all_entity_groups["Molecule"]},
     "Composes_Primary_Structure":
         {"source_role": "DNA_Part",
          "source_types": ("Box", "Promoter"),
          "target_role": "DNA",
-         "target_types": ("DNA",)},
+         "target_types": all_entity_groups["DNA"]},
     "Composes_Protein_Complex":
         {"source_role": "Amino_Acid_Sequence",
          "source_types": ("Protein", "Protein_Family", "Protein_Complex", "Protein_Domain"),
@@ -94,12 +94,12 @@ pair_types = {
          "target_types": ("Protein_Complex",)},
     "Exists_At_Stage":
         {"source_role": "Functional_Molecule",
-         "source_types": ("Functional_Molecule",),
+         "source_types": all_entity_groups["Functional_Molecule"],
          "target_role": "Development",
          "target_types": ("Development_Phase",)},
     "Exists_At_Genotype":
         {"source_role": "Molecule",
-         "source_types": ("Molecule", "Biological context"),  # mutually exclusive
+         "source_types": all_entity_groups["Molecule"] + ("Biological context",),  # mutually exclusive
          "target_role": "Genotype",
          "target_types": ("Genotype",)},
     "Has_Sequence_Identical_To":
@@ -109,17 +109,17 @@ pair_types = {
          "target_types": all_entity_types},
     "Interacts_with":
         {"source_role": "Agent",
-         "source_types": ("Molecule",),
+         "source_types": all_entity_groups["Molecule"],
          "target_role": "Target",
-         "target_types": ("Molecule",)},
+         "target_types": all_entity_groups["Molecule"]},
     "Is_Involved_In_Process":
         {"source_role": "Participant",
-         "source_types": ("Molecule",),
+         "source_types": all_entity_groups["Molecule"],
          "target_role": "Process",
-         "target_types": ("Dynamic_Process",)},
+         "target_types": all_entity_groups["Dynamic_Process"]},
     "Is_Localized_In":
         {"source_role": "Functional_Molecule",
-         "source_types": ("Functional_Molecule", "Dynamic_Process"),
+         "source_types": all_entity_groups["Functional_Molecule"] + all_entity_groups["Dynamic_Process"],
          "target_role": "Target_Tissue",
          "target_types": ("Tissue",)},
     "Is_Member_Of_Family":
@@ -131,22 +131,22 @@ pair_types = {
         {"source_role": "Domain",
          "source_types": ("Protein_Domain",),
          "target_role": "Product",
-         "target_types": ("DNA_Product",)},
+         "target_types": all_entity_groups["DNA_Product"]},
     "Occurs_During":
         {"source_role": "Process",
-         "source_types": ("Dynamic_Process",),
+         "source_types": all_entity_groups["Dynamic_Process"],
          "target_role": "Development",
          "target_types": ("Development_Phase",)},
     "Occurs_In_Genotype":
         {"source_role": "Process",
-         "source_types": ("Dynamic_Process",),
+         "source_types": all_entity_groups["Dynamic_Process"],
          "target_role": "Genotype",
          "target_types": ("Genotype",)},
     "Regulates_Accumulation":
         {"source_role": "Agent",
          "source_types": all_entity_types,
          "target_role": "Functional_Molecule",
-         "target_types": ("Functional_Molecule",)},
+         "target_types": all_entity_groups["Functional_Molecule"]},
     "Regulates_Development_Phase":
         {"source_role": "Agent",
          "source_types": all_entity_types,
@@ -156,17 +156,17 @@ pair_types = {
         {"source_role": "Agent",
          "source_types": all_entity_types,
          "target_role": "DNA",
-         "target_types": ("DNA",)},
+         "target_types": all_entity_groups["DNA"]},
     "Regulates_Molecule_Activity":
         {"source_role": "Agent",
          "source_types": all_entity_types,
          "target_role": "Molecule",
-         "target_types": ("Molecule",)},
+         "target_types": all_entity_groups["Molecule"]},
     "Regulates_Process":
         {"source_role": "Agent",
          "source_types": all_entity_types,
          "target_role": "Process",
-         "target_types": ("Dynamic_Process",)},
+         "target_types": all_entity_groups["Dynamic_Process"]},
     "Regulates_Tissue_Development":
         {"source_role": "Agent",
          "source_types": all_entity_types,
@@ -174,9 +174,9 @@ pair_types = {
          "target_types": ("Tissue",)},
     "Transcribes_Or_Translates_To":
         {"source_role": "Source",
-         "source_types": ("DNA", "RNA"),
+         "source_types": all_entity_groups["DNA"] + ("RNA",),
          "target_role": "Product",
-         "target_types": ("DNA_Product",)},
+         "target_types": all_entity_groups["DNA_Product"]},
     "Is_Linked_To":
         {"source_role": "Agent",
          "source_types": all_entity_types,

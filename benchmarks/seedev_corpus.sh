@@ -7,7 +7,7 @@ LOGLEVEL=${1:-WARNING}
 #python src/main.py annotate --goldstd seedev_train --log $LOGLEVEL
 #python src/main.py annotate --goldstd seedev_dev --log $LOGLEVEL
 #
-python src/main.py train_relations --goldstd seedev_train --log $LOGLEVEL --models goldstandard --kernel jsre
+ python src/seedev_evaluation.py train_relations --goldstd seedev_train --log debug --models goldstandard --kernel jsre --pairtype Binds_To
 #python src/main.py test_relations --goldstd seedev_dev --log $LOGLEVEL --models goldstandard --kernel jsre -o pickle results/mirtexdev_on_mirtextest_mirnaprotein_jsre
 #python src/evaluate.py evaluate_list seedev_dev --results results/mirtexdev_on_mirtextest_mirnaprotein_jsre --models jsre --pairtype "miRNA-gene regulation" --log $LOGLEVEL
 #
