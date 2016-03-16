@@ -14,6 +14,7 @@ from classification.rext.scikitre import ScikitRE
 from classification.rext.stanfordre import StanfordRE
 from classification.rext.svmtk import SVMTKernel
 from config import config
+from evaluate import get_relations_results, get_gold_ann_set
 from reader.seedev_corpus import SeeDevCorpus
 from text.corpus import Corpus
 
@@ -108,20 +109,31 @@ def main():
         # testing
 
         elif options.actions == "test_relations":
-            if options.kernel == "jsre":
-                model = JSREKernel(corpus, (options.etype1, options.etype2))
-            elif options.kernel == "svmtk":
-                model = SVMTKernel(corpus, (options.etype1, options.etype2))
-            elif options.kernel == "rules":
-                model = RuleClassifier(corpus, options.ptype)
-            elif options.kernel == "stanfordre":
-                model = StanfordRE(corpus, options.ptype)
-            elif options.kernel == "scikit":
-                model = ScikitRE(corpus, (options.etype1, options.etype2))
-            model.load_classifier()
-            model.test()
-            results = model.get_predictions(corpus)
-            results.save(options.output[1] + ".pickle")
+            if options.ptype == "all":
+                ptypes = config.pair_types.keys()
+            else:
+                ptypes = [options.ptype]
+            for p in ptypes:
+                print p
+                if options.kernel == "jsre":
+                    model = JSREKernel(corpus, p)
+                elif options.kernel == "svmtk":
+                    model = SVMTKernel(corpus, p)
+                elif options.kernel == "rules":
+                    model = RuleClassifier(corpus, p)
+                elif options.kernel == "stanfordre":
+                    model = StanfordRE(corpus, p)
+                elif options.kernel == "scikit":
+                    model = ScikitRE(corpus, p)
+                model.load_classifier()
+                model.test()
+                results = model.get_predictions(corpus)
+                results.save(options.output[1] + "_" + p.lower() + ".pickle")
+                results.load_corpus(options.goldstd[0])
+                results.path = options.output[1] + "_" + p.lower()
+                goldset = get_gold_ann_set(config.paths[options.goldstd[0]]["format"], config.paths[options.goldstd[0]]["annotations"],
+                                       "all", p, config.paths[options.goldstd[0]]["text"])
+                get_relations_results(results, options.models, goldset[1],[], [])
 
     total_time = time.time() - start_time
     logging.info("Total time: %ss" % total_time)

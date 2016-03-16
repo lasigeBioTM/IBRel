@@ -194,9 +194,9 @@ def get_relations_results(results, model, gold_pairs, ths, rules, compare_text=T
                     pair = (did, (p.entities[0].dstart, p.entities[0].dend), (p.entities[1].dstart, p.entities[1].dend),
                             "{}=>{}".format(p.entities[0].text, p.entities[1].text))
                     system_pairs.append(pair)
-    print random.sample(system_pairs, 5)
-    print random.sample(gold_pairs, 5)
-    print pcount, ptrue, npairs
+    # print random.sample(system_pairs, 5)
+    # print random.sample(gold_pairs, 5)
+    # print pcount, ptrue, npairs
     if not compare_text:
         gold_pairs = [(o[0], o[1], o[2], "") for o in gold_pairs]
     reportlines, tps, fps, fns = compare_results(set(system_pairs), gold_pairs, results.corpus, getwords=compare_text)
