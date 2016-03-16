@@ -148,7 +148,7 @@ class Sentence(object):
             print [(ee.start, ee.end) for ee in self.entities.elist[source]]
 
 
-    def tag_entity(self, start, end, etype, entity=None, source="goldstandard", **kwargs):
+    def tag_entity(self, start, end, etype, entity=None, source="goldstandard", exclude=None, **kwargs):
         """Find the tokens that match this entity. start and end are relative to the sentence.
            Totalchars is the offset of the sentence on the document."""
         tlist = []
@@ -164,19 +164,45 @@ class Sentence(object):
                 break
             elif t.start == end+1:
                 nextword = t.text
+            exclude_list = []
+            if exclude is not None:
+                for t in tlist:
+                    for e in exclude:
+                        if t.start >= e[0] and t.end <= e[1]-1:
+                            exclude_list.append(t.tid)
+            tlist = [t for t in tlist if t.tid not in exclude_list]
         if tlist:
-            newtext = self.text[tlist[0].start:tlist[-1].end]
+            if exclude is not None:
+                newtext = self.text[tlist[0].start:exclude[0][0]]
+                #print self.text[exclude[0][0]:exclude[0][1]], exclude
+                last_exclude = exclude[0]
+                for e in exclude[1:]:
+                    if not self.text[e[1]].isspace() and not newtext[-1].isspace():
+                        newtext += " "
+                    newtext += self.text[last_exclude[1]:e[0]]
+                    last_exclude = e
+                if not self.text[exclude[-1][1]].isspace() and not newtext[-1].isspace():
+                    newtext += " "
+                newtext += self.text[exclude[-1][1]:tlist[-1].end]
+                # self.text[exclude[1]:tlist[-1].end]
+            else:
+                newtext = self.text[tlist[0].start:tlist[-1].end]
             if entity:
                 entity.text = newtext
             if "text" in kwargs and newtext != kwargs["text"]:
                 if newtext not in kwargs["text"] and kwargs["text"] not in newtext:
                     logging.info("text does not match: {}=>{}".format(newtext, kwargs["text"]))
+                    print exclude, self.text[tlist[0].start:tlist[-1].end]
+                    print self.text[tlist[0].start:exclude[0][0]]
+                    print self.text[exclude[0][0]:exclude[0][1]]
+                    print self.text[exclude[0][1]:tlist[-1].end]
                     # return None
                 else:
                     logging.info("diferent text:|system {} {} |{}|=>|{}| {} {} input|{} {}".format(tlist[0].start, tlist[-1].end, newtext, kwargs["text"],
                                  start, end, self.sid, self.text))
+                    print exclude, self.text[tlist[0].start:tlist[-1].end]
             #     print "tokens found:", [t.text for t in tlist]
-                # sys.exit()
+                    # sys.exit()
             # else:
             # print "found the tokens!", start, end, kwargs["text"], self.sid
             if self.entities.elist.get(source):

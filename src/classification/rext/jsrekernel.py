@@ -111,7 +111,7 @@ class JSREKernel(ReModel):
             examplelines = []
             # sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
             # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
-            for pair in itertools.combinations(doc_entities, 2):
+            for pair in itertools.permutations(doc_entities, 2):
                 # print pair[0].type, pair[1].type, pairtypes
                 sid1 = pair[0].eid.split(".")[-2]
                 sid2 = pair[1].eid.split(".")[-2]

@@ -82,8 +82,8 @@ def main():
         logging.info("loading corpus %s" % corpus_path)
         corpus = pickle.load(open(corpus_path, 'rb'))
         logging.debug("loading annotations...")
-        corpus.clear_annotations(options.etype)
-        corpus.load_annotations(corpus_ann, options.etype, options.ptype)
+        # corpus.clear_annotations("all")
+        corpus.load_annotations(corpus_ann, "all", options.ptype)
         # corpus.get_invalid_sentences()
         corpus.save(config.paths[options.goldstd]["corpus"])
     else:

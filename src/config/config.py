@@ -97,7 +97,7 @@ pair_types = {
          "source_types": all_entity_groups["Functional_Molecule"],
          "target_role": "Development",
          "target_types": ("Development_Phase",)},
-    "Exists_At_Genotype":
+    "Exists_In_Genotype":
         {"source_role": "Molecule",
          "source_types": all_entity_groups["Molecule"] + ("Biological context",),  # mutually exclusive
          "target_role": "Genotype",
@@ -107,7 +107,7 @@ pair_types = {
          "source_types": all_entity_types,
          "target_role": "Element2",
          "target_types": all_entity_types},
-    "Interacts_with":
+    "Interacts_With":
         {"source_role": "Agent",
          "source_types": all_entity_groups["Molecule"],
          "target_role": "Target",

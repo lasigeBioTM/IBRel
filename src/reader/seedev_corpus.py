@@ -76,26 +76,40 @@ class SeeDevCorpus(Corpus):
                     tid, ann, etext = line.strip().split("\t")
                     if ";" in ann:
                         # print "multiple offsets:", ann
-                        # TODO: use the two parts
-                        ann = ann.split(";")[0] # ignore the second part for now
-                    entity_type, dstart, dend = ann.split(" ")
+                        # ann = ann.split(";")[0] # ignore the second part for now
+                        ann_elements = ann.split(" ")
+                        entity_type, dstart, dend = ann_elements[0], int(ann_elements[1]), int(ann_elements[-1])
+                        dexclude = [e.split(";") for e in ann_elements[2:-1]]
+                        dexclude = [(int(dex[0]), int(dex[1])) for dex in dexclude]
+                        # print ann, dstart, dend
+                    else:
+                        entity_type, dstart, dend = ann.split(" ")
+                        dexclude = None
+                        dstart, dend = int(dstart), int(dend)
                     # load all entities
                     #if etype == "all" or (etype != "all" and etype == type_match[entity_type]):
-                    dstart, dend = int(dstart), int(dend)
+
                     sentence = self.documents[did].find_sentence_containing(dstart, dend, chemdner=False)
                     if sentence is not None:
                         # e[0] and e[1] are relative to the document, so subtract sentence offset
                         start = dstart - sentence.offset
                         end = dend - sentence.offset
-                        eid = sentence.tag_entity(start, end, entity_type, text=etext, original_id=tid)
+                        if dexclude is not None:
+                            exclude = [(dex[0] - sentence.offset, dex[1] - sentence.offset) for dex in dexclude]
+                        else:
+                            exclude = None
+                        eid = sentence.tag_entity(start, end, entity_type, text=etext, original_id=tid, exclude=exclude)
                         if eid is None:
-                            print "no eid!", sentence.sid, start, end, etext, sentence.text
+                            print "no eid!", sentence.sid, start, end, exclude, etext, sentence.text
                             sys.exit()
                         originalid_to_eid[did + "." + tid] = eid
                     else:
                         print "{}: could not find sentence for this span: {}-{}|{}".format(did, dstart, dend, etext.encode("utf-8"))
                         print
+                        sys.exit()
+        self.load_relations(ann_dir, originalid_to_eid)
 
+    def load_relations(self, ann_dir, originalid_to_eid):
         annfiles = [ann_dir + '/' + f for f in os.listdir(ann_dir) if f.endswith('.a2')]
         total = len(annfiles)
         time_per_abs = []
@@ -129,7 +143,6 @@ class SeeDevCorpus(Corpus):
                         entity1 = sentence1.entities.get_entity(sourceid)
                         entity1.targets.append((targetid, etype))
                         # print "{}: {}=>{}".format(etype, entity1.text.encode("utf-8"), targetid)
-
 
 
 def get_seedev_gold_ann_set(goldpath, entitytype, pairtype):

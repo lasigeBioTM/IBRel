@@ -19,6 +19,8 @@ class Entity(object):
         self.end = tokens[-1].end
         self.dstart = tokens[0].dstart
         self.dend = tokens[-1].dend
+        self.exclude = None
+        self.dexclude = None
         self.recognized_by = []
         self.subentities = []
         self.targets = [] # targets should be (eid, relationtype)
