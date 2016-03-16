@@ -28,13 +28,18 @@ class RuleClassifier(ReModel):
     def test(self):
         pcount = 0
         ptrue = 0
-        for sentence in self.corpus.get_sentences("goldstandard"):
-            # logging.info("{} {}/{}".format(sentence.sid))
-            sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
+        for did in self.corpus.documents:
+            doc_entities = self.corpus.documents[did].get_entities("goldstandard")
             # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
             # doc_entities += sentence_entities
-            for pair in itertools.combinations(sentence_entities, 2):
-                pid = sentence.did + ".p" + str(pcount)
+            for pair in itertools.combinations(doc_entities, 2):
+                sid1 = pair[0].eid.split(".")[-2]
+                sid2 = pair[1].eid.split(".")[-2]
+                sn1 = int(sid1[1:])
+                sn2 = int(sid2[1:])
+                if abs(sn2 - sn1) > 3:
+                    continue
+                pid = did + ".p" + str(pcount)
                 self.pids[pid] = pair
                 self.pairs[pid] = 0
                 # sentence1 = self.corpus.documents[did].get_sentence(e1.sid)
