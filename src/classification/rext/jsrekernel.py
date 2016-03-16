@@ -105,12 +105,20 @@ class JSREKernel(ReModel):
         pairtypes = (config.pair_types[pairtype]["source_types"], config.pair_types[pairtype]["target_types"])
         pcount = 0
         truepcount = 0
-        for sentence in corpus.get_sentences("goldstandard"):
+        #for sentence in corpus.get_sentences("goldstandard"):
+        for did in corpus.documents:
+            doc_entities = corpus.documents[did].get_entities("goldstandard")
             examplelines = []
-            sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
+            # sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
             # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
-            for pair in itertools.combinations(sentence_entities, 2):
-                print pair[0].type, pair[1].type, pairtypes
+            for pair in itertools.combinations(doc_entities, 2):
+                # print pair[0].type, pair[1].type, pairtypes
+                sid1 = pair[0].eid.split(".")[-2]
+                sid2 = pair[1].eid.split(".")[-2]
+                sn1 = int(sid1[1:])
+                sn2 = int(sid2[1:])
+                if abs(sn2 - sn1) > 3:
+                    continue
                 if pair[0].type in pairtypes[0] and pair[1].type in pairtypes[1] or\
                    pair[1].type in pairtypes[0] and pair[0].type in pairtypes[1]:
                     # logging.debug(pair)
@@ -121,20 +129,22 @@ class JSREKernel(ReModel):
                         e1id = pair[1].eid
                         e2id = pair[0].eid
                         pair = (pair[1], pair[0])
-                    pid = sentence.did + ".p" + str(pcount)
+                    # print e1id, e2id
+                    pid = did + ".p" + str(pcount)
                     # self.pairs[pid] = (e1id, e2id)
                     self.pairs[pid] = pair
                     # sentence1 = corpus.documents[did].get_sentence(pair[0].sid)
                     #sentence1 = sentence
                     # logging.info("{}  {}-{} => {}-{}".format(sentence.sid, e1id, pair[0].text, e2id, pair[1].text))
+                    sentence = corpus.documents[did].get_sentence(did + "." + sid1)
                     tokens_text, pos, lemmas, ner = self.get_sentence_instance(sentence, e1id, e2id, pair)
 
                     # logging.debug("{} {} {} {}".format(len(pair_text), len(pos), len(lemmas), len(ner)))
                     #logging.debug("generating jsre lines...")
                     #for i in range(len(pairinstances)):
                         #body = generatejSRE_line(pairinstances[i], pos, stems, ner)
-                    if pair[0].sid != pair[1].sid:
-                        sentence2 = corpus.documents[sentence.did].get_sentence(pair[1].sid)
+                    if sid1 != sid2:
+                        sentence2 = corpus.documents[did].get_sentence(did + "." + sid2)
                         tokens_text2, pos2, lemmas2, ner2 = self.get_sentence_instance(sentence2, e1id, e2id, pair)
                         tokens_text += tokens_text2
                         pos += pos2
@@ -214,11 +224,11 @@ class JSREKernel(ReModel):
         if not candidates[0]:
             logging.debug("missing first candidate on pair ")
             elements = ["0&&#candidate#&&#candidate#&&-None-&&ENTITY&&T"] + [str(n+1) + e[1:] for n, e in enumerate(elements)]
-            # print elements
+            print pairtext
         if not candidates[1]:
             logging.debug("missing second candidate on pair")
             elements.append(str(it+1) + "&&#candidate#&&#candidate#&&-None-&&ENTITY&&T")
-            # print elements
+            print pairtext
         body = " ".join(elements)
         return body
 

@@ -5,6 +5,7 @@ import itertools
 import re
 from classification.rext.kernelmodels import ReModel
 from classification.results import ResultsRE
+from config import config
 
 
 class RuleClassifier(ReModel):
@@ -39,11 +40,13 @@ class RuleClassifier(ReModel):
                 # sentence1 = self.corpus.documents[did].get_sentence(e1.sid)
                 # sentence2 = self.corpus.documents[did].get_sentence(e2.sid)
                 # logging.info("relation: {}=>{}".format(pair[0].type, pair[1].type))
-                if pair[0].type == "mirna" and pair[1].type == "protein":
+                if pair[0].type in config.pair_types[self.ptype]["source_types"] and\
+                   pair[1].type in config.pair_types[self.ptype]["target_types"]:
                     # logging.info("mirna-dna relation: {}=>{}".format(pair[0].text, pair[1].text))
                     self.pairs[pid] = 1
                     ptrue += 1
-                elif pair[0].type == "protein" and pair[1].type == "mirna":
+                elif pair[1].type in config.pair_types[self.ptype]["source_types"] and\
+                     pair[0].type in config.pair_types[self.ptype]["target_types"]:
                     self.pids[pid] = (pair[1], pair[0])
                     self.pairs[pid] = 1
                     ptrue += 1

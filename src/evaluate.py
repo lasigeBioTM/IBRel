@@ -7,6 +7,7 @@ import codecs
 import collections
 import logging
 import os
+import random
 import sys
 import time
 
@@ -15,6 +16,7 @@ from reader.chemdner_corpus import get_chemdner_gold_ann_set, run_chemdner_evalu
 from reader.genia_corpus import get_genia_gold_ann_set
 from reader.mirna_corpus import get_ddi_mirna_gold_ann_set
 from reader.mirtext_corpus import get_mirtex_gold_ann_set
+from reader.seedev_corpus import get_seedev_gold_ann_set
 from reader.tempEval_corpus import get_thymedata_gold_ann_set
 
 if config.use_chebi:
@@ -36,6 +38,8 @@ def get_gold_ann_set(corpus_type, gold_path, entity_type, pair_type, text_path):
         goldset = get_ddi_mirna_gold_ann_set(gold_path, entity_type, pair_type)
     elif corpus_type == "mirtex":
         goldset = get_mirtex_gold_ann_set(gold_path, entity_type, pair_type)
+    elif corpus_type == "seedev":
+        goldset = get_seedev_gold_ann_set(gold_path, entity_type, pair_type)
     return goldset
 
 
@@ -190,6 +194,8 @@ def get_relations_results(results, model, gold_pairs, ths, rules, compare_text=T
                     pair = (did, (p.entities[0].dstart, p.entities[0].dend), (p.entities[1].dstart, p.entities[1].dend),
                             "{}=>{}".format(p.entities[0].text, p.entities[1].text))
                     system_pairs.append(pair)
+    print random.sample(system_pairs, 5)
+    print random.sample(gold_pairs, 5)
     print pcount, ptrue, npairs
     if not compare_text:
         gold_pairs = [(o[0], o[1], o[2], "") for o in gold_pairs]

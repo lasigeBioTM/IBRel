@@ -141,7 +141,7 @@ class Document(object):
         else:
             pid = self.did + ".p0"
         between_text = self.text[entity1.dend:entity2.start]
-        logging.info("adding {}:{}=>{}".format(pid, entity1.text.decode("utf8"), entity2.text.decode("utf8")))
+        logging.info("adding {}:{}=>{}".format(pid, entity1.text.encode("utf8"), entity2.text.encode("utf8")))
         # print between_text
         if subtype == "tlink":
             pair = TLink(entity1, entity2, relation=relation, original_id=kwargs.get("original_id"),
@@ -263,3 +263,11 @@ class Document(object):
                    return e
         print "no entity found for eid {}".format(eid)
         return None
+
+    def get_entities(self, source):
+        entities = []
+        for s in self.sentences:
+            if source in s.entities.elist:
+                for e in s.entities.elist[source]:
+                    entities.append(e)
+        return entities

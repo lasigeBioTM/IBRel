@@ -138,25 +138,30 @@ def get_seedev_gold_ann_set(goldpath, entitytype, pairtype):
     gold_offsets = set()
     tid_to_offsets = {}
     for current, f in enumerate(annfiles):
-            did = f.split(".")[0]
-            with open(f, 'r') as txt:
+            did = f.split(".")[0].split("/")[-1]
+            with codecs.open(f, 'r', "utf-8") as txt:
                 for line in txt:
                     tid, ann, etext = line.strip().split("\t")
+                    if ";" in ann:
+                        # print "multiple offsets:", ann
+                        # TODO: use the two parts
+                        ann = ann.split(";")[0] # ignore the second part for now
                     etype, dstart, dend = ann.split(" ")
                     dstart, dend = int(dstart), int(dend)
-                    tid_to_offsets[tid] = (did, dstart, dend, etext)
+                    tid_to_offsets[did + "." + tid] = (dstart, dend, etext)
     gold_relations = set()
     annfiles = [goldpath + '/' + f for f in os.listdir(goldpath) if f.endswith('.a2')]
     for current, f in enumerate(annfiles):
-            did = f.split(".")[0]
+            did = f.split(".")[0].split("/")[-1]
             with open(f, 'r') as txt:
                 for line in txt:
                     eid, ann = line.strip().split("\t")
-                    etype, sourceid, targetid = ann.split(" ")
-                    sourceid = sourceid.split(":")[-1]
-                    targetid = targetid.split(":")[-1]
-                    source = tid_to_offsets[sourceid]
-                    target = tid_to_offsets[targetid]
-                    gold_relations.add((did, source, target))
+                    ptype, sourceid, targetid = ann.split(" ")
+                    if ptype == pairtype:
+                        sourceid = sourceid.split(":")[-1]
+                        targetid = targetid.split(":")[-1]
+                        source = tid_to_offsets[did + "." + sourceid]
+                        target = tid_to_offsets[did + "." + targetid]
+                        gold_relations.add((did, source[:2], target[:2], source[2] + "=>" + target[2]))
     return gold_offsets, gold_relations
 
