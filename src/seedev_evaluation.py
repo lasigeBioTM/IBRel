@@ -34,6 +34,7 @@ def write_seedev_results(results, path):
                 target_role = config.pair_types[pair.relation]["target_role"]
                 resfile.write("E{}\t{} {}:{} {}:{}\n".format(str(n), pair.relation, source_role, pair.entities[0].original_id,
                                                            target_role, pair.entities[1].original_id))
+                n += 1
 
 def main():
     start_time = time.time()
