@@ -37,7 +37,7 @@ class RuleClassifier(ReModel):
                 sid2 = pair[1].eid.split(".")[-2]
                 sn1 = int(sid1[1:])
                 sn2 = int(sid2[1:])
-                if abs(sn2 - sn1) > 5:
+                if abs(sn2 - sn1) > 0:
                     continue
                 pid = did + ".p" + str(pcount)
                 self.pids[pid] = pair

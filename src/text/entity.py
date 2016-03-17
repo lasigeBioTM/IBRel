@@ -25,6 +25,7 @@ class Entity(object):
         self.subentities = []
         self.targets = [] # targets should be (eid, relationtype)
         self.score = kwargs.get("score", 0)
+        self.original_id = kwargs.get("original_id")
         # logging.info("created entity {} with score {}".format(self.text, self.score))
         # print "entity", args, kwargs
 

@@ -172,7 +172,7 @@ def get_seedev_gold_ann_set(goldpath, entitytype, pairtype):
                 for line in txt:
                     eid, ann = line.strip().split("\t")
                     ptype, sourceid, targetid = ann.split(" ")
-                    if ptype == pairtype:
+                    if ptype == pairtype or pairtype == "all":
                         sourceid = sourceid.split(":")[-1]
                         targetid = targetid.split(":")[-1]
                         source = tid_to_offsets[did + "." + sourceid]

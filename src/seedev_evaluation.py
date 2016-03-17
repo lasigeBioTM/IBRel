@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 import pickle
 
 import time
@@ -7,6 +8,7 @@ import time
 import sys
 from pycorenlp import StanfordCoreNLP
 
+from classification.results import ResultsRE
 from classification.rext.jsrekernel import JSREKernel
 from classification.rext.multir import MultiR
 from classification.rext.rules import RuleClassifier
@@ -17,7 +19,21 @@ from config import config
 from evaluate import get_relations_results, get_gold_ann_set
 from reader.seedev_corpus import SeeDevCorpus
 from text.corpus import Corpus
+from text.pair import Pairs
 
+
+def write_seedev_results(results, path):
+    if not os.path.isdir(path):
+        os.makedirs(path)
+
+    for did in results.document_pairs:
+        with open(path + "/" + did + ".a2", 'w') as resfile:
+            n = 1
+            for pair in results.document_pairs[did].pairs:
+                source_role = config.pair_types[pair.relation]["source_role"]
+                target_role = config.pair_types[pair.relation]["target_role"]
+                resfile.write("E{}\t{} {}:{} {}:{}\n".format(str(n), pair.relation, source_role, pair.entities[0].original_id,
+                                                           target_role, pair.entities[1].original_id))
 
 def main():
     start_time = time.time()
@@ -111,6 +127,9 @@ def main():
         elif options.actions == "test_relations":
             if options.ptype == "all":
                 ptypes = config.pair_types.keys()
+                all_results = ResultsRE(options.output[1])
+                all_results.corpus = corpus
+                all_results.path = options.output[1]
             else:
                 ptypes = [options.ptype]
             for p in ptypes:
@@ -134,6 +153,16 @@ def main():
                 goldset = get_gold_ann_set(config.paths[options.goldstd[0]]["format"], config.paths[options.goldstd[0]]["annotations"],
                                        "all", p, config.paths[options.goldstd[0]]["text"])
                 get_relations_results(results, options.models, goldset[1],[], [])
+                for did in results.document_pairs:
+                    if did not in all_results.document_pairs:
+                        all_results.document_pairs[did] = Pairs(did=did)
+                    all_results.document_pairs[did].pairs += results.document_pairs[did].pairs
+            if options.ptype == "all":
+                goldset = get_gold_ann_set(config.paths[options.goldstd[0]]["format"], config.paths[options.goldstd[0]]["annotations"],
+                                       "all", "all", config.paths[options.goldstd[0]]["text"])
+                get_relations_results(all_results, options.models, goldset[1],[], [])
+                write_seedev_results(all_results, options.output[1])
+
 
     total_time = time.time() - start_time
     logging.info("Total time: %ss" % total_time)
