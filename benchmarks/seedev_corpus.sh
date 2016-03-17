@@ -12,7 +12,7 @@ python src/main.py annotate --goldstd seedev_dev --log $LOGLEVEL
 
 #
 python src/seedev_evaluation.py train_relations --goldstd seedev_train --log $LOGLEVEL --models goldstandard --kernel jsre --pairtype all
-python src/seedev_evaluation.py test_relations --goldstd seedev_dev --log $LOGLEVEL --models goldstandard --kernel jsre -o pickle results/seedev_dev_jsre_binds_to --pairtype all
+python src/seedev_evaluation.py test_relations --goldstd seedev_dev --log $LOGLEVEL --models goldstandard --kernel jsre -o pickle results/seedev_dev_jsre --pairtype all
 # python src/evaluate.py evaluate_list seedev_dev --results results/mirtexdev_on_mirtextest_mirnaprotein_jsre --models jsre --pairtype "miRNA-gene regulation" --log $LOGLEVEL
 #
 #python src/main.py train_relations --goldstd seedev_train --log $LOGLEVEL --models goldstandard  --etype1 mirna --etype2 protein --kernel svmtk

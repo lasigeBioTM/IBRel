@@ -122,7 +122,7 @@ class JSREKernel(ReModel):
                 sid2 = pair[1].eid.split(".")[-2]
                 sn1 = int(sid1[1:])
                 sn2 = int(sid2[1:])
-                if abs(sn2 - sn1) > 0:
+                if abs(sn2 - sn1) > 0 or pair[0].start == pair[1].start or pair[0].end == pair[1].end:
                     continue
                 if pair[0].type in pairtypes[0] and pair[1].type in pairtypes[1] or\
                    pair[1].type in pairtypes[0] and pair[0].type in pairtypes[1]:
@@ -143,7 +143,7 @@ class JSREKernel(ReModel):
                     # logging.info("{}  {}-{} => {}-{}".format(sentence.sid, e1id, pair[0].text, e2id, pair[1].text))
                     sentence = corpus.documents[did].get_sentence(did + "." + sid1)
                     tokens_text, pos, lemmas, ner = self.get_sentence_instance(sentence, e1id, e2id, pair)
-
+                    # print tokens_text, pair[0].text, pair[0].start, pair[1].text, pair[1].start, pair[0].start == pair[1].start
                     # logging.debug("{} {} {} {}".format(len(pair_text), len(pos), len(lemmas), len(ner)))
                     #logging.debug("generating jsre lines...")
                     #for i in range(len(pairinstances)):
@@ -229,11 +229,13 @@ class JSREKernel(ReModel):
         if not candidates[0]:
             logging.debug("missing first candidate on pair ")
             elements = ["0&&#candidate#&&#candidate#&&-None-&&ENTITY&&T"] + [str(n+1) + e[1:] for n, e in enumerate(elements)]
-            # print pairtext
+            print pairtext
+            sys.exit()
         if not candidates[1]:
             logging.debug("missing second candidate on pair")
             elements.append(str(it+1) + "&&#candidate#&&#candidate#&&-None-&&ENTITY&&T")
-            # print pairtext
+            print pairtext
+            sys.exit()
         body = " ".join(elements)
         return body
 
