@@ -196,6 +196,7 @@ class Sentence(object):
                     print self.text[tlist[0].start:exclude[0][0]]
                     print self.text[exclude[0][0]:exclude[0][1]]
                     print self.text[exclude[0][1]:tlist[-1].end]
+
                     # return None
                 else:
                     logging.info("diferent text:|system {} {} |{}|=>|{}| {} {} input|{} {}".format(tlist[0].start, tlist[-1].end, newtext, kwargs["text"],
@@ -205,11 +206,14 @@ class Sentence(object):
                     # sys.exit()
             # else:
             # print "found the tokens!", start, end, kwargs["text"], self.sid
+
             if self.entities.elist.get(source):
                 eid = self.sid + ".e" + str(len(self.entities.elist[source]))
             else:
                 eid = self.sid + ".e0"
             if entity is None:
+                if "text" in kwargs:
+                    newtext = kwargs["text"]
                 entity = create_entity(tlist, self.sid, did=self.did, text=newtext, score=kwargs.get("score"),
                                        etype=etype, eid=eid, subtype=kwargs.get("subtype"),
                                        original_id=kwargs.get("original_id"), nextword=nextword)

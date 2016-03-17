@@ -158,9 +158,11 @@ def get_seedev_gold_ann_set(goldpath, entitytype, pairtype):
                     if ";" in ann:
                         # print "multiple offsets:", ann
                         # TODO: use the two parts
-                        ann = ann.split(";")[0] # ignore the second part for now
-                    etype, dstart, dend = ann.split(" ")
-                    dstart, dend = int(dstart), int(dend)
+                        ann_elements = ann.split(" ")
+                        entity_type, dstart, dend = ann_elements[0], int(ann_elements[1]), int(ann_elements[-1])
+                    else:
+                        etype, dstart, dend = ann.split(" ")
+                        dstart, dend = int(dstart), int(dend)
                     tid_to_offsets[did + "." + tid] = (dstart, dend, etext)
     gold_relations = set()
     annfiles = [goldpath + '/' + f for f in os.listdir(goldpath) if f.endswith('.a2')]
