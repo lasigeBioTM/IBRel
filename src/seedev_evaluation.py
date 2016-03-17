@@ -112,17 +112,23 @@ def main():
             corpus.documents.update(this_corpus.documents)
 
         if options.actions == "train_relations":
-            if options.kernel == "jsre":
-                model = JSREKernel(corpus, options.ptype)
-            elif options.kernel == "svmtk":
-                model = SVMTKernel(corpus, (options.etype1, options.etype2))
-            elif options.kernel == "stanfordre":
-                model = StanfordRE(corpus, (options.etype1, options.etype2))
-            elif options.kernel == "multir":
-                model = MultiR(corpus, (options.etype1, options.etype2))
-            elif options.kernel == "scikit":
-                model = ScikitRE(corpus, (options.etype1, options.etype2))
-            model.train()
+            if options.ptype == "all":
+                ptypes = config.pair_types.keys()
+            else:
+                ptypes = [options.ptype]
+            for p in ptypes:
+                print p
+                if options.kernel == "jsre":
+                    model = JSREKernel(corpus, p)
+                elif options.kernel == "svmtk":
+                    model = SVMTKernel(corpus, p)
+                elif options.kernel == "stanfordre":
+                    model = StanfordRE(corpus, p)
+                elif options.kernel == "multir":
+                    model = MultiR(corpus, p)
+                elif options.kernel == "scikit":
+                    model = ScikitRE(corpus, p)
+                model.train()
         # testing
 
         elif options.actions == "test_relations":
@@ -145,7 +151,7 @@ def main():
                     model = StanfordRE(corpus, p)
                 elif options.kernel == "scikit":
                     model = ScikitRE(corpus, p)
-                model.load_classifier()
+                model.load_classifier(p)
                 model.test()
                 results = model.get_predictions(corpus)
                 results.save(options.output[1] + "_" + p.lower() + ".pickle")
@@ -154,10 +160,11 @@ def main():
                 goldset = get_gold_ann_set(config.paths[options.goldstd[0]]["format"], config.paths[options.goldstd[0]]["annotations"],
                                        "all", p, config.paths[options.goldstd[0]]["text"])
                 get_relations_results(results, options.models, goldset[1],[], [])
-                for did in results.document_pairs:
-                    if did not in all_results.document_pairs:
-                        all_results.document_pairs[did] = Pairs(did=did)
-                    all_results.document_pairs[did].pairs += results.document_pairs[did].pairs
+                if options.ptype == "all":
+                    for did in results.document_pairs:
+                        if did not in all_results.document_pairs:
+                            all_results.document_pairs[did] = Pairs(did=did)
+                        all_results.document_pairs[did].pairs += results.document_pairs[did].pairs
             if options.ptype == "all":
                 goldset = get_gold_ann_set(config.paths[options.goldstd[0]]["format"], config.paths[options.goldstd[0]]["annotations"],
                                        "all", "all", config.paths[options.goldstd[0]]["text"])

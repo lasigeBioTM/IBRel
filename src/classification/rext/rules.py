@@ -22,7 +22,7 @@ class RuleClassifier(ReModel):
         self.trigger_words = set([])
 
 
-    def load_classifier(self):
+    def load_classifier(self, p):
         pass
 
     def test(self):

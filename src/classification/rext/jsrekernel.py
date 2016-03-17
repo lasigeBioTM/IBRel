@@ -16,11 +16,16 @@ class JSREKernel(ReModel):
     def __init__(self, corpus, relationtype, modelname="slk_classifier.model"):
         super(JSREKernel, self).__init__()
         self.modelname = relationtype + "_" + modelname
+        self.pairtype = relationtype
         self.test_jsre = []
         self.pairs = {}
+        self.resultsfile = None
+        self.examplesfile = None
         self.generatejSREdata(corpus, modelname, pairtype=relationtype)
 
     def load_classifier(self, relationtype, outputfile="jsre_results.txt"):
+        self.resultsfile = self.temp_dir + relationtype + "_" + outputfile
+        self.examplesfile = self.temp_dir + self.modelname + ".txt"
         if os.path.isfile(self.temp_dir + relationtype + "_" + outputfile):
             os.remove(self.temp_dir + relationtype + "_" + outputfile)
         if not os.path.isfile(self.basedir + self.modelname):
@@ -35,8 +40,8 @@ class JSREKernel(ReModel):
         libs = ["libsvm-2.8.jar", "log4j-1.2.8.jar", "commons-digester.jar", "commons-beanutils.jar", "commons-logging.jar", "commons-collections.jar"]
         classpath = 'bin/jsre/jsre-1.1/bin'+ sep + sep.join(["bin/jsre/jsre-1.1/lib/" + l for l in libs])
         self.test_jsre = ['java', '-mx4g', '-classpath', classpath, "org.itc.irst.tcc.sre.Predict",
-                          self.temp_dir + self.modelname + ".txt", self.basedir + self.modelname,
-                          self.temp_dir + relationtype + "_" + outputfile]
+                          self.examplesfile, self.basedir + self.modelname,
+                          self.resultsfile]
         #print ' '.join(jsrecommand)
 
     def train(self):
@@ -56,7 +61,7 @@ class JSREKernel(ReModel):
         jsrecall = ['java', '-mx3g', '-classpath', classpath, "org.itc.irst.tcc.sre.Train",
                           "-k",  "SL", "-n", "4", "-w", "3", "-m", "3072", #  "-c", str(1),
                           self.temp_dir + self.modelname + ".txt", self.basedir + self.modelname]
-        print " ".join(jsrecall)
+        # print " ".join(jsrecall)
         jsrecall = Popen(jsrecall, stdout=PIPE, stderr=PIPE)
         res  = jsrecall.communicate()
         if not os.path.isfile(self.basedir + self.modelname):
@@ -74,7 +79,7 @@ class JSREKernel(ReModel):
 
 
     def test(self, outputfile="jsre_results.txt"):
-        print " ".join(self.test_jsre)
+        # print " ".join(self.test_jsre)
         jsrecall = Popen(self.test_jsre, stdout=PIPE, stderr=PIPE)
         res = jsrecall.communicate()
         #logging.debug(res[0].strip().split('\n')[-2:])
@@ -117,7 +122,7 @@ class JSREKernel(ReModel):
                 sid2 = pair[1].eid.split(".")[-2]
                 sn1 = int(sid1[1:])
                 sn2 = int(sid2[1:])
-                if abs(sn2 - sn1) > 3:
+                if abs(sn2 - sn1) > 0:
                     continue
                 if pair[0].type in pairtypes[0] and pair[1].type in pairtypes[1] or\
                    pair[1].type in pairtypes[0] and pair[0].type in pairtypes[1]:
@@ -224,26 +229,27 @@ class JSREKernel(ReModel):
         if not candidates[0]:
             logging.debug("missing first candidate on pair ")
             elements = ["0&&#candidate#&&#candidate#&&-None-&&ENTITY&&T"] + [str(n+1) + e[1:] for n, e in enumerate(elements)]
-            print pairtext
+            # print pairtext
         if not candidates[1]:
             logging.debug("missing second candidate on pair")
             elements.append(str(it+1) + "&&#candidate#&&#candidate#&&-None-&&ENTITY&&T")
-            print pairtext
+            # print pairtext
         body = " ".join(elements)
         return body
 
-    def get_predictions(self, corpus, examplesfile="slk_classifier.model.txt", resultfile="jsre_results.txt"):
+    def get_predictions(self, corpus):
+
         #pred_y = []
-        with open(self.temp_dir + resultfile, 'r') as resfile:
+        with open(self.resultsfile, 'r') as resfile:
             pred = resfile.readlines()
 
-        with codecs.open(self.temp_dir + examplesfile, 'r', 'utf-8') as trainfile:
+        with codecs.open(self.examplesfile, 'r', 'utf-8') as trainfile:
             original = trainfile.readlines()
 
         if len(pred) != len(original):
             print "different number of predictions!"
             sys.exit()
-        results = ResultsRE(resultfile)
+        results = ResultsRE(self.resultsfile)
         temppreds = {}
         for i in range(len(pred)):
             original_tsv = original[i].split('\t')
@@ -267,7 +273,7 @@ class JSREKernel(ReModel):
                 p = 1
             if p == 1:
                 did = '.'.join(pid.split(".")[:-1])
-                pair = corpus.documents[did].add_relation(self.pairs[pid][0], self.pairs[pid][1], "pair", relation=True)
+                pair = corpus.documents[did].add_relation(self.pairs[pid][0], self.pairs[pid][1], self.pairtype, relation=True)
                 #pair = self.get_pair(pid, corpus)
                 results.pairs[pid] = pair
 
