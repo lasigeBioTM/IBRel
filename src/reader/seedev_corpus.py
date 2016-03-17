@@ -5,7 +5,7 @@ import pickle
 import xml.etree.ElementTree as ET
 import os
 import sys
-
+import pprint
 import itertools
 import progressbar as pb
 import time
@@ -23,7 +23,7 @@ from text.corpus import Corpus
 from text.document import Document
 from text.sentence import Sentence
 
-
+pp = pprint.PrettyPrinter(indent=4)
 
 class SeeDevCorpus(Corpus):
     """
@@ -110,6 +110,7 @@ class SeeDevCorpus(Corpus):
         self.load_relations(ann_dir, originalid_to_eid)
 
     def load_relations(self, ann_dir, originalid_to_eid):
+        relations_stats = {}
         annfiles = [ann_dir + '/' + f for f in os.listdir(ann_dir) if f.endswith('.a2')]
         total = len(annfiles)
         time_per_abs = []
@@ -119,30 +120,42 @@ class SeeDevCorpus(Corpus):
             with codecs.open(f, 'r', 'utf-8') as txt:
                 for line in txt:
                     eid, ann = line.strip().split("\t")
-                    etype, sourceid, targetid = ann.split(" ")
+                    rtype, sourceid, targetid = ann.split(" ")
+                    if rtype not in relations_stats:
+                        relations_stats[rtype] = {"count": 0}
+                    relations_stats[rtype]["count"] += 1
                     sourceid = did + "." + sourceid.split(":")[-1]
                     targetid = did + "." + targetid.split(":")[-1]
                     if sourceid not in originalid_to_eid or targetid not in originalid_to_eid:
                         print "{}: entity not found: {}=>{}".format(did, sourceid, targetid)
                         # print sorted([e.split(".")[-1] for e in originalid_to_eid if e.startswith(did)])
-                        print "skipped relation {}".format(etype)
+                        print "skipped relation {}".format(rtype)
                         continue
                     sourceid, targetid = originalid_to_eid[sourceid], originalid_to_eid[targetid]
                     sid1 = '.'.join(sourceid.split(".")[:-1])
                     sid2 = '.'.join(targetid.split(".")[:-1])
                     sn1 = int(sid1.split("s")[-1])
                     sn2 = int(sid2.split("s")[-1])
-                    if abs(sn2 - sn1) > 3:
-                        print "relation {} between entities on distant sentences: {}=>{}".format(etype, sourceid, targetid)
-                        continue
+                    # if abs(sn2 - sn1) > 3:
+                    #     print "relation {} between entities on distant sentences: {}=>{}".format(rtype, sourceid, targetid)
+                    #     continue
                     sentence1 = self.documents[did].get_sentence(sid1)
+                    sentence2 = self.documents[did].get_sentence(sid2)
                     if sentence1 is None:
                         print "sentence not found:", did, sid1, sourceid, targetid, len(self.documents[did].sentences)
                         continue
                     else:
                         entity1 = sentence1.entities.get_entity(sourceid)
-                        entity1.targets.append((targetid, etype))
+                        entity2 = sentence2.entities.get_entity(targetid)
+                        entity1.targets.append((targetid, rtype))
+                        if entity1.type + "_source" not in relations_stats[rtype]:
+                            relations_stats[rtype][entity1.type + "_source"] = 0
+                        relations_stats[rtype][entity1.type + "_source"] += 1
+                        if entity2.type + "_target" not in relations_stats[rtype]:
+                            relations_stats[rtype][entity2.type + "_target"] = 0
+                        relations_stats[rtype][entity2.type + "_target"] += 1
                         # print "{}: {}=>{}".format(etype, entity1.text.encode("utf-8"), targetid)
+        pp.pprint(relations_stats)
 
 
 def get_seedev_gold_ann_set(goldpath, entitytype, pairtype):
