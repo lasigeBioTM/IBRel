@@ -178,9 +178,9 @@ pair_types = {
          "target_role": "Product",
          "target_types": all_entity_groups["DNA_Product"]},
     "Is_Linked_To":
-        {"source_role": "Agent",
+        {"source_role": "Agent1",
          "source_types": all_entity_types,
-         "target_role": "Target",
+         "target_role": "Agent2",
          "target_types": all_entity_types}
 }
 

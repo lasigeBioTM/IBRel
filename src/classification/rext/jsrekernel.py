@@ -124,17 +124,18 @@ class JSREKernel(ReModel):
                 sn2 = int(sid2[1:])
                 if abs(sn2 - sn1) > 0 or pair[0].start == pair[1].start or pair[0].end == pair[1].end:
                     continue
-                if pair[0].type in pairtypes[0] and pair[1].type in pairtypes[1] or\
-                   pair[1].type in pairtypes[0] and pair[0].type in pairtypes[1]:
+                if pair[0].type in pairtypes[0] and pair[1].type in pairtypes[1]: # or\
+                   # pair[1].type in pairtypes[0] and pair[0].type in pairtypes[1]:
                     # logging.debug(pair)
-                    if pair[0].type == pairtypes[0]:
-                        e1id = pair[0].eid
-                        e2id = pair[1].eid
+                    """if pair[0].type == pairtypes[0]:
+
                     else:
                         e1id = pair[1].eid
                         e2id = pair[0].eid
-                        pair = (pair[1], pair[0])
+                        pair = (pair[1], pair[0])"""
                     # print e1id, e2id
+                    e1id = pair[0].eid
+                    e2id = pair[1].eid
                     pid = did + ".p" + str(pcount)
                     # self.pairs[pid] = (e1id, e2id)
                     self.pairs[pid] = pair

@@ -32,6 +32,11 @@ def write_seedev_results(results, path):
             for pair in results.document_pairs[did].pairs:
                 source_role = config.pair_types[pair.relation]["source_role"]
                 target_role = config.pair_types[pair.relation]["target_role"]
+                if pair.relation == "Exists_In_Genotype" and pair.entities[0].type == "Biological context":
+                    source_role = "Element"
+                elif pair.relation == "Is_Localized_In" and pair.entities[0].type in config.all_entity_groups["Dynamic_Process"]:
+                    source_role = "Process"
+
                 resfile.write("E{}\t{} {}:{} {}:{}\n".format(str(n), pair.relation, source_role, pair.entities[0].original_id,
                                                            target_role, pair.entities[1].original_id))
                 n += 1

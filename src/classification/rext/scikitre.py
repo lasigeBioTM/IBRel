@@ -19,6 +19,7 @@ from sklearn.metrics import f1_score, make_scorer
 from classification.results import ResultsRE
 from classification.rext.kernelmodels import ReModel
 from config import config
+from text.sentence import Sentence
 
 
 class ScikitRE(ReModel):
@@ -36,10 +37,10 @@ class ScikitRE(ReModel):
         self.generate_data(corpus, modelname, relationtype)
         self.text_clf = Pipeline([('vect', CountVectorizer(ngram_range=(1,3), binary=False)),
                                   ('tfidf', TfidfTransformer(use_idf=True)),
-                                  #         ('clf', SGDClassifier(loss='hinge', penalty='l1', alpha=0.0001, n_iter=5, random_state=42)),
-                                  ('clf', svm.SVC(tol=0.001, kernel="linear"))
-                                  #('clf', RandomForestClassifier())
-                                  # ('clf', MultinomialNB(alpha=0.1, fit_prior=False))
+                                  #('clf', SGDClassifier(loss='hinge', penalty='l1', alpha=0.0001, n_iter=5, random_state=42)),
+                                  #('clf', svm.SVC(tol=0.001, kernel="linear"))
+                                  # ('clf', RandomForestClassifier())
+                                  ('clf', MultinomialNB(alpha=0.1, fit_prior=False))
                                  ])
 
     def generate_data(self, corpus, modelname, pairtypes):
@@ -47,19 +48,34 @@ class ScikitRE(ReModel):
         pcount = 0
         truepcount = 0
         ns = 0
-        for sentence in corpus.get_sentences(hassource="goldstandard"):
+        for did in corpus.documents:
+            doc_entities = corpus.documents[did].get_entities("goldstandard")
+            examplelines = []
             # logging.info("{}".format(sentence.sid))
-            sentence_entities = sentence.entities.elist["goldstandard"]
+            # sentence_entities = sentence.entities.elist["goldstandard"]
             # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
-            for pair in itertools.combinations(sentence_entities, 2):
+            for pair in itertools.combinations(doc_entities, 2):
+                sn1 = int(pair[0].sid.split(".")[-1][1:])
+                sn2 = int(pair[1].sid.split(".")[-1][1:])
+                if abs(sn2 - sn1) > 0 or pair[0].start == pair[1].start or pair[0].end == pair[1].end:
+                    continue
                 # logging.info("{}=>{}|{}=>{}".format(pair[0].type, pair[1].type, pairtypes[0], pairtypes[1]))
-                if pair[0].type in config.pair_types[self.pairtype]["source_types"] and pair[1].type in config.pair_types[self.pairtype]["target_types"] or \
-                                        pair[1].type in config.pair_types[self.pairtype]["source_types"] and pair[0].type in config.pair_types[self.pairtype]["target_types"]:
+                if pair[0].type in config.pair_types[self.pairtype]["source_types"] and pair[1].type in config.pair_types[self.pairtype]["target_types"]:
+                                        #pair[1].type in config.pair_types[self.pairtype]["source_types"] and pair[0].type in config.pair_types[self.pairtype]["target_types"]:
                     # logging.debug(pair)
-                    if pair[0].type not in config.pair_types[self.pairtype]["source_types"]:
-                        pair = (pair[1], pair[0])
-                    pid = sentence.did + ".p" + str(pcount)
+                    #if pair[0].type not in config.pair_types[self.pairtype]["source_types"]:
+                    #    pair = (pair[1], pair[0])
+                    pid = did + ".p" + str(pcount)
                     # self.pairs[pid] = (e1id, e2id)
+                    if sn1 != sn2:
+                        sentence1 = corpus.documents[did].get_sentence(pair[0].sid)
+                        sentence2 = corpus.documents[did].get_sentence(pair[1].sid)
+                        sentence = Sentence(text = sentence1.text + " " + sentence2.text, offset=sentence1.offset)
+                        sentence.tokens = sentence1.tokens + sentence2.tokens
+                        for t in pair[1].tokens:
+                            t.order += len(sentence1.tokens)
+                    else:
+                        sentence = corpus.documents[did].get_sentence(pair[0].sid)
                     f, label = self.generate_features(sentence, pair)
                     self.features.append(f)
                     self.labels.append(label)
@@ -75,7 +91,7 @@ class ScikitRE(ReModel):
         if start > end:
             start, end = pair[1].tokens[-1].order, pair[0].tokens[0].order
         #text = [t.lemma + "-" + t.pos for t in sentence.tokens[start:end]]
-        text = [t.lemma + "-" + t.pos for t in sentence.tokens]
+        text = [t.lemma + "-" + t.pos for t in sentence.tokens[start-2:end+2]] + [pair[0].type, pair[1].type]
         f = ' '.join(text)
         return f, label
 
