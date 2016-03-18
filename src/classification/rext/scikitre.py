@@ -18,13 +18,15 @@ from sklearn.metrics import f1_score, make_scorer
 
 from classification.results import ResultsRE
 from classification.rext.kernelmodels import ReModel
+from config import config
 
 
 class ScikitRE(ReModel):
     def __init__(self, corpus, relationtype, modelname="scikit_classifier"):
         super(ScikitRE, self).__init__()
-        self.modelname = modelname
+        self.modelname = relationtype + "_" + modelname
         self.relationtype = relationtype
+        self.pairtype = relationtype
         self.corpus = corpus
         self.pairs = []
         self.features = []
@@ -34,10 +36,10 @@ class ScikitRE(ReModel):
         self.generate_data(corpus, modelname, relationtype)
         self.text_clf = Pipeline([('vect', CountVectorizer(ngram_range=(1,3), binary=False)),
                                   ('tfidf', TfidfTransformer(use_idf=True)),
-                                  ('clf', SGDClassifier(loss='hinge', penalty='l1', alpha=0.0001, n_iter=5, random_state=42)),
-                                  #('clf', svm.SVC(tol=0.001, kernel="linear"))
+                                  #         ('clf', SGDClassifier(loss='hinge', penalty='l1', alpha=0.0001, n_iter=5, random_state=42)),
+                                  ('clf', svm.SVC(tol=0.001, kernel="linear"))
                                   #('clf', RandomForestClassifier())
-                                  #('clf', MultinomialNB(alpha=0.1, fit_prior=False))
+                                  # ('clf', MultinomialNB(alpha=0.1, fit_prior=False))
                                  ])
 
     def generate_data(self, corpus, modelname, pairtypes):
@@ -51,10 +53,10 @@ class ScikitRE(ReModel):
             # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
             for pair in itertools.combinations(sentence_entities, 2):
                 # logging.info("{}=>{}|{}=>{}".format(pair[0].type, pair[1].type, pairtypes[0], pairtypes[1]))
-                if pair[0].type == pairtypes[0] and pair[1].type == pairtypes[1] or \
-                                        pair[1].type == pairtypes[0] and pair[0].type == pairtypes[1]:
+                if pair[0].type in config.pair_types[self.pairtype]["source_types"] and pair[1].type in config.pair_types[self.pairtype]["target_types"] or \
+                                        pair[1].type in config.pair_types[self.pairtype]["source_types"] and pair[0].type in config.pair_types[self.pairtype]["target_types"]:
                     # logging.debug(pair)
-                    if pair[0].type != pairtypes[0]:
+                    if pair[0].type not in config.pair_types[self.pairtype]["source_types"]:
                         pair = (pair[1], pair[0])
                     pid = sentence.did + ".p" + str(pcount)
                     # self.pairs[pid] = (e1id, e2id)
@@ -64,7 +66,7 @@ class ScikitRE(ReModel):
                     self.pairs.append(pair)
 
     def generate_features(self, sentence, pair):
-        if pair[1].eid in pair[0].targets:
+        if (pair[1].eid, self.pairtype) in pair[0].targets:
             label = True
         else:
             label = False
@@ -96,14 +98,16 @@ class ScikitRE(ReModel):
                      #'clf__alpha': (0, 1e-2, 1e-3, 1e-1, 1e-4, 1e-5),
                       #'clf__fit_prior': (False, True),
                      }
-        gs_clf = GridSearchCV(self.text_clf, parameters, n_jobs=-1, scoring=self.posfmeasure)
-        gs_clf = gs_clf.fit(self.features, self.labels)
-        print gs_clf.best_params_
-        # self.text_clf = self.text_clf.fit(self.features, self.labels)
+        # gs_clf = GridSearchCV(self.text_clf, parameters, n_jobs=-1, scoring=self.posfmeasure)
+        # gs_clf = gs_clf.fit(self.features, self.labels)
+        # print gs_clf.best_params_
+        logging.info("Traning with {}/{} true pairs".format(str(sum(self.labels)), str(len(self.labels))))
+        self.text_clf = self.text_clf.fit(self.features, self.labels)
         if not os.path.exists(self.basedir + self.modelname):
             os.makedirs(self.basedir + self.modelname)
-        #joblib.dump(self.text_clf, "{}/{}/{}.pkl".format(self.basedir, self.modelname, self.modelname))
-        joblib.dump(gs_clf.best_estimator_, "{}/{}/{}.pkl".format(self.basedir, self.modelname, self.modelname))
+        logging.info("Training complete, saving to {}/{}/{}.pkl".format(self.basedir, self.modelname, self.modelname))
+        joblib.dump(self.text_clf, "{}/{}/{}.pkl".format(self.basedir, self.modelname, self.modelname))
+        # joblib.dump(gs_clf.best_estimator_, "{}/{}/{}.pkl".format(self.basedir, self.modelname, self.modelname))
         # self.test()
 
     def load_classifier(self):
@@ -125,7 +129,7 @@ class ScikitRE(ReModel):
             pid = did + ".p" + str(i)
             if self.pred[i]:
                 did = '.'.join(pid.split(".")[:-1])
-                pair = corpus.documents[did].add_relation(self.pairs[i][0], self.pairs[i][1], "pair", relation=True)
+                pair = corpus.documents[did].add_relation(self.pairs[i][0], self.pairs[i][1], self.pairtype, relation=True)
                 #pair = self.get_pair(pid, corpus)
                 results.pairs[pid] = pair
 

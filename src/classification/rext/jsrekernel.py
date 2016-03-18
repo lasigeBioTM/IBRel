@@ -23,11 +23,11 @@ class JSREKernel(ReModel):
         self.examplesfile = None
         self.generatejSREdata(corpus, modelname, pairtype=relationtype)
 
-    def load_classifier(self, relationtype, outputfile="jsre_results.txt"):
-        self.resultsfile = self.temp_dir + relationtype + "_" + outputfile
+    def load_classifier(self, outputfile="jsre_results.txt"):
+        self.resultsfile = self.temp_dir + self.pairtype + "_" + outputfile
         self.examplesfile = self.temp_dir + self.modelname + ".txt"
-        if os.path.isfile(self.temp_dir + relationtype + "_" + outputfile):
-            os.remove(self.temp_dir + relationtype + "_" + outputfile)
+        if os.path.isfile(self.temp_dir + self.pairtype + "_" + outputfile):
+            os.remove(self.temp_dir + self.pairtype + "_" + outputfile)
         if not os.path.isfile(self.basedir + self.modelname):
             print "model", self.basedir + self.modelname, "not found"
             sys.exit()

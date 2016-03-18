@@ -151,7 +151,7 @@ def main():
                     model = StanfordRE(corpus, p)
                 elif options.kernel == "scikit":
                     model = ScikitRE(corpus, p)
-                model.load_classifier(p)
+                model.load_classifier()
                 model.test()
                 results = model.get_predictions(corpus)
                 results.save(options.output[1] + "_" + p.lower() + ".pickle")
