@@ -13,7 +13,6 @@ from text.sentence import Sentence
 from text.token2 import Token2
 from classification.rext.relations import Pairs
 
-from text.tlink import TLink
 
 whitespace = [u"\u2002", u"\u2003", u"\u00A0", u"\u2009", u"\u200C", u"\u200D",
               u'\u2005', u'\u2009', u'\u200A']

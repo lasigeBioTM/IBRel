@@ -9,7 +9,6 @@ import atexit
 from socket import error as SocketError
 import errno
 
-from text.protein_entity import ProteinEntity
 from text.offset import Offsets, Offset
 from classification.results import ResultsNER
 from classification.ner.simpletagger import SimpleTaggerModel, create_entity

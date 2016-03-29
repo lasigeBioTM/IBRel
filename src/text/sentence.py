@@ -13,7 +13,6 @@ from classification.ner.simpletagger import create_entity
 from classification.rext.relations import Pairs
 from classification.rext import ddi_kernels
 from classification.rext import relations
-from text.tlink import TLink
 
 pp = pprint.PrettyPrinter(indent=2)
 class Sentence(object):
