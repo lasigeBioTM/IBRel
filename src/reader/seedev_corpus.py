@@ -7,10 +7,22 @@ import os
 import sys
 import pprint
 import itertools
+
+import numpy as np
 import progressbar as pb
 import time
 
 from pycorenlp import StanfordCoreNLP
+from sklearn import metrics, svm, feature_selection
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.externals import joblib
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.feature_selection import SelectKBest, chi2
+from sklearn.linear_model import SGDClassifier
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.pipeline import Pipeline
+from sklearn.svm import LinearSVC
 
 from classification.rext.jsrekernel import JSREKernel
 from classification.rext.multir import MultiR
@@ -24,7 +36,18 @@ from text.document import Document
 from text.sentence import Sentence
 
 pp = pprint.PrettyPrinter(indent=4)
-
+text_clf = Pipeline([('vect', CountVectorizer(analyzer='char_wb', ngram_range=(7,20), min_df=0.2, max_df=0.5)),
+                             #('vect', CountVectorizer(analyzer='word', ngram_range=(1,5), stop_words="english", min_df=0.1)),
+                             #     ('tfidf', TfidfTransformer(use_idf=True, norm="l2")),
+                                  #('tfidf', TfidfVectorizer(analyzer='char_wb', ngram_range=(6,20))),
+                                  #('clf', SGDClassifier(loss='hinge', penalty='l1', alpha=0.01, n_iter=5, random_state=42)),
+                                  #('clf', SGDClassifier())
+                                  #('clf', svm.SVC(kernel='rbf', C=10, verbose=True, tol=1e-5))
+                                  #('clf', RandomForestClassifier(n_estimators=10))
+                                    #('feature_selection', feature_selection.SelectFromModel(LinearSVC(penalty="l1"))),
+                                  ('clf', MultinomialNB(alpha=0.1, fit_prior=False))
+                                  #('clf', DummyClassifier(strategy="constant", constant=True))
+                                 ])
 class SeeDevCorpus(Corpus):
     """
     Corpus for the BioNLP SeeDev task
@@ -33,6 +56,8 @@ class SeeDevCorpus(Corpus):
     def __init__(self, corpusdir, **kwargs):
         super(SeeDevCorpus, self).__init__(corpusdir, **kwargs)
         self.subtypes = []
+        self.train_sentences = [] # sentences used for training the sentence classifier
+        self.type_sentences = {} # sentences classified as true for each type
 
     def load_corpus(self, corenlpserver, process=True):
         # self.path is the base directory of the files of this corpus
@@ -106,7 +131,7 @@ class SeeDevCorpus(Corpus):
                     else:
                         print "{}: could not find sentence for this span: {}-{}|{}".format(did, dstart, dend, etext.encode("utf-8"))
                         print
-                        sys.exit()
+                        #sys.exit()
         self.load_relations(ann_dir, originalid_to_eid)
 
     def load_relations(self, ann_dir, originalid_to_eid):
@@ -114,6 +139,7 @@ class SeeDevCorpus(Corpus):
         annfiles = [ann_dir + '/' + f for f in os.listdir(ann_dir) if f.endswith('.a2')]
         total = len(annfiles)
         time_per_abs = []
+        unique_relations = set()
         for current, f in enumerate(annfiles):
             logging.debug('%s:%s/%s', f, current + 1, total)
             did = f.split(".")[0].split("/")[-1]
@@ -154,8 +180,149 @@ class SeeDevCorpus(Corpus):
                         if entity2.type + "_target" not in relations_stats[rtype]:
                             relations_stats[rtype][entity2.type + "_target"] = 0
                         relations_stats[rtype][entity2.type + "_target"] += 1
+                        entity1_text = entity1.text.encode("utf-8")
+                        entity2_text = entity2.text.encode("utf-8")
+                        rel_text = "{}#{}\t{}\t{}#{}".format(entity1.type, entity1_text, rtype, entity2.type, entity2_text)
+                        unique_relations.add(rel_text)
+                        # if rel_text not in unique_relations:
+                        #     unique_relations[rel_text] = set()
+                        # print
+                        # print "{}-{}={}>{}-{}".format(entity1.type, entity1_text, rtype, entity2.type, entity2_text)
+                        # sentence1_text = sentence1.text.encode("utf-8")
+                        # sentence1_text = sentence1_text.replace(entity1_text, "|{}|".format(entity1_text))
+                        # sentence1_text = sentence1_text.replace(entity2_text, "|{}|".format(entity2_text))
+                        # print sentence1_text
+                        #if sid1 != sid2:
+                        #    sentence2_text = sentence1.text.encode("utf-8").replace(entity2_text, "|{}|".format(entity2_text))
+                        #   print sentence2_text
+                        # print
                         # print "{}: {}=>{}".format(etype, entity1.text.encode("utf-8"), targetid)
-        pp.pprint(relations_stats)
+        with codecs.open("seedev_relation.txt", 'w', 'utf-8') as relfile:
+            for r in unique_relations:
+                relfile.write(r.decode("utf-8") + '\n')
+        #pp.pprint(relations_stats)
+
+    def get_features(self, pairtype):
+        f = []
+        labels = []
+        sids = []
+        for sentence in self.get_sentences("goldstandard"):
+            hasrel = False
+            hassource = False
+            hastarget = False
+            sids.append(sentence.sid)
+            for e in sentence.entities.elist["goldstandard"]:
+                if e.type in config.pair_types[pairtype]["source_types"]:
+                    hassource = True
+                if e.type in config.pair_types[pairtype]["target_types"]:
+                    hastarget = True
+                if any([target[1] == pairtype for target in e.targets]):
+                    # print pairtype, sentence.text
+                    hasrel = True
+                    break
+            if not hassource or not hastarget:
+                continue
+            tokens_text = [t.text for t in sentence.tokens]
+            stokens = []
+            for it, t in enumerate(sentence.tokens):
+                #print tokens_text[:it], tokens_text[it:]
+                if "-LRB-" in tokens_text[:it] and "-RRB-" in tokens_text[it:] and "-RRB-" not in tokens_text[:it] and "-LRB-" not in tokens_text[it:]:
+                    #if "(" in t.text or ")" in t.text:
+                    # print "skipped between ()", t.text
+                    continue
+                elif t.lemma.isdigit():
+                    # print "digit:", t.lemma, t.text
+                    continue
+                elif t.text == "-LRB-" or t.text == "-RRB-":
+                    continue
+                elif "goldstandard" in t.tags and (len(stokens) == 0 or stokens[-1] != t.tags["goldstandard_subtype"]):
+                    stokens.append(t.tags["goldstandard_subtype"])
+                #elif not t.text.isalpha():
+                #    print "not alpha:", t.text
+                #    continue
+                else:
+                    stokens.append(t.pos + "-" + t.lemma)
+            f.append(" ".join(stokens))
+            if hasrel:
+                labels.append(True)
+            else:
+                labels.append(False)
+        return f, labels, sids
+
+    def train_sentence_classifier(self, pairtype):
+        self.text_clf = Pipeline([('vect', CountVectorizer(analyzer='char_wb', ngram_range=(7,20), min_df=0.2, max_df=0.5)),
+                             #('vect', CountVectorizer(analyzer='word', ngram_range=(1,5), stop_words="english", min_df=0.1)),
+                             #     ('tfidf', TfidfTransformer(use_idf=True, norm="l2")),
+                                  #('tfidf', TfidfVectorizer(analyzer='char_wb', ngram_range=(6,20))),
+                                  #('clf', SGDClassifier(loss='hinge', penalty='l1', alpha=0.01, n_iter=5, random_state=42)),
+                                  #('clf', SGDClassifier())
+                                  #('clf', svm.SVC(kernel='rbf', C=10, verbose=True, tol=1e-5))
+                                  #('clf', RandomForestClassifier(n_estimators=10))
+                                    #('feature_selection', feature_selection.SelectFromModel(LinearSVC(penalty="l1"))),
+                                  ('clf', MultinomialNB(alpha=0.1, fit_prior=False))
+                                  #('clf', DummyClassifier(strategy="constant", constant=True))
+                                 ])
+        f, labels, sids = self.get_features(pairtype)
+        half_point = int(len(f)*0.5)
+        self.train_sentences = sids[:half_point]
+        """ch2 = SelectKBest(chi2, k=20)
+        X_train = text_clf.named_steps["vect"].fit_transform(f[:half_point])
+        X_test = text_clf.named_steps["vect"].transform(f[half_point:])
+        X_train = ch2.fit_transform(X_train, labels[:half_point])
+        X_test = ch2.transform(X_test)
+        feature_names = text_clf.named_steps["vect"].get_feature_names()
+        feature_names = [feature_names[i] for i
+                         in ch2.get_support(indices=True)]
+        # print feature_names"""
+        # train
+        text_clf = self.text_clf.fit(f[:half_point], labels[:half_point])
+
+        #save model
+        if not os.path.exists("models/kernel_models/" + pairtype + "_sentence_classifier/"):
+            os.makedirs("models/kernel_models/" + pairtype + "_sentence_classifier/")
+        logging.info("Training complete, saving to {}/{}/{}.pkl".format("models/kernel_models/",
+                                                                        pairtype + "_sentence_classifier/", pairtype))
+        joblib.dump(text_clf, "{}/{}/{}.pkl".format("models/kernel_models/",
+                                                                        pairtype + "_sentence_classifier/", pairtype))
+
+        # evaluate
+        pred = text_clf.predict(f[half_point:])
+        # print len(pred), sum(pred)
+        self.type_sentences[pairtype] = []
+        for ip, p in enumerate(pred):
+            if p:
+                self.type_sentences[pairtype].append(sids[half_point + ip])
+
+        res = metrics.confusion_matrix(labels[half_point:], pred)
+        return res[1][1], res[0][1], res[1][0]
+
+    def test_sentence_classifier(self, pairtype):
+        text_clf = joblib.load("{}/{}/{}.pkl".format("models/kernel_models/",
+                                                                        pairtype + "_sentence_classifier/", pairtype))
+        f, labels, sids = self.get_features(pairtype)
+        pred = text_clf.predict(f)
+        self.type_sentences[pairtype] = []
+        for ip, p in enumerate(pred):
+            if p:
+                self.type_sentences[pairtype].append(sids[ip])
+        # print self.type_sentences.keys()
+        res = metrics.confusion_matrix(labels, pred)
+        return res[1][1], res[0][1], res[1][0]
+
+
+    def add_more_sentences(self, corpuspath):
+        """
+        Load sentences with relations from another corpus
+        :param corpuspath: corpus path
+        :return:
+        """
+        corpus2 = pickle.load(open(corpuspath, 'rb'))
+        for did in corpus2.documents:
+            for sentence in corpus2.documents[did].sentences:
+                if any([len(e.targets)> 1 for e in sentence.entities.elist["goldstandard"]]):
+                    print "found sentence with relations:", sentence.sid
+                    self.documents[sentence.sid] = Document(sentence.text, sentences=[sentence])
+        self.save("corpora/Thaliana/seedev-extended.pickle")
 
 
 def get_seedev_gold_ann_set(goldpath, entitytype, pairtype):
@@ -190,6 +357,7 @@ def get_seedev_gold_ann_set(goldpath, entitytype, pairtype):
                         targetid = targetid.split(":")[-1]
                         source = tid_to_offsets[did + "." + sourceid]
                         target = tid_to_offsets[did + "." + targetid]
-                        gold_relations.add((did, source[:2], target[:2], source[2] + "=>" + target[2]))
+                        gold_relations.add((did, source[:2], target[:2], u"{}={}>{}".format(source[2], ptype, target[2])))
+                        #gold_relations.add((did, source[:2], target[:2], u"{}=>{}".format(source[2], target[2])))
     return gold_offsets, gold_relations
 
