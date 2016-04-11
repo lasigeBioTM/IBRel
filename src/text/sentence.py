@@ -143,9 +143,9 @@ class Sentence(object):
                         if tag.startswith(source):
                             del t.tags[tag]
         for e in to_delete:
-            print "removing {}".format(e)
+            #print "removing {}".format(e)
             self.entities.elist[source].remove(e)
-            print [(ee.start, ee.end) for ee in self.entities.elist[source]]
+            #print [(ee.start, ee.end) for ee in self.entities.elist[source]]
 
 
     def tag_entity(self, start, end, etype, entity=None, source="goldstandard", exclude=None, **kwargs):
@@ -201,7 +201,7 @@ class Sentence(object):
                 else:
                     logging.info("diferent text:|system {} {} |{}|=>|{}| {} {} input|{} {}".format(tlist[0].start, tlist[-1].end, newtext, kwargs["text"],
                                  start, end, self.sid, self.text))
-                    print exclude, self.text[tlist[0].start:tlist[-1].end]
+                    # print exclude, self.text[tlist[0].start:tlist[-1].end]
             #     print "tokens found:", [t.text for t in tlist]
                     # sys.exit()
             # else:
