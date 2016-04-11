@@ -42,11 +42,18 @@ class PubmedDocument(Document):
             sys.exit()
         else:
             root = ET.fromstring(xml.encode("utf-8"))
-            title = root.find('.//ArticleTitle').text
+            title = root.find('.//ArticleTitle')
+            if title is not None:
+                title = title.text
+            else:
+                title = ""
             abstext = root.findall('.//AbstractText')
-            if len(abstext) > 0:
+            if abstext is not None and len(abstext) > 0:
                 abstext = [a.text for a in abstext]
-                abstext = '\n'.join(abstext)
+                if all([abst is not None for abst in abstext]):
+                    abstext = '\n'.join(abstext)
+                else:
+                    abstext = ""
             else:
                 print "Abstract not found:", title
                 print xml[:50]

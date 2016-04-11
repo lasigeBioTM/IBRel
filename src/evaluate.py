@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-from __future__ import division, unicode_literals
-
+from __future__ import division
 import argparse
 import cPickle as pickle
 import codecs
@@ -132,7 +131,7 @@ def get_report(results, corpus, getwords=True):
         if did not in report:
             report[did] = []
         if getwords:
-            line = did + '\t' + start + ":" + end + '\t' + tokentext
+            line = u"{}\t{}:{}\t{}".format(did, start, end, tokentext)
         else:
             line = did + '\t' + start + ":" + end
         report[did].append(line)
@@ -183,8 +182,8 @@ def get_relations_results(results, model, gold_pairs, ths, rules, compare_text=T
     pcount = 0
     ptrue = 0
     npairs = 0
-    for did in results.corpus.documents:
-        npairs += len(results.document_pairs[did].pairs)
+    for did in results.document_pairs:
+        # npairs += len(results.document_pairs[did].pairs)
         for p in results.document_pairs[did].pairs:
             pcount += 1
             if p.recognized_by.get(model) == 1:
@@ -192,7 +191,8 @@ def get_relations_results(results, model, gold_pairs, ths, rules, compare_text=T
                 if val:
                     ptrue += 1
                     pair = (did, (p.entities[0].dstart, p.entities[0].dend), (p.entities[1].dstart, p.entities[1].dend),
-                            "{}=>{}".format(p.entities[0].text, p.entities[1].text))
+                            u"{}={}>{}".format(p.entities[0].text, p.relation, p.entities[1].text))
+                             # u"{}=>{}".format(p.entities[0].text, p.entities[1].text))
                     system_pairs.append(pair)
     # print random.sample(system_pairs, 5)
     # print random.sample(gold_pairs, 5)

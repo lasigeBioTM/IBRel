@@ -115,7 +115,7 @@ class ReModel(object):
                 # tokens = tokens[:first_token] + ["#candidateb#"] + tokens[first_token:]
                 # tokens = tokens[:first_token] + ["#candidateb#"] + tokens[first_token+1:]
                 tokens[first_token] = "#candidateb#"
-                # tokens[-1] = "#candidateb#"
+                #tokens[-1] = "#candidateb#"
                 # pos = pos[:first_token] + [pos[first_token]] + pos[first_token:]
                 # lemmas = lemmas[:first_token] + [lemmas[first_token]] + lemmas[first_token:]
                 #ner = ner[:first_token] + [ner[first_token]] + ner[first_token:]
