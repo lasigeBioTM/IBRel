@@ -17,6 +17,7 @@ from classification.ner.simpletagger import BiasModel, feature_extractors
 from classification.ner.stanfordner import StanfordNERModel
 from classification.ner.taggercollection import TaggerCollection
 from classification.results import ResultsNER, ResultSetNER
+from classification.rext.crfre import CrfSuiteRE
 from classification.rext.jsrekernel import JSREKernel
 from classification.rext.multir import MultiR
 from classification.rext.rules import RuleClassifier
@@ -196,15 +197,17 @@ considered when coadministering with megestrol acetate.''',
             models.train_types()
         elif options.actions == "train_relations":
             if options.kernel == "jsre":
-                model = JSREKernel(corpus, (options.etype1, options.etype2))
+                model = JSREKernel(corpus, options.ptype)
             elif options.kernel == "svmtk":
-                model = SVMTKernel(corpus, (options.etype1, options.etype2))
+                model = SVMTKernel(corpus, options.ptype)
             elif options.kernel == "stanfordre":
-                model = StanfordRE(corpus, (options.etype1, options.etype2))
+                model = StanfordRE(corpus, options.ptype)
             elif options.kernel == "multir":
-                model = MultiR(corpus, (options.etype1, options.etype2))
+                model = MultiR(corpus, options.ptype)
             elif options.kernel == "scikit":
-                model = ScikitRE(corpus, (options.etype1, options.etype2))
+                model = ScikitRE(corpus, options.ptype)
+            elif options.kernel == "crf":
+                model = CrfSuiteRE(corpus, options.ptype)
             model.train()
         # testing
         elif options.actions == "test":
@@ -271,15 +274,17 @@ considered when coadministering with megestrol acetate.''',
             final_results.save(options.output[1] + ".pickle")
         elif options.actions == "test_relations":
             if options.kernel == "jsre":
-                model = JSREKernel(corpus, (options.etype1, options.etype2))
+                model = JSREKernel(corpus, options.ptype, train=False)
             elif options.kernel == "svmtk":
-                model = SVMTKernel(corpus, (options.etype1, options.etype2))
+                model = SVMTKernel(corpus, options.ptype)
             elif options.kernel == "rules":
                 model = RuleClassifier(corpus, options.ptype)
             elif options.kernel == "stanfordre":
                 model = StanfordRE(corpus, options.ptype)
             elif options.kernel == "scikit":
-                model = ScikitRE(corpus, (options.etype1, options.etype2))
+                model = ScikitRE(corpus, options.ptype)
+            elif options.kernel == "crf":
+                model = CrfSuiteRE(corpus, options.ptype, test=True)
             model.load_classifier()
             model.test()
             results = model.get_predictions(corpus)
