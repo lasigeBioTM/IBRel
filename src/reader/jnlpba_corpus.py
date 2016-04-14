@@ -42,6 +42,7 @@ class JNLPBACorpus(Corpus):
                     logging.debug("starting new document:" + did)
                     sentence_text = ""
                     doc_offset = 0
+                    sentences = []
                 elif l.strip() == "" and sentence_text != "": # new sentence
                     logging.debug("creating sentence...")
                     sid = did + ".s" + str(len(sentences))
