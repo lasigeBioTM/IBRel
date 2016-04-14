@@ -1,7 +1,14 @@
 import logging
 import re
+import MySQLdb
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + '../..'))
+from config.config import go_conn as db
 from config import config
 from text.entity import Entity
+from text.token2 import Token2
 
 __author__ = 'Andre'
 prot_words = set()
@@ -64,3 +71,36 @@ class ProteinEntity(Entity):
         if "fixdash" in rules:
             self.text = self.text.replace("-", "")
         return True
+
+    def normalize(self):
+        term = MySQLdb.escape_string(self.text)
+        # adjust - adjust the final score
+        match = ()
+        cur = db.cursor()
+        # synonym
+        query = """SELECT DISTINCT t.acc, t.name, s.term_synonym
+                       FROM term t, term_synonym s
+                       WHERE s.term_synonym LIKE %s and s.term_id = t.id
+                       ORDER BY t.ic ASC
+                       LIMIT 1;""" # or DESC
+            # print "QUERY", query
+
+        cur.execute(query, ("%" + term + "%",))
+
+        res = cur.fetchone()
+        if res is not None:
+            print res
+        else:
+            query = """SELECT DISTINCT t.acc, t.name, p.name
+                       FROM term t, prot p, prot_GOA_BP a
+                       WHERE p.name LIKE %s and p.id = a.prot_id and a.term_id = t.id
+                       ORDER BY t.ic ASC
+                       LIMIT 1;""" # or DESC
+            cur.execute(query, (term,))
+            res = cur.fetchone()
+            print res
+
+token = Token2("IL-2")
+token.start, token.dstart, token.end, token.dend = 0,0,0,0
+p = ProteinEntity([token], "", text=sys.argv[1])
+p.normalize()
