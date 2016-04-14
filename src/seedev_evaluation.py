@@ -9,6 +9,7 @@ import sys
 from pycorenlp import StanfordCoreNLP
 
 from classification.results import ResultsRE
+from classification.rext.crfre import CrfSuiteRE
 from classification.rext.jsrekernel import JSREKernel
 from classification.rext.multir import MultiR
 from classification.rext.rules import RuleClassifier
@@ -44,10 +45,7 @@ def write_seedev_results(results, path):
 def main():
     start_time = time.time()
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument("actions", default="classify",  help="Actions to be performed.",
-                      choices=["load_corpus", "annotate", "classify", "write_results", "write_goldstandard",
-                               "train", "test", "train_multiple", "test_multiple", "train_matcher", "test_matcher",
-                               "crossvalidation", "train_relations", "test_relations"])
+    parser.add_argument("actions", default="classify",  help="Actions to be performed.")
     parser.add_argument("--goldstd", default="", dest="goldstd", nargs="+",
                       help="Gold standard to be used. Will override corpus, annotations",
                       choices=config.paths.keys())
@@ -109,22 +107,24 @@ def main():
         # corpus.get_invalid_sentences()
         corpus.save(config.paths[options.goldstd]["corpus"])
     else:
-        corpus = Corpus("corpus/" + "&".join(options.goldstd))
-        for g in options.goldstd:
-            corpus_path = config.paths[g]["corpus"]
-            logging.info("loading corpus %s" % corpus_path)
-            this_corpus = pickle.load(open(corpus_path, 'rb'))
-            corpus.documents.update(this_corpus.documents)
+        #corpus = SeeDevCorpus("corpus/" + "&".join(options.goldstd))
+        corpus_path = config.paths[options.goldstd[0]]["corpus"]
+        logging.info("loading corpus %s" % corpus_path)
+        corpus = pickle.load(open(corpus_path, 'rb'))
 
-        if options.actions == "train_relations":
+        if options.actions == "add_sentences":
+            corpus.add_more_sentences(options.models)
+
+        elif options.actions == "train_relations":
             if options.ptype == "all":
                 ptypes = config.pair_types.keys()
+                # ptypes = config.event_types.keys()
             else:
                 ptypes = [options.ptype]
             for p in ptypes:
                 print p
                 if options.kernel == "jsre":
-                    model = JSREKernel(corpus, p)
+                    model = JSREKernel(corpus, p, train=True)
                 elif options.kernel == "svmtk":
                     model = SVMTKernel(corpus, p)
                 elif options.kernel == "stanfordre":
@@ -133,12 +133,15 @@ def main():
                     model = MultiR(corpus, p)
                 elif options.kernel == "scikit":
                     model = ScikitRE(corpus, p)
+                elif options.kernel == "crf":
+                    model = CrfSuiteRE(corpus, p)
                 model.train()
         # testing
 
         elif options.actions == "test_relations":
             if options.ptype == "all":
                 ptypes = config.pair_types.keys()
+                # ptypes = config.event_types.keys()
                 all_results = ResultsRE(options.output[1])
                 all_results.corpus = corpus
                 all_results.path = options.output[1]
@@ -147,7 +150,7 @@ def main():
             for p in ptypes:
                 print p
                 if options.kernel == "jsre":
-                    model = JSREKernel(corpus, p)
+                    model = JSREKernel(corpus, p, train=False)
                 elif options.kernel == "svmtk":
                     model = SVMTKernel(corpus, p)
                 elif options.kernel == "rules":
@@ -156,11 +159,13 @@ def main():
                     model = StanfordRE(corpus, p)
                 elif options.kernel == "scikit":
                     model = ScikitRE(corpus, p)
+                elif options.kernel == "crf":
+                    model = CrfSuiteRE(corpus, p, test=True)
                 model.load_classifier()
                 model.test()
                 results = model.get_predictions(corpus)
-                results.save(options.output[1] + "_" + p.lower() + ".pickle")
-                results.load_corpus(options.goldstd[0])
+                # results.save(options.output[1] + "_" + p.lower() + ".pickle")
+                # results.load_corpus(options.goldstd[0])
                 results.path = options.output[1] + "_" + p.lower()
                 goldset = get_gold_ann_set(config.paths[options.goldstd[0]]["format"], config.paths[options.goldstd[0]]["annotations"],
                                        "all", p, config.paths[options.goldstd[0]]["text"])
@@ -175,7 +180,56 @@ def main():
                                        "all", "all", config.paths[options.goldstd[0]]["text"])
                 get_relations_results(all_results, options.models, goldset[1],[], [])
                 write_seedev_results(all_results, options.output[1])
-
+        elif options.actions == "train_sentences": #and evaluate
+            if options.ptype == "all":
+                avg = [0,0,0]
+                for p in config.pair_types:
+                    print p
+                    tps, fps, fns = corpus.train_sentence_classifier(p)
+                    if tps == 0 and fns == 0:
+                        precision, recall, fscore = 0, 1, 1
+                    else:
+                        precision = 1.0 * tps / (fps + tps)
+                        recall = 1.0 * fns / (fns + tps)
+                        fscore = 2.0 * precision * recall / (recall + precision)
+                    print precision, recall, fscore
+                    avg[0] += tps
+                    avg[1] += fps
+                    avg[2] += fns
+                #print [a/len(config.pair_types) for a in avg]
+                precision = 1.0 * avg[1] / (avg[0] + avg[1])
+                recall = 1.0 * avg[2] / (avg[0] + avg[2])
+                fscore = 2.0 * precision * recall / (recall + precision)
+                print precision, recall, fscore
+            else:
+                res = corpus.train_sentence_classifier(options.ptype)
+                print res
+            corpus.save(config.paths[options.goldstd[0]]["corpus"])
+        elif options.actions == "test_sentences": #and evaluate
+            if options.ptype == "all":
+                avg = [0,0,0]
+                for p in config.pair_types:
+                    print p
+                    tps, fps, fns = corpus.test_sentence_classifier(p)
+                if tps == 0 and fns == 0:
+                    precision, recall, fscore = 0, 1, 1
+                else:
+                    precision = 1.0 * tps / (fps + tps)
+                    recall = 1.0 * fns / (fns + tps)
+                    fscore = 2.0 * precision * recall / (recall + precision)
+                print precision, recall, fscore
+                avg[0] += tps
+                avg[1] += fps
+                avg[2] += fns
+            #print [a/len(config.pair_types) for a in avg]
+            precision = 1.0 * avg[1] / (avg[0] + avg[1])
+            recall = 1.0 * avg[2] / (avg[0] + avg[2])
+            fscore = 2.0 * precision * recall / (recall + precision)
+            print precision, recall, fscore
+        else:
+            res = corpus.test_sentence_classifier(options.ptype)
+            print res
+        corpus.save(config.paths[options.goldstd[0]]["corpus"])
 
     total_time = time.time() - start_time
     logging.info("Total time: %ss" % total_time)
