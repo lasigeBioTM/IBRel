@@ -30,6 +30,7 @@ from reader.chemdner_corpus import ChemdnerCorpus
 from reader.ddi_corpus import DDICorpus
 from reader.genia_corpus import GeniaCorpus
 from reader.gpro_corpus import GproCorpus
+from reader.jnlpba_corpus import JNLPBACorpus
 from reader.mirna_corpus import MirnaCorpus
 from reader.mirtext_corpus import MirtexCorpus
 from reader.pubmed_corpus import PubmedCorpus
@@ -78,6 +79,9 @@ def load_corpus(goldstd, corpus_path, corpus_format, corenlp_client):
         # corpus.path = ".".join(config.paths[options.goldstd]["corpus"].split(".")[:-1])
     elif corpus_format == "transmir":
         corpus = TransmirCorpus(corpus_path)
+        corpus.load_corpus(corenlp_client)
+    elif corpus_format == "jnlpba":
+        corpus = JNLPBACorpus(corpus_path)
         corpus.load_corpus(corenlp_client)
     return corpus
 
