@@ -19,10 +19,13 @@ class Entity(object):
         self.end = tokens[-1].end
         self.dstart = tokens[0].dstart
         self.dend = tokens[-1].dend
+        self.exclude = None
+        self.dexclude = None
         self.recognized_by = []
         self.subentities = []
-        self.targets = []
+        self.targets = [] # targets should be (eid, relationtype)
         self.score = kwargs.get("score", 0)
+        self.original_id = kwargs.get("original_id")
         # logging.info("created entity {} with score {}".format(self.text, self.score))
         # print "entity", args, kwargs
 
@@ -234,3 +237,9 @@ class Entities(object):
                     else:
                         logging.debug("did not add {}".format(e.text))
         return spans
+
+    def get_entity(self, eid, source="goldstandard"):
+        for e in self.elist[source]:
+            if e.eid == eid:
+                return e
+        print "entity not found:", eid, source

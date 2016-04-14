@@ -87,8 +87,8 @@ def run_crossvalidation(goldstd_list, corpus, model, cv, crf="stanford", entity_
         test_goldset = set()
         for gs in goldstd_list:
             goldset = get_gold_ann_set(config.paths[gs]["format"], config.paths[gs]["annotations"], entity_type,
-                                       config.paths[gs]["text"] )
-            for g in goldset:
+                                       "pairtype", config.paths[gs]["text"] )
+            for g in goldset[0]:
                 if g[0] in testids:
                     test_goldset.add(g)
         precision, recall = get_results(final_results, basemodel, test_goldset, {}, [])

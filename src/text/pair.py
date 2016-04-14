@@ -15,6 +15,7 @@ class Pair(object):
         self.recognized_by = {}
         self.score = 0
 
+
     def get_dic(self):
         dic = {}
         dic["eid1"] = self.eids[0]

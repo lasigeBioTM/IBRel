@@ -143,12 +143,12 @@ class Sentence(object):
                         if tag.startswith(source):
                             del t.tags[tag]
         for e in to_delete:
-            print "removing {}".format(e)
+            #print "removing {}".format(e)
             self.entities.elist[source].remove(e)
-            print [(ee.start, ee.end) for ee in self.entities.elist[source]]
+            #print [(ee.start, ee.end) for ee in self.entities.elist[source]]
 
 
-    def tag_entity(self, start, end, etype, entity=None, source="goldstandard", **kwargs):
+    def tag_entity(self, start, end, etype, entity=None, source="goldstandard", exclude=None, **kwargs):
         """Find the tokens that match this entity. start and end are relative to the sentence.
            Totalchars is the offset of the sentence on the document."""
         tlist = []
@@ -164,26 +164,56 @@ class Sentence(object):
                 break
             elif t.start == end+1:
                 nextword = t.text
+            exclude_list = []
+            if exclude is not None:
+                for t in tlist:
+                    for e in exclude:
+                        if t.start >= e[0] and t.end <= e[1]-1:
+                            exclude_list.append(t.tid)
+            tlist = [t for t in tlist if t.tid not in exclude_list]
         if tlist:
-            newtext = self.text[tlist[0].start:tlist[-1].end]
+            if exclude is not None:
+                newtext = self.text[tlist[0].start:exclude[0][0]]
+                #print self.text[exclude[0][0]:exclude[0][1]], exclude
+                last_exclude = exclude[0]
+                for e in exclude[1:]:
+                    if not self.text[e[1]].isspace() and not newtext[-1].isspace():
+                        newtext += " "
+                    newtext += self.text[last_exclude[1]:e[0]]
+                    last_exclude = e
+                if not self.text[exclude[-1][1]].isspace() and not newtext[-1].isspace():
+                    newtext += " "
+                newtext += self.text[exclude[-1][1]:tlist[-1].end]
+                # self.text[exclude[1]:tlist[-1].end]
+            else:
+                newtext = self.text[tlist[0].start:tlist[-1].end]
             if entity:
                 entity.text = newtext
             if "text" in kwargs and newtext != kwargs["text"]:
                 if newtext not in kwargs["text"] and kwargs["text"] not in newtext:
-                    logging.info("not added, text does not match: {}=>{}".format(newtext, kwargs["text"]))
-                    return None
+                    logging.info("text does not match: {}=>{}".format(newtext, kwargs["text"]))
+                    print exclude, self.text[tlist[0].start:tlist[-1].end]
+                    print self.text[tlist[0].start:exclude[0][0]]
+                    print self.text[exclude[0][0]:exclude[0][1]]
+                    print self.text[exclude[0][1]:tlist[-1].end]
+
+                    # return None
                 else:
                     logging.info("diferent text:|system {} {} |{}|=>|{}| {} {} input|{} {}".format(tlist[0].start, tlist[-1].end, newtext, kwargs["text"],
                                  start, end, self.sid, self.text))
+                    # print exclude, self.text[tlist[0].start:tlist[-1].end]
             #     print "tokens found:", [t.text for t in tlist]
-                # sys.exit()
+                    # sys.exit()
             # else:
             # print "found the tokens!", start, end, kwargs["text"], self.sid
+
             if self.entities.elist.get(source):
                 eid = self.sid + ".e" + str(len(self.entities.elist[source]))
             else:
                 eid = self.sid + ".e0"
             if entity is None:
+                if "text" in kwargs:
+                    newtext = kwargs["text"]
                 entity = create_entity(tlist, self.sid, did=self.did, text=newtext, score=kwargs.get("score"),
                                        etype=etype, eid=eid, subtype=kwargs.get("subtype"),
                                        original_id=kwargs.get("original_id"), nextword=nextword)

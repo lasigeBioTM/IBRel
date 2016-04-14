@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 import os
 import logging
+import random
 import sys
 from classification.rext.kernelmodels import ReModel
 from subprocess import Popen, PIPE
@@ -8,20 +9,27 @@ import platform
 import itertools
 import codecs
 from classification.results import ResultsRE
+from config import config
+from text.pair import Pairs
 
 
 class JSREKernel(ReModel):
 
-    def __init__(self, corpus, relationtype, modelname="slk_classifier.model"):
+    def __init__(self, corpus, relationtype, modelname="ratio_slk_classifier.model", train=False):
         super(JSREKernel, self).__init__()
-        self.modelname = modelname
+        self.modelname = relationtype + "_" + modelname
+        self.pairtype = relationtype
         self.test_jsre = []
         self.pairs = {}
-        self.generatejSREdata(corpus, modelname, pairtypes=relationtype)
+        self.resultsfile = None
+        self.examplesfile = None
+        self.generatejSREdata(corpus, train=train, pairtype=relationtype)
 
-    def load_classifier(self, inputfile="slk_classifier.model.txt", outputfile="jsre_results.txt"):
-        if os.path.isfile(self.temp_dir + outputfile):
-            os.remove(self.temp_dir + outputfile)
+    def load_classifier(self, outputfile="jsre_results.txt"):
+        self.resultsfile = self.temp_dir + self.pairtype + "_" + outputfile
+        self.examplesfile = self.temp_dir + self.modelname + ".txt"
+        if os.path.isfile(self.temp_dir + self.pairtype + "_" + outputfile):
+            os.remove(self.temp_dir + self.pairtype + "_" + outputfile)
         if not os.path.isfile(self.basedir + self.modelname):
             print "model", self.basedir + self.modelname, "not found"
             sys.exit()
@@ -34,7 +42,8 @@ class JSREKernel(ReModel):
         libs = ["libsvm-2.8.jar", "log4j-1.2.8.jar", "commons-digester.jar", "commons-beanutils.jar", "commons-logging.jar", "commons-collections.jar"]
         classpath = 'bin/jsre/jsre-1.1/bin'+ sep + sep.join(["bin/jsre/jsre-1.1/lib/" + l for l in libs])
         self.test_jsre = ['java', '-mx4g', '-classpath', classpath, "org.itc.irst.tcc.sre.Predict",
-                          self.temp_dir + inputfile, self.basedir + self.modelname, self.temp_dir + outputfile]
+                          self.examplesfile, self.basedir + self.modelname,
+                          self.resultsfile]
         #print ' '.join(jsrecommand)
 
     def train(self):
@@ -51,10 +60,10 @@ class JSREKernel(ReModel):
         libs = ["libsvm-2.8.jar", "log4j-1.2.8.jar", "commons-digester.jar", "commons-beanutils.jar",
                 "commons-logging.jar", "commons-collections.jar"]
         classpath = 'bin/jsre/jsre-1.1/bin/' + sep + sep.join(["bin/jsre/jsre-1.1/lib/" + l for l in libs])
-        jsrecall = ['java', '-mx3g', '-classpath', classpath, "org.itc.irst.tcc.sre.Train",
-                          "-k",  "SL", "-n", "4", "-w", "3", "-m", "3072", #  "-c", str(1),
+        jsrecall = ['java', '-mx8g', '-classpath', classpath, "org.itc.irst.tcc.sre.Train",
+                          "-k",  "SL", "-n", "2", "-w", "2", "-m", "3072",  # "-c", str(2),
                           self.temp_dir + self.modelname + ".txt", self.basedir + self.modelname]
-        print " ".join(jsrecall)
+        # print " ".join(jsrecall)
         jsrecall = Popen(jsrecall, stdout=PIPE, stderr=PIPE)
         res  = jsrecall.communicate()
         if not os.path.isfile(self.basedir + self.modelname):
@@ -72,7 +81,7 @@ class JSREKernel(ReModel):
 
 
     def test(self, outputfile="jsre_results.txt"):
-        print " ".join(self.test_jsre)
+        # print " ".join(self.test_jsre)
         jsrecall = Popen(self.test_jsre, stdout=PIPE, stderr=PIPE)
         res = jsrecall.communicate()
         #logging.debug(res[0].strip().split('\n')[-2:])
@@ -84,8 +93,14 @@ class JSREKernel(ReModel):
         logging.debug("done.")
 
     def get_sentence_instance(self, sentence, e1id, e2id, pair):
+
         tokens = [t for t in sentence.tokens]
+        #start, end = pair[0].tokens[0].order, pair[1].tokens[-1].order
+        #if pair[0].tokens[0].order > pair[1].tokens[-1].order:
+        #    start, end = end, start
+        #tokens = [t for t in sentence.tokens[start:end]]
         tokens_text = [t.text for t in tokens]
+        # print tokens_text
         pos = [t.pos for t in tokens]
         lemmas = [t.lemma for t in tokens]
         ner = [t.tag for t in tokens]
@@ -93,63 +108,103 @@ class JSREKernel(ReModel):
         return self.blind_all_entities(tokens_text, sentence.entities.elist["goldstandard"],
                                        [e1id, e2id], pos, lemmas, ner)
 
-    def generatejSREdata(self, corpus, savefile, train=False, pairtypes=("mirna", "protein")):
-        if os.path.isfile(self.temp_dir + savefile + ".txt"):
+    def generatejSREdata(self, corpus, train=False, pairtype="all"):
+        if os.path.isfile(self.temp_dir + self.modelname + ".txt"):
             print "removed old data"
-            os.remove(self.temp_dir + savefile + ".txt")
+            os.remove(self.temp_dir + self.modelname + ".txt")
         examplelines = []
         # get all entities of this document
         # doc_entities = []
+        pairtypes = (config.pair_types[pairtype]["source_types"], config.pair_types[pairtype]["target_types"])
+        # pairtypes = (config.event_types[pairtype]["source_types"], config.event_types[pairtype]["target_types"])
         pcount = 0
         truepcount = 0
+        strue = 0
+        sfalse = 0
+        skipped = 0
         for sentence in corpus.get_sentences("goldstandard"):
+        #for did in corpus.documents:
+            did = sentence.did
+            #doc_entities = corpus.documents[did].get_entities("goldstandard")
             examplelines = []
+            pos_sentences = set()
+            sids = []
+            # print len(corpus.type_sentences[pairtype])
             sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
             # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
-            for pair in itertools.combinations(sentence_entities, 2):
-                if pair[0].type == pairtypes[0] and pair[1].type == pairtypes[1] or pair[1].type == pairtypes[0] and pair[0].type == pairtypes[1]:
+            for pair in itertools.permutations(sentence_entities, 2):
+                # print pair[0].type, pair[1].type, pairtypes
+                sid1 = pair[0].eid.split(".")[-2]
+                sid2 = pair[1].eid.split(".")[-2]
+                # if pairtype in corpus.type_sentences and pair[0].sid not in corpus.type_sentences[pairtype]:
+                #     continue
+                sids.append((pair[0].sid, pair[0].sid))
+                sn1 = int(sid1[1:])
+                sn2 = int(sid2[1:])
+                if pair[0].start == pair[1].start or pair[0].end == pair[1].end:
+                    continue
+                if pairtype in ("Has_Sequence_Identical_To", "Is_Functionally_Equivalent_To") and pair[0].type != pair[1].type:
+                    continue
+                if pair[0].type in pairtypes[0] and pair[1].type in pairtypes[1]: # or\
+                   # pair[1].type in pairtypes[0] and pair[0].type in pairtypes[1]:
                     # logging.debug(pair)
-                    if pair[0].type == pairtypes[0]:
-                        e1id = pair[0].eid
-                        e2id = pair[1].eid
+                    """if pair[0].type == pairtypes[0]:
+
                     else:
                         e1id = pair[1].eid
                         e2id = pair[0].eid
-                        pair = (pair[1], pair[0])
-                    pid = sentence.did + ".p" + str(pcount)
+                        pair = (pair[1], pair[0])"""
+                    # print e1id, e2id
+                    e1id = pair[0].eid
+                    e2id = pair[1].eid
+                    pid = did + ".p" + str(pcount)
                     # self.pairs[pid] = (e1id, e2id)
                     self.pairs[pid] = pair
                     # sentence1 = corpus.documents[did].get_sentence(pair[0].sid)
                     #sentence1 = sentence
                     # logging.info("{}  {}-{} => {}-{}".format(sentence.sid, e1id, pair[0].text, e2id, pair[1].text))
+                    #sentence = corpus.documents[did].get_sentence(did + "." + sid1)
                     tokens_text, pos, lemmas, ner = self.get_sentence_instance(sentence, e1id, e2id, pair)
-
+                    # print tokens_text, pair[0].text, pair[0].start, pair[1].text, pair[1].start, pair[0].start == pair[1].start
                     # logging.debug("{} {} {} {}".format(len(pair_text), len(pos), len(lemmas), len(ner)))
                     #logging.debug("generating jsre lines...")
                     #for i in range(len(pairinstances)):
                         #body = generatejSRE_line(pairinstances[i], pos, stems, ner)
-                    if pair[0].sid != pair[1].sid:
-                        sentence2 = corpus.documents[sentence.did].get_sentence(pair[1].sid)
-                        tokens_text2, pos2, lemmas2, ner2 = self.get_sentence_instance(sentence2, e1id, e2id, pair)
-                        tokens_text += tokens_text2
-                        pos += pos2
-                        ner += ner2
-                        lemmas += lemmas2
 
                     trueddi = 0
-                    if e2id in pair[0].targets:
+                    #print (e2id, pairtype), pair[0].targets
+                    if (e2id, pairtype) in pair[0].targets:
+                    #if any((pair[1].eid, pt) in pair[0].targets for pt in config.event_types[self.pairtype]["subtypes"]):
                         trueddi = 1
                         truepcount += 1
-                    body = self.generatejSRE_line(tokens_text, pos, lemmas, ner)
-                    examplelines.append(str(trueddi) + '\t' + pid + '.i' + '0\t' + body + '\n')
-                    pcount += 1
+                        strue += 1
+                    else:
+                        sfalse += 1
+                    # true/total ratio
+                    if train is True and trueddi == 0 and 1.0*strue/(strue+sfalse) < 0.01:
+                        sfalse -= 1
+                        skipped += 1
+                        continue
+
+                    else:
+
+                        #pos_sentences.add(pair[0].sid)
+                        #pos_sentences.add(pair[1].sid)
+                        body = self.generatejSRE_line(tokens_text, pos, lemmas, ner)
+                        examplelines.append(str(trueddi) + '\t' + pid + '.i' + '0\t' + body + '\n')
+                        pcount += 1
+            # print strue, sfalse, skipped
+            #for il, l in enumerate(examplelines):
+
             logging.debug("writing {} lines to file...".format(len(examplelines)))
-            with codecs.open(self.temp_dir + savefile + ".txt", 'a', "utf-8") as trainfile:
-                for l in examplelines:
-                    #print l
+            with codecs.open(self.temp_dir + self.modelname + ".txt", 'a', "utf-8") as trainfile:
+                for il, l in enumerate(examplelines):
+                    # print sids[il], random.sample(pos_sentences, 1)
+                    #if sids[il][0] in pos_sentences or  sids[il][1] in pos_sentences or not train:
                     trainfile.write(l)
+
                 # logging.info("wrote " + temp_dir + savefile)
-        logging.info("True/total relations:{}/{} ({})".format(truepcount, pcount, str(1.0*truepcount/pcount)))
+        logging.info("True/total relations:{}/{} ({})".format(truepcount, pcount, str(1.0*truepcount/(pcount+1))))
 
     def generatejSRE_line(self, pairtext, pos, lemmas, ner):
         candidates = [False,False]
@@ -208,26 +263,29 @@ class JSREKernel(ReModel):
         if not candidates[0]:
             logging.debug("missing first candidate on pair ")
             elements = ["0&&#candidate#&&#candidate#&&-None-&&ENTITY&&T"] + [str(n+1) + e[1:] for n, e in enumerate(elements)]
-            # print elements
+            # print pairtext
+            # sys.exit()
         if not candidates[1]:
             logging.debug("missing second candidate on pair")
             elements.append(str(it+1) + "&&#candidate#&&#candidate#&&-None-&&ENTITY&&T")
-            # print elements
+            # print pairtext
+            # sys.exit()
         body = " ".join(elements)
         return body
 
-    def get_predictions(self, corpus, examplesfile="slk_classifier.model.txt", resultfile="jsre_results.txt"):
+    def get_predictions(self, corpus):
+        # real_pair_type = config.event_types[self.pairtype]["subtypes"][0]
         #pred_y = []
-        with open(self.temp_dir + resultfile, 'r') as resfile:
+        with open(self.resultsfile, 'r') as resfile:
             pred = resfile.readlines()
 
-        with codecs.open(self.temp_dir + examplesfile, 'r', 'utf-8') as trainfile:
+        with codecs.open(self.examplesfile, 'r', 'utf-8') as trainfile:
             original = trainfile.readlines()
 
         if len(pred) != len(original):
             print "different number of predictions!"
             sys.exit()
-        results = ResultsRE(resultfile)
+        results = ResultsRE(self.resultsfile)
         temppreds = {}
         for i in range(len(pred)):
             original_tsv = original[i].split('\t')
@@ -251,10 +309,13 @@ class JSREKernel(ReModel):
                 p = 1
             if p == 1:
                 did = '.'.join(pid.split(".")[:-1])
-                pair = corpus.documents[did].add_relation(self.pairs[pid][0], self.pairs[pid][1], "pair", relation=True)
+                if did not in results.document_pairs:
+                    results.document_pairs[did] = Pairs()
+                pair = corpus.documents[did].add_relation(self.pairs[pid][0], self.pairs[pid][1], self.pairtype, relation=True)
+                # pair = corpus.documents[did].add_relation(self.pairs[pid][0], self.pairs[pid][1], real_pair_type, relation=True)
                 #pair = self.get_pair(pid, corpus)
                 results.pairs[pid] = pair
-
+                results.document_pairs[did].add_pair(pair, "scikit")
                 # logging.debug("{} - {} SLK: {}".format(pair.entities[0], pair.entities[1], p))
                 #if pair not in temppreds:
                 #    temppreds[pair] = []

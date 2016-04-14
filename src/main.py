@@ -17,6 +17,7 @@ from classification.ner.simpletagger import BiasModel, feature_extractors
 from classification.ner.stanfordner import StanfordNERModel
 from classification.ner.taggercollection import TaggerCollection
 from classification.results import ResultsNER, ResultSetNER
+from classification.rext.crfre import CrfSuiteRE
 from classification.rext.jsrekernel import JSREKernel
 from classification.rext.multir import MultiR
 from classification.rext.rules import RuleClassifier
@@ -29,6 +30,7 @@ from reader.chemdner_corpus import ChemdnerCorpus
 from reader.ddi_corpus import DDICorpus
 from reader.genia_corpus import GeniaCorpus
 from reader.gpro_corpus import GproCorpus
+from reader.jnlpba_corpus import JNLPBACorpus
 from reader.mirna_corpus import MirnaCorpus
 from reader.mirtext_corpus import MirtexCorpus
 from reader.pubmed_corpus import PubmedCorpus
@@ -78,6 +80,9 @@ def load_corpus(goldstd, corpus_path, corpus_format, corenlp_client):
     elif corpus_format == "transmir":
         corpus = TransmirCorpus(corpus_path)
         corpus.load_corpus(corenlp_client)
+    elif corpus_format == "jnlpba":
+        corpus = JNLPBACorpus(corpus_path)
+        corpus.load_corpus(corenlp_client)
     return corpus
 
 def main():
@@ -112,8 +117,6 @@ considered when coadministering with megestrol acetate.''',
                         choices=["stanford", "crfsuite"])
     parser.add_argument("--log", action="store", dest="loglevel", default="WARNING", help="Log level")
     parser.add_argument("--kernel", action="store", dest="kernel", default="svmtk", help="Kernel for relation extraction")
-    parser.add_argument("--etype1", action="store", dest="etype1")
-    parser.add_argument("--etype2", action="store", dest="etype2")
     options = parser.parse_args()
 
     # set logger
@@ -144,7 +147,7 @@ considered when coadministering with megestrol acetate.''',
         corpus = load_corpus(options.goldstd, corpus_path, corpus_format, corenlp_client)
         corpus.save(config.paths[options.goldstd]["corpus"])
         if corpus_ann: #add annotation if it is not a test set
-            corpus.load_annotations(corpus_ann, options.etype)
+            corpus.load_annotations(corpus_ann, options.etype, options.ptype)
             corpus.save(config.paths[options.goldstd]["corpus"])
 
     elif options.actions == "annotate": # rext-add annotation to corpus
@@ -196,15 +199,17 @@ considered when coadministering with megestrol acetate.''',
             models.train_types()
         elif options.actions == "train_relations":
             if options.kernel == "jsre":
-                model = JSREKernel(corpus, (options.etype1, options.etype2))
+                model = JSREKernel(corpus, options.ptype)
             elif options.kernel == "svmtk":
-                model = SVMTKernel(corpus, (options.etype1, options.etype2))
+                model = SVMTKernel(corpus, options.ptype)
             elif options.kernel == "stanfordre":
-                model = StanfordRE(corpus, (options.etype1, options.etype2))
+                model = StanfordRE(corpus, options.ptype)
             elif options.kernel == "multir":
-                model = MultiR(corpus, (options.etype1, options.etype2))
+                model = MultiR(corpus, options.ptype)
             elif options.kernel == "scikit":
-                model = ScikitRE(corpus, (options.etype1, options.etype2))
+                model = ScikitRE(corpus, options.ptype)
+            elif options.kernel == "crf":
+                model = CrfSuiteRE(corpus, options.ptype)
             model.train()
         # testing
         elif options.actions == "test":
@@ -271,15 +276,17 @@ considered when coadministering with megestrol acetate.''',
             final_results.save(options.output[1] + ".pickle")
         elif options.actions == "test_relations":
             if options.kernel == "jsre":
-                model = JSREKernel(corpus, (options.etype1, options.etype2))
+                model = JSREKernel(corpus, options.ptype, train=False)
             elif options.kernel == "svmtk":
-                model = SVMTKernel(corpus, (options.etype1, options.etype2))
+                model = SVMTKernel(corpus, options.ptype)
             elif options.kernel == "rules":
                 model = RuleClassifier(corpus, options.ptype)
             elif options.kernel == "stanfordre":
                 model = StanfordRE(corpus, options.ptype)
             elif options.kernel == "scikit":
-                model = ScikitRE(corpus, (options.etype1, options.etype2))
+                model = ScikitRE(corpus, options.ptype)
+            elif options.kernel == "crf":
+                model = CrfSuiteRE(corpus, options.ptype, test=True)
             model.load_classifier()
             model.test()
             results = model.get_predictions(corpus)

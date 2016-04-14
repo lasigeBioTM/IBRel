@@ -126,7 +126,7 @@ class Corpus(object):
         entities = []
         for d in self.documents:
             for s in self.documents[d].sentences:
-                for e in s.entities.elist:
+                for e in s.entities.elist[source]:
                     entities.append(e)
         return entities
 
