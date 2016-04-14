@@ -113,8 +113,6 @@ considered when coadministering with megestrol acetate.''',
                         choices=["stanford", "crfsuite"])
     parser.add_argument("--log", action="store", dest="loglevel", default="WARNING", help="Log level")
     parser.add_argument("--kernel", action="store", dest="kernel", default="svmtk", help="Kernel for relation extraction")
-    parser.add_argument("--etype1", action="store", dest="etype1")
-    parser.add_argument("--etype2", action="store", dest="etype2")
     options = parser.parse_args()
 
     # set logger
@@ -145,7 +143,7 @@ considered when coadministering with megestrol acetate.''',
         corpus = load_corpus(options.goldstd, corpus_path, corpus_format, corenlp_client)
         corpus.save(config.paths[options.goldstd]["corpus"])
         if corpus_ann: #add annotation if it is not a test set
-            corpus.load_annotations(corpus_ann, options.etype)
+            corpus.load_annotations(corpus_ann, options.etype, options.ptype)
             corpus.save(config.paths[options.goldstd]["corpus"])
 
     elif options.actions == "annotate": # rext-add annotation to corpus

@@ -6,6 +6,7 @@ class Token2(object):
     The 2 is because there's already a token class in NLTK
     """
     def __init__(self, text, **kwargs):
+        # TODO: require start and end and dstart and dend
         self.text = text
         self.sid = kwargs.get("sid")
         self.order = kwargs.get("order")
