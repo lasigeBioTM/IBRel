@@ -273,12 +273,12 @@ paths = {
     'jnlpba_train':{ # pre processed genia corpus
         'text': jnlpba_base + "train/Genia4ERtask2.iob2",
         'annotations': jnlpba_base + "train/Genia4ERtask2.iob2",
-        'corpus': "data/Genia4EReval1.raw.pickle",
+        'corpus': "data/Genia4ERtask1.raw.pickle",
         'format': "jnlpba"
     },
     'jnlpba_test':{
-        'text': jnlpba_base + "test/Genia4EReval1.raw",
-        'annotations': jnlpba_base + "test/Genia4EReval1.iob2",
+        'text': jnlpba_base + "test/Genia4EReval2.iob2",
+        'annotations': jnlpba_base + "test/Genia4EReval2.iob2",
         'corpus': "data/Genia4EReval1.raw.pickle",
         'format': "jnlpba"
     },

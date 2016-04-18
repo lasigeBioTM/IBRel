@@ -13,6 +13,7 @@ import time
 from config import config
 from reader.chemdner_corpus import get_chemdner_gold_ann_set, run_chemdner_evaluation
 from reader.genia_corpus import get_genia_gold_ann_set
+from reader.jnlpba_corpus import get_jnlpba_gold_ann_set
 from reader.mirna_corpus import get_ddi_mirna_gold_ann_set
 from reader.mirtext_corpus import get_mirtex_gold_ann_set
 from reader.seedev_corpus import get_seedev_gold_ann_set
@@ -39,6 +40,8 @@ def get_gold_ann_set(corpus_type, gold_path, entity_type, pair_type, text_path):
         goldset = get_mirtex_gold_ann_set(gold_path, entity_type, pair_type)
     elif corpus_type == "seedev":
         goldset = get_seedev_gold_ann_set(gold_path, entity_type, pair_type)
+    elif corpus_type == "jnlpba":
+        goldset = get_jnlpba_gold_ann_set(gold_path, entity_type)
     return goldset
 
 

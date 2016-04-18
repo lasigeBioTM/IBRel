@@ -90,8 +90,8 @@ class Document(object):
             #corenlpres = corenlpserver.raw_parse(s.text)
             corenlpres = corenlpserver.annotate(s.text.encode("utf8"), properties={
                 'ssplit.eolonly': True,
-                # 'annotators': 'tokenize,ssplit,pos,depparse,parse',
-                'annotators': 'tokenize,ssplit,pos,parse,ner,lemma,depparse',
+                'annotators': 'tokenize,ssplit,pos,ner,lemma',
+                #'annotators': 'tokenize,ssplit,pos,parse,ner,lemma,depparse',
                 'outputFormat': 'json',
             })
             if isinstance(corenlpres, basestring):
@@ -102,7 +102,12 @@ class Document(object):
                 'annotators': 'tokenize,ssplit,pos,ner,lemma',
                 'outputFormat': 'json',
             })
-            s.process_corenlp_sentence(corenlpres)
+            if isinstance(corenlpres, basestring):
+                print "could not process this sentence:", s.text.encode("utf8")
+                print corenlpres
+                continue
+            else:
+                s.process_corenlp_sentence(corenlpres)
 
 
     def tag_chemdner_entity(self, start, end, subtype, **kwargs):

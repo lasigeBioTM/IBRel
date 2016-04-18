@@ -32,28 +32,39 @@ class JNLPBACorpus(Corpus):
             for i,l in enumerate(corpusfile):
                 if l.startswith("###"): # new doc
                     if doc_text != "":
-                        logging.debug("creating document...")
+                        logging.debug("creating document: {}".format(doc_text))
                         newdoc = Document(doc_text, process=False, did=did)
                         newdoc.sentences = sentences[:]
                         newdoc.process_document(corenlpserver, "biomedical")
                         # logging.info(len(newdoc.sentences))
                         self.documents[newdoc.did] = newdoc
+                        doc_text = ""
                     did = "JNLPBA" + l.strip().split(":")[-1]
                     logging.debug("starting new document:" + did)
                     sentence_text = ""
                     doc_offset = 0
                     sentences = []
                 elif l.strip() == "" and sentence_text != "": # new sentence
-                    logging.debug("creating sentence...")
+                    logging.debug("creating mew sentence: {}".format(sentence_text))
                     sid = did + ".s" + str(len(sentences))
                     this_sentence = Sentence(sentence_text, offset=doc_offset, sid=sid, did=did)
                     doc_offset += len(sentence_text) + 1
                     doc_text += sentence_text + " "
                     sentences.append(this_sentence)
+                    if i == nlines:
+                        logging.debug("creating document: {}".format(doc_text))
+                        newdoc = Document(doc_text, process=False, did=did)
+                        newdoc.sentences = sentences[:]
+                        newdoc.process_document(corenlpserver, "biomedical")
+                        # logging.info(len(newdoc.sentences))
+                        self.documents[newdoc.did] = newdoc
+                        doc_text = ""
+                    # start new sentence
+                    sentence_text = ""
                 else:
-                    logging.debug(str(i) + "/" + str(l))
+                    #logging.debug(str(i) + "/" + str(l))
                     t = l.strip().split("\t")
-                    if sentence_text != " ":
+                    if sentence_text != "":
                         sentence_text += " "
                     #if t[1] == "B-protein"
                     sentence_text += t[0]
@@ -61,65 +72,103 @@ class JNLPBACorpus(Corpus):
             pbar.finish()
 
     def load_annotations(self, ann_dir, etype, ptype):
-        with codecs.open(ann_dir, 'r', "utf-8") as annfile:
+        added = True
+        with codecs.open(self.path, 'r', "utf-8") as corpusfile:
+            doc_text = ""
             sentences = []
-            for l in annfile:
+            for i, l in enumerate(corpusfile):
                 if l.startswith("###"):  # new doc
+                    if doc_text != "":
+                        # logging.info(len(newdoc.sentences))
+                        doc_text = ""
                     did = "JNLPBA" + l.strip().split(":")[-1]
+                    logging.debug("starting new document:" + did)
                     sentence_text = ""
+                    sentence_entities = []
+                    doc_offset = 0
+                    sentences = []
                 elif l.strip() == "" and sentence_text != "":  # new sentence
+                    logging.debug("creating mew sentence: {}".format(sentence_text))
                     sid = did + ".s" + str(len(sentences))
                     this_sentence = self.documents[did].get_sentence(sid)
+                    if not added: # in case the last token was an entity
+                        sentence_entities.append((estart, eend, entity_text))
+                        added = True
+                    print sentence_entities
+                    for e in sentence_entities:
+                        logging.debug("adding this entity: {}".format(e[2]))
+                        eid = this_sentence.tag_entity(e[0], e[1], etype,
+                                                  text=e[2])
+                        if eid is None:
+                            print "did not add this entity: {}".format(e[2])
+                    doc_offset += len(sentence_text) + 1
+                    doc_text += sentence_text + " "
                     sentences.append(this_sentence)
+                    # start new sentence
+                    sentence_text = ""
+                    sentence_entities = []
                 else:
-                    t = l.strip().split("\t")
-                    if sentence_text != " ":
+                    # logging.debug(str(i) + "/" + str(l))
+                    if sentence_text != "":
                         sentence_text += " "
-                    if t[1] == "B-" + etype:
+                    t = l.strip().split("\t")
+                    if len(t) > 1 and t[1] == "B-" + etype:
                         estart = len(sentence_text)
                         eend = estart + len(t[0])
                         entity_text = t[0]
                         added = False
-                    elif t[1] == "I-" + etype:
+                    elif len(t) > 1 and  t[1] == "I-" + etype:
                         eend += 1 + len(t[0])
                         entity_text += " " + t[0]
                     else: # not B- I-
                         if not added:
-                            eid = this_sentence.tag_entity(estart, eend, etype,
-                                                           text=entity_text)
-                            if eid is None:
-                                print "did not add this entity: {}".format(entity_text)
+                            sentence_entities.append((estart, eend, entity_text))
                             added = True
-                    if sentence_text != "":
-                        sentence_text += " "
                     sentence_text += t[0]
 
-def get_genia_gold_ann_set(goldann, etype):
+def get_jnlpba_gold_ann_set(goldann, etype):
     gold_offsets = set()
-    with codecs.open(goldann, 'r', "utf-8") as annfile:
+    added = True
+    with codecs.open(goldann, 'r', "utf-8") as corpusfile:
+        doc_text = ""
         sentences = []
-        for l in annfile:
+        for i, l in enumerate(corpusfile):
             if l.startswith("###"):  # new doc
+                if doc_text != "":
+                    # logging.info(len(newdoc.sentences))
+                    doc_text = ""
                 did = "JNLPBA" + l.strip().split(":")[-1]
+                logging.debug("starting new document:" + did)
                 sentence_text = ""
+                sentence_entities = []
+                doc_offset = 0
+                sentences = []
             elif l.strip() == "" and sentence_text != "":  # new sentence
-                sid = did + ".s" + str(len(sentences))
+                logging.debug("creating mew sentence: {}".format(sentence_text))
+                if not added:  # in case the last token was an entity
+                    gold_offsets.add((did, doc_offset + estart, doc_offset + eend, entity_text))
+                    added = True
+                doc_offset += len(sentence_text) + 1
+                doc_text += sentence_text + " "
+                # start new sentence
+                sentence_text = ""
+                sentence_entities = []
             else:
-                t = l.strip().split("\t")
-                if sentence_text != " ":
+                # logging.debug(str(i) + "/" + str(l))
+                if sentence_text != "":
                     sentence_text += " "
-                if t[1] == "B-" + etype:
+                t = l.strip().split("\t")
+                if len(t) > 1 and t[1] == "B-" + etype:
                     estart = len(sentence_text)
                     eend = estart + len(t[0])
                     entity_text = t[0]
                     added = False
-                elif t[1] == "I-" + etype:
+                elif len(t) > 1 and t[1] == "I-" + etype:
                     eend += 1 + len(t[0])
                     entity_text += " " + t[0]
                 else:  # not B- I-
                     if not added:
-                        gold_offsets.add((did, estart, eend, entity_text))
+                        gold_offsets.add((did, doc_offset + estart, doc_offset + eend, entity_text))
                         added = True
-                if sentence_text != "":
-                    sentence_text += " "
                 sentence_text += t[0]
+    return gold_offsets, None

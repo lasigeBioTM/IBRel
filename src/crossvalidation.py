@@ -103,9 +103,9 @@ def run_crossvalidation(goldstd_list, corpus, model, cv, crf="stanford", entity_
     print "recall: average={}  all={}".format(str(ravg), '|'.join([str(rr) for rr in r]))
     all_goldset = set()
     for gs in goldstd_list:
-        goldset = get_gold_ann_set(config.paths[gs]["format"], config.paths[gs]["annotations"], entity_type,
+        goldset = get_gold_ann_set(config.paths[gs]["format"], config.paths[gs]["annotations"], entity_type, "",
                                        config.paths[gs]["text"] )
-        for g in goldset:
+        for g in goldset[0]:
             all_goldset.add(g)
     get_results(all_results, model, all_goldset, {}, [])
 

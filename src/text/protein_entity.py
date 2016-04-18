@@ -100,7 +100,7 @@ class ProteinEntity(Entity):
             res = cur.fetchone()
             print res
 
-token = Token2("IL-2")
-token.start, token.dstart, token.end, token.dend = 0,0,0,0
-p = ProteinEntity([token], "", text=sys.argv[1])
-p.normalize()
+#token = Token2("IL-2")
+#token.start, token.dstart, token.end, token.dend = 0,0,0,0
+#p = ProteinEntity([token], "", text=sys.argv[1])
+#p.normalize()
