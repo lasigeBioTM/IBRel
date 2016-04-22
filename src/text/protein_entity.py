@@ -1,8 +1,12 @@
+import atexit
 import logging
+import pickle
 import re
 import MySQLdb
 import sys
 import os
+
+import requests
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__) + '../..'))
 from config.config import go_conn as db
@@ -24,6 +28,23 @@ with open(config.stoplist, 'r') as stopfile:
         if w not in prot_words and len(w) > 1:
             prot_stopwords.add(w)
 
+uniprotdic = "data/uniprot_dic.pickle"
+
+if os.path.isfile(uniprotdic):
+    logging.info("loading uniprot cache...")
+    uniprot = pickle.load(open(uniprotdic, "rb"))
+    loadeduniprot = True
+    logging.info("loaded chebi dictionary with %s entries", str(len(uniprot)))
+else:
+    uniprot = {}
+    loadeduniprot = False
+    logging.info("new chebi dictionary")
+
+def exit_handler():
+    logging.info('Saving uniprot cache...!')
+    pickle.dump(uniprot, open(uniprotdic, "wb"))
+
+atexit.register(exit_handler)
 
 class ProteinEntity(Entity):
     def __init__(self, tokens, sid, *args, **kwargs):
@@ -32,6 +53,8 @@ class ProteinEntity(Entity):
         self.type = "protein"
         self.subtype = kwargs.get("subtype")
         self.sid = sid
+        self.go_ids = []
+        self.best_go = None
 
     tf_regex = re.compile(r"\A[A-Z]+\d*\w*\d*\Z")
 
@@ -73,34 +96,92 @@ class ProteinEntity(Entity):
         return True
 
     def normalize(self):
-        term = MySQLdb.escape_string(self.text)
-        # adjust - adjust the final score
-        match = ()
+        global uniprot
+        # first check if a chebi mappings dictionary is loaded in memory
+        if self.text in uniprot:
+            c = uniprot[self.text]
+        else:
+            query = {"query": self.text,
+                     "sort": "score",
+                     "columns": "id,entry name,reviewed,protein names,organism,go,go-id",
+                     "format": "tab",
+                     "limit": "1"}
+            headers = {'User-Agent': 'IBEnt (CentOS) alamurias@lasige.di.fc.ul.pt'}
+            r = requests.get('http://www.uniprot.org/uniprot/', query, headers=headers)
+            logging.debug("Request Status: " + str(r.status_code))
+
+            c = r.text
+            if "\n" not in c:
+                print "nothing found on uniprot for {}".format(self.text)
+                c = "NA\t"*6
+            else:
+                c = c.split("\n")[1].strip()
+                uniprot[self.text] = c
+        values = c.split("\t")
+        if len(values) > 3:
+
+            #print
+            #print self.text, values[0], values[1]
+            #print values[3]
+            self.normalized = values[0]
+            self.normalized_score = 100
+            self.normalized_ref = "uniprot"
+            if len(values) > 5:
+                #gos = values[5].split(";")
+                #print values[6]
+                self.go_ids = [v.strip() for v in values[6].split(";")]
+            #print gos
+            if len(self.go_ids) > 0:
+                self.get_best_go()
+
+    def get_best_go(self):
         cur = db.cursor()
         # synonym
-        query = """SELECT DISTINCT t.acc, t.name, s.term_synonym
-                       FROM term t, term_synonym s
-                       WHERE s.term_synonym LIKE %s and s.term_id = t.id
-                       ORDER BY t.ic ASC
+
+        query = """SELECT DISTINCT t.acc, t.name, t.ic
+                       FROM term t
+                       WHERE t.acc IN (%s)
+                       ORDER BY t.ic DESC
                        LIMIT 1;""" # or DESC
             # print "QUERY", query
 
-        cur.execute(query, ("%" + term + "%",))
 
+        format_strings = ','.join(['%s'] * len(self.go_ids))
+        cur.execute(query % format_strings, (self.go_ids))
         res = cur.fetchone()
         if res is not None:
-            print res
-        else:
-            query = """SELECT DISTINCT t.acc, t.name, p.name
-                       FROM term t, prot p, prot_GOA_BP a
-                       WHERE p.name LIKE %s and p.id = a.prot_id and a.term_id = t.id
-                       ORDER BY t.ic ASC
-                       LIMIT 1;""" # or DESC
-            cur.execute(query, (term,))
-            res = cur.fetchone()
-            print res
+            print self.text, res[1:]
+            self.best_go = res[0]
 
-#token = Token2("IL-2")
-#token.start, token.dstart, token.end, token.dend = 0,0,0,0
-#p = ProteinEntity([token], "", text=sys.argv[1])
-#p.normalize()
+    # def normalize(self):
+    #     term = MySQLdb.escape_string(self.text)
+    #     # adjust - adjust the final score
+    #     match = ()
+    #     cur = db.cursor()
+    #     # synonym
+    #     query = """SELECT DISTINCT t.acc, t.name, s.term_synonym
+    #                    FROM term t, term_synonym s
+    #                    WHERE s.term_synonym LIKE %s and s.term_id = t.id
+    #                    ORDER BY t.ic ASC
+    #                    LIMIT 1;""" # or DESC
+    #         # print "QUERY", query
+    #
+    #     cur.execute(query, ("%" + term + "%",))
+    #
+    #     res = cur.fetchone()
+    #     if res is not None:
+    #         print res
+    #     else:
+    #         query = """SELECT DISTINCT t.acc, t.name, p.name
+    #                    FROM term t, prot p, prot_GOA_BP a
+    #                    WHERE p.name LIKE %s and p.id = a.prot_id and a.term_id = t.id
+    #                    ORDER BY t.ic ASC
+    #                    LIMIT 1;""" # or DESC
+    #         cur.execute(query, (term,))
+    #         res = cur.fetchone()
+    #         print res
+
+# token = Token2("IL-2")
+# token.start, token.dstart, token.end, token.dend = 0,0,0,0
+# p = ProteinEntity([token], "", text=sys.argv[1])
+# p.normalize()
