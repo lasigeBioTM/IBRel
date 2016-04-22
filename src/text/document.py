@@ -90,8 +90,8 @@ class Document(object):
             #corenlpres = corenlpserver.raw_parse(s.text)
             corenlpres = corenlpserver.annotate(s.text.encode("utf8"), properties={
                 'ssplit.eolonly': True,
-                'annotators': 'tokenize,ssplit,pos,ner,lemma',
-                #'annotators': 'tokenize,ssplit,pos,parse,ner,lemma,depparse',
+                #'annotators': 'tokenize,ssplit,pos,ner,lemma',
+                'annotators': 'tokenize,ssplit,pos,parse,ner,lemma,depparse',
                 'outputFormat': 'json',
             })
             if isinstance(corenlpres, basestring):
@@ -276,3 +276,39 @@ class Document(object):
                 for e in s.entities.elist[source]:
                     entities.append(e)
         return entities
+
+    def get_abbreviations(self):
+        self.abbreviations = {}
+        first_elem = []
+        second_elem = []
+        open_paren = False
+        for sentence in self.sentences:
+            # print sentence.text
+            for i, t in enumerate(sentence.tokens):
+                if t.text == "-LRB-":
+                    open_paren = True
+                    last_token = sentence.tokens[i-1]
+                    while last_token.pos.startswith("NN") or last_token.pos.startswith("JJ"): # use nouns before the parenthesis
+                        first_elem.insert(0, last_token)
+                        if last_token.order == 0:
+                            break
+                        else:
+                            last_token = sentence.tokens[last_token.order - 1]  # check the token before this one
+                    if len(first_elem) > 0:
+                        logging.info("starting abbreviation for this text: " + str([tt.text for tt in first_elem]))
+                    else:
+                        open_paren = False
+                elif t.text == "-RRB-" and open_paren == True:
+                    first_text = sentence.text[first_elem[0].start:first_elem[-1].end]
+                    second_text = sentence.text[second_elem[0].start:second_elem[-1].end]
+                    if len(first_text) > len(second_text):
+                        self.abbreviations[second_text] = first_text
+                    else:
+                        self.abbreviations[first_text] = second_text
+                    open_paren = False
+                    first_elem = []
+                    second_elem = []
+                elif open_paren:
+                    second_elem.append(t)
+        for abv in self.abbreviations:
+            print abv, ":", self.abbreviations[abv]

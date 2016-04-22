@@ -82,6 +82,7 @@ class JNLPBACorpus(Corpus):
                         # logging.info(len(newdoc.sentences))
                         doc_text = ""
                     did = "JNLPBA" + l.strip().split(":")[-1]
+                    self.documents[did].get_abbreviations()
                     logging.debug("starting new document:" + did)
                     sentence_text = ""
                     sentence_entities = []
@@ -94,7 +95,7 @@ class JNLPBACorpus(Corpus):
                     if not added: # in case the last token was an entity
                         sentence_entities.append((estart, eend, entity_text))
                         added = True
-                    print sentence_entities
+                    #print sentence_entities
                     for e in sentence_entities:
                         logging.debug("adding this entity: {}".format(e[2]))
                         eid = this_sentence.tag_entity(e[0], e[1], etype,
