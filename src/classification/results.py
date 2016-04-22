@@ -179,7 +179,7 @@ def combine_results(modelname, results, resultsname, etype, models):
                                 if e.type == etype:
                                     eid_offset = Offset(e.dstart, e.dend, text=e.text, sid=e.sid)
                                     exclude = [perfect_overlap]
-                                    toadd, v, alt = offsets.add_offset(eid_offset, exclude_if=exclude)
+                                    toadd, v, overlapping, to_exclude = offsets.add_offset(eid_offset, exclude_this_if=exclude, exclude_others_if=[])
                                     if toadd:
                                         # print "added:", r.path, s, e.text
                                         ref_sentence.entities.elist[modelname].append(e)

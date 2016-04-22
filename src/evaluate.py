@@ -208,15 +208,17 @@ def get_relations_results(results, model, gold_pairs, ths, rules, compare_text=T
         reportfile.write("TPs: {!s}\nFPs: {!s}\nFNs: {!s}\n".format(len(tps), len(fps), len(fns)))
         reportfile.write(">\n")
         if len(tps) == 0:
-            precision, recall = 0, 0
+            precision, recall, fmeasure = 0, 0
         else:
             precision, recall = len(tps)/(len(tps) + len(fps)), len(tps)/(len(tps) + len(fns))
+            fmeasure = 2*precision*recall/(precision+recall)
         reportfile.write("Precision: {!s}\nRecall: {!s}\n".format(precision, recall))
         reportfile.write(">\n")
         for line in reportlines:
             reportfile.write(line + '\n')
-    print "Precision: {}".format(precision)
-    print "Recall: {}".format(recall)
+    print "Precision: {:.3f}".format(precision)
+    print "Recall: {:.3f}".format(recall)
+    print "Fmeasure: {:.3f}".format(fmeasure)
     return precision, recall
 
 def get_results(results, models, gold_offsets, ths, rules, compare_text=True):
@@ -245,15 +247,18 @@ def get_results(results, models, gold_offsets, ths, rules, compare_text=True):
         if len(tps) == 0:
             precision = 0
             recall = 0
+            fmeasure = 0
         else:
             precision = len(tps)/(len(tps) + len(fps))
             recall = len(tps)/(len(tps) + len(fns))
+            fmeasure = 2 * precision * recall / (precision + recall)
         reportfile.write("Precision: {!s}\nRecall: {!s}\n".format(precision, recall))
         reportfile.write(">\n")
         for line in reportlines:
             reportfile.write(line + '\n')
-    print "Precision: {}".format(precision)
-    print "Recall: {}".format(recall)
+    print "Precision: {:.3f}".format(precision)
+    print "Recall: {:.3f}".format(recall)
+    print "Fmeasure: {:.3f}".format(fmeasure)
     return precision, recall
 
 
