@@ -112,7 +112,7 @@ class ProteinEntity(Entity):
 
             c = r.text
             if "\n" not in c:
-                print "nothing found on uniprot for {}".format(self.text)
+                # print "nothing found on uniprot for {}".format(self.text)
                 c = "NA\t"*6
             else:
                 c = c.split("\n")[1].strip()
@@ -150,7 +150,7 @@ class ProteinEntity(Entity):
         cur.execute(query % format_strings, (self.go_ids))
         res = cur.fetchone()
         if res is not None:
-            print self.text, res[1:]
+            # print self.text, res[1:]
             self.best_go = res[0]
 
     # def normalize(self):

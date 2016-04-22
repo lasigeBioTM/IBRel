@@ -102,6 +102,8 @@ class JNLPBACorpus(Corpus):
                                                   text=e[2])
                         if eid is None:
                             print "did not add this entity: {}".format(e[2])
+                        else:
+                            this_sentence.entities.get_entity(eid).normalize()
                     doc_offset += len(sentence_text) + 1
                     doc_text += sentence_text + " "
                     sentences.append(this_sentence)
