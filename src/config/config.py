@@ -70,6 +70,7 @@ all_entity_types = ("Gene",
                      "Development_Phase",
                      "Environmental_Factor")
 
+
 all_entity_groups = {"DNA_Product": ("RNA", "Protein", "Protein_Family", "Protein_Complex", "Protein_Domain"),
                      "DNA": ("Gene", "Gene_Family", "Box", "Promoter"),
                      "Dynamic_Process": ("Regulatory_Network", "Pathway"),
@@ -78,6 +79,19 @@ all_entity_groups = {"DNA_Product": ("RNA", "Protein", "Protein_Family", "Protei
 all_entity_groups["Functional_Molecule"] = all_entity_groups["DNA_Product"] + ("Hormone",)
 all_entity_groups["Molecule"] = all_entity_groups["DNA"] + all_entity_groups["Functional_Molecule"]
 all_entity_groups["Factor"] = all_entity_groups["Internal_Factor"] + ("Environmental_Factor",)
+
+ds_pair_types = {
+    "Binds_To",
+"Composes_Primary_Structure",
+"Composes_Protein_Complex",
+"Exists_At_Stage",
+"Is_Involved_In_Process",
+"Occurs_In_Genotype",
+"Occurs_During",
+"Regulates_Accumulation",
+"Regulates_Molecule_Activity",
+"Regulates_Tissue_Development",
+}
 
 pair_types = {
     "Binds_To":
@@ -246,8 +260,20 @@ mirnacorpus_base = "corpora/miRNACorpus/"
 mirtex_base = "corpora/miRTex/"
 jnlpba_base = "corpora/JNLPBA/"
 seedev_base = "corpora/SeeDev/"
-
+bc2gn_base = "corpora/BC2GN/"
 paths = {
+    'bc2gn_train': {
+        'text': bc2gn_base + "bc2geneMention/train/train.in",
+        'annotations': bc2gn_base + "bc2geneMention/train/GENE.eval",
+        'corpus': "data/BC2GN-train.pickle",
+        'format': "bc2"
+    },
+    'bc2gn_test': {
+        'text': bc2gn_base + "BC2GM/test/test.in",
+        'annotations': bc2gn_base + "BC2GM/test/GENE.eval",
+        'corpus': "data/BC2GN-test.pickle",
+        'format': "bc2"
+    },
     'seedev_test': {
         'text': seedev_base + "BioNLP-ST-2016_SeeDev-binary_test/",
         'annotations': seedev_base + "BioNLP-ST-2016_SeeDev-binary_test/",
@@ -268,6 +294,14 @@ paths = {
         'text': seedev_base + "BioNLP-ST-2016_SeeDev-binary_dev/",
         'annotations': seedev_base + "BioNLP-ST-2016_SeeDev-binary_dev/",
         'corpus': "data/SeeDev-dev.txt.pickle",
+        'format': "seedev"
+    },
+    'seedev_traindev':{
+        'corpus': "data/SeeDev-traindev.txt.pickle",
+        'format': "seedev"
+    },
+    'seedev_ds':{
+        'corpus': "data/thaliana-documents_1.pickle",
         'format': "seedev"
     },
     'jnlpba_train':{ # pre processed genia corpus
