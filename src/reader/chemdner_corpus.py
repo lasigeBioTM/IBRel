@@ -9,6 +9,7 @@ from pycorenlp import StanfordCoreNLP
 import progressbar as pb
 from subprocess import check_output
 
+import config.corpus_paths
 from text.corpus import Corpus
 from text.document import Document
 from config import config
@@ -114,8 +115,8 @@ def main():
     parser.add_argument("actions", default="classify",  help="Actions to be performed.",
                       choices=["load_corpus"])
     parser.add_argument("--goldstd", default="", dest="goldstd", nargs="+",
-                      help="Gold standard to be used. Will override corpus, annotations",
-                      choices=config.paths.keys())
+                        help="Gold standard to be used. Will override corpus, annotations",
+                        choices=config.corpus_paths.paths.keys())
     parser.add_argument("--submodels", default="", nargs='+', help="sub types of classifiers"),
     parser.add_argument("-i", "--input", dest="input", action="store",
                       default='''Administration of a higher dose of indinavir should be \\
@@ -160,18 +161,18 @@ considered when coadministering with megestrol acetate.''',
             print "load only one corpus each time"
             sys.exit()
         options.goldstd = options.goldstd[0]
-        corpus_format = config.paths[options.goldstd]["format"]
-        corpus_path = config.paths[options.goldstd]["text"]
-        corpus_ann = config.paths[options.goldstd]["annotations"]
+        corpus_format = config.corpus_paths.paths[options.goldstd]["format"]
+        corpus_path = config.corpus_paths.paths[options.goldstd]["text"]
+        corpus_ann = config.corpus_paths.paths[options.goldstd]["annotations"]
         corenlp_client = StanfordCoreNLP('http://localhost:9000')
         if corpus_format == "chemdner":
             corpus = ChemdnerCorpus(corpus_path)
             #corpus.save()
             if options.goldstd == "chemdner_traindev":
                 # merge chemdner_train and chemdner_dev
-                tpath = config.paths["chemdner_train"]["corpus"]
+                tpath = config.corpus_paths.paths["chemdner_train"]["corpus"]
                 tcorpus = pickle.load(open(tpath, 'rb'))
-                dpath = config.paths["chemdner_dev"]["corpus"]
+                dpath = config.corpus_paths.paths["chemdner_dev"]["corpus"]
                 dcorpus = pickle.load(open(dpath, 'rb'))
                 corpus.documents.update(tcorpus.documents)
                 corpus.documents.update(dcorpus.documents)
@@ -183,7 +184,7 @@ considered when coadministering with megestrol acetate.''',
                 logging.info("step: {}".format(str(step)))
                 for i in range(10):
                     logging.info("processing cemp_test{}: {} - {}".format(str(i), int(step*i), int(step*i+step)))
-                    sub_corpus_path = config.paths["cemp_test" + str(i)]["corpus"]
+                    sub_corpus_path = config.corpus_paths.paths["cemp_test" + str(i)]["corpus"]
                     sub_corpus = ChemdnerCorpus(sub_corpus_path)
                     sub_docs = docs[int(step*i):int(step*i+step)]
                     for di, d in enumerate(sub_docs):

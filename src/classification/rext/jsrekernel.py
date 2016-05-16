@@ -3,6 +3,8 @@ import os
 import logging
 import random
 import sys
+
+import config.seedev_types
 from classification.rext.kernelmodels import ReModel
 from subprocess import Popen, PIPE
 import platform
@@ -115,7 +117,7 @@ class JSREKernel(ReModel):
         examplelines = []
         # get all entities of this document
         # doc_entities = []
-        pairtypes = (config.pair_types[pairtype]["source_types"], config.pair_types[pairtype]["target_types"])
+        pairtypes = (config.seedev_types.pair_types[pairtype]["source_types"], config.seedev_types.pair_types[pairtype]["target_types"])
         # pairtypes = (config.event_types[pairtype]["source_types"], config.event_types[pairtype]["target_types"])
         pcount = 0
         truepcount = 0

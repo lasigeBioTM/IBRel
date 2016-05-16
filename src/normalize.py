@@ -6,6 +6,7 @@ import time
 
 import sys
 
+import config.corpus_paths
 from config import config
 
 def add_chebi_mappings(results, path, source, save=True):
@@ -107,8 +108,8 @@ def main():
     parser.add_argument("action", default="map",
                       help="Actions to be performed.")
     parser.add_argument("goldstd", default="chemdner_sample",
-                      help="Gold standard to be used.",
-                      choices=config.paths.keys())
+                        help="Gold standard to be used.",
+                        choices=config.corpus_paths.paths.keys())
     parser.add_argument("--corpus", dest="corpus",
                       default="data/chemdner_sample_abstracts.txt.pickle",
                       help="format path")

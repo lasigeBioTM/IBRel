@@ -5,6 +5,8 @@ import time
 import argparse
 import pickle
 import sys
+
+import config.corpus_paths
 from classification.ner.crfsuitener import CrfSuiteModel
 from classification.ner.simpletagger import feature_extractors
 from classification.ner.stanfordner import StanfordNERModel
@@ -86,8 +88,8 @@ def run_crossvalidation(goldstd_list, corpus, model, cv, crf="stanford", entity_
         logging.info('CV{} - EVALUATE'.format(nlist))
         test_goldset = set()
         for gs in goldstd_list:
-            goldset = get_gold_ann_set(config.paths[gs]["format"], config.paths[gs]["annotations"], entity_type,
-                                       "pairtype", config.paths[gs]["text"] )
+            goldset = get_gold_ann_set(config.corpus_paths.paths[gs]["format"], config.corpus_paths.paths[gs]["annotations"], entity_type,
+                                       "pairtype", config.corpus_paths.paths[gs]["text"])
             for g in goldset[0]:
                 if g[0] in testids:
                     test_goldset.add(g)
@@ -103,8 +105,8 @@ def run_crossvalidation(goldstd_list, corpus, model, cv, crf="stanford", entity_
     print "recall: average={}  all={}".format(str(ravg), '|'.join([str(rr) for rr in r]))
     all_goldset = set()
     for gs in goldstd_list:
-        goldset = get_gold_ann_set(config.paths[gs]["format"], config.paths[gs]["annotations"], entity_type, "",
-                                       config.paths[gs]["text"] )
+        goldset = get_gold_ann_set(config.corpus_paths.paths[gs]["format"], config.corpus_paths.paths[gs]["annotations"], entity_type, "",
+                                   config.corpus_paths.paths[gs]["text"])
         for g in goldset[0]:
             all_goldset.add(g)
     get_results(all_results, model, all_goldset, {}, [])
@@ -122,8 +124,8 @@ def main():
     start_time = time.time()
     parser = argparse.ArgumentParser(description='')
     parser.add_argument("--goldstd", default="", dest="goldstd", nargs="+",
-                      help="Gold standard to be used. Will override corpus, annotations",
-                      choices=config.paths.keys())
+                        help="Gold standard to be used. Will override corpus, annotations",
+                        choices=config.corpus_paths.paths.keys())
     parser.add_argument("--submodels", default="", nargs='+', help="sub types of classifiers"),
     parser.add_argument("--corpus", dest="corpus", nargs=2,
                       default=["chemdner", "CHEMDNER/CHEMDNER_SAMPLE_JUNE25/chemdner_sample_abstracts.txt"],
@@ -161,7 +163,7 @@ def main():
     corpus_name = "&".join(options.goldstd)
     corpus = Corpus("corpus/" + corpus_name)
     for g in options.goldstd:
-        corpus_path = config.paths[g]["corpus"]
+        corpus_path = config.corpus_paths.paths[g]["corpus"]
         logging.info("loading corpus %s" % corpus_path)
         this_corpus = pickle.load(open(corpus_path, 'rb'))
         corpus.documents.update(this_corpus.documents)

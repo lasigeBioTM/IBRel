@@ -25,6 +25,7 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
 from sklearn.svm import LinearSVC
 
+import config.seedev_types
 from classification.rext.jsrekernel import JSREKernel
 from classification.rext.multir import MultiR
 from classification.rext.rules import RuleClassifier
@@ -260,9 +261,9 @@ class SeeDevCorpus(Corpus):
             hastarget = False
             sids.append(sentence.sid)
             for e in sentence.entities.elist["goldstandard"]:
-                if e.type in config.pair_types[pairtype]["source_types"]:
+                if e.type in config.seedev_types.pair_types[pairtype]["source_types"]:
                     hassource = True
-                if e.type in config.pair_types[pairtype]["target_types"]:
+                if e.type in config.seedev_types.pair_types[pairtype]["target_types"]:
                     hastarget = True
                 if any([target[1] == pairtype for target in e.targets]):
                     # print pairtype, sentence.text
@@ -394,7 +395,7 @@ class SeeDevCorpus(Corpus):
                         sentence.entities.elist["goldstandard"] += sentence.entities.elist[source]
 
     def find_ds_relations(self):
-        rtypes = config.ds_pair_types
+        rtypes = config.seedev_types.ds_pair_types
         #del rtypes["Has_Sequence_Identical_To"]
         #del rtypes["Is_Functionally_Equivalent_To"]
         rel_words = get_relwords(rtypes)
@@ -406,7 +407,7 @@ class SeeDevCorpus(Corpus):
                 for rtype in rtypes:
                     # logging.info(rtype)
                     if len(sentence_words & rel_words[rtype]) > 1 and len(sentence_entities) < 5:
-                        pairtypes = (config.pair_types[rtype]["source_types"], config.pair_types[rtype]["target_types"])
+                        pairtypes = (config.seedev_types.pair_types[rtype]["source_types"], config.seedev_types.pair_types[rtype]["target_types"])
                         for pair in itertools.permutations(sentence_entities, 2):
                             if pair[0].type in pairtypes[0] and pair[1].type in pairtypes[1] and pair[0].text != pair[1].text:
 

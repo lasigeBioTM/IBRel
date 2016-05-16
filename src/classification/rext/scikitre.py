@@ -18,6 +18,7 @@ from sklearn import metrics
 from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import f1_score, make_scorer
 
+import config.seedev_types
 from classification.results import ResultsRE
 from classification.rext.kernelmodels import ReModel
 from config import config
@@ -73,7 +74,7 @@ class ScikitRE(ReModel):
                 #if pair[0].text == pair[1].text:
                 #    continue
                 # logging.info("{}=>{}|{}=>{}".format(pair[0].type, pair[1].type, pairtypes[0], pairtypes[1]))
-                if pair[0].type in config.pair_types[self.pairtype]["source_types"] and pair[1].type in config.pair_types[self.pairtype]["target_types"]:
+                if pair[0].type in config.seedev_types.pair_types[self.pairtype]["source_types"] and pair[1].type in config.seedev_types.pair_types[self.pairtype]["target_types"]:
                 #if pair[0].type in config.event_types[self.pairtype]["source_types"] and pair[1].type in config.event_types[self.pairtype]["target_types"]:
                                         #pair[1].type in config.pair_types[self.pairtype]["source_types"] and pair[0].type in config.pair_types[self.pairtype]["target_types"]:
                     # logging.debug(pair)

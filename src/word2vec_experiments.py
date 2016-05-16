@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 
 from pycorenlp import StanfordCoreNLP
 
+import config.corpus_paths
 from classification.ner.matcher import MatcherModel
 from config import config
 from reader import pubmed
@@ -136,7 +137,7 @@ def match_relations(reltype, docfile_root="corpora/Thaliana/documents-processed"
 
 def get_seedev_docs(f="corpora/Thaliana/documents-processed.txt"):
     goldstd = "seedev_train"
-    corpus_path = config.paths[goldstd]["corpus"]
+    corpus_path = config.corpus_paths.paths[goldstd]["corpus"]
     print "loading corpus %s" % corpus_path
     corpus = pickle.load(open(corpus_path, 'rb'))
     final_text = []

@@ -6,6 +6,7 @@ import itertools
 import pycrfsuite
 import sys
 
+import config.seedev_types
 from classification.ner.simpletagger import SimpleTaggerModel, create_entity, feature_extractors
 from classification.results import ResultsNER, ResultsRE
 from classification.rext.kernelmodels import ReModel
@@ -95,7 +96,7 @@ class CrfSuiteRE(ReModel):
                 if "goldstandard" not in sentence.entities.elist:
                     continue
             # logging.info("{}".format(sentence.sid))
-                sentence_entities = [e for e in sentence.entities.elist["goldstandard"] if e.type in config.pair_types[self.pairtype]["source_types"]]
+                sentence_entities = [e for e in sentence.entities.elist["goldstandard"] if e.type in config.seedev_types.pair_types[self.pairtype]["source_types"]]
                 # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
                 #for pair in itertools.permutations(doc_entities, 2):
                 #for e in doc_entities:
@@ -106,7 +107,7 @@ class CrfSuiteRE(ReModel):
                     #if self.pairtype in ("Has_Sequence_Identical_To", "Is_Functionally_Equivalent_To") and pair[0].type != pair[1].type:
                     #    continue
                     # logging.info("{}=>{}|{}=>{}".format(pair[0].type, pair[1].type, pairtypes[0], pairtypes[1]))
-                if not any([e.type in config.pair_types[self.pairtype]["source_types"] for e in sentence.entities.elist["goldstandard"]]):
+                if not any([e.type in config.seedev_types.pair_types[self.pairtype]["source_types"] for e in sentence.entities.elist["goldstandard"]]):
                     logging.info("skipped sentence without targets")
                     continue
                 for e in sentence_entities:
@@ -191,7 +192,7 @@ class CrfSuiteRE(ReModel):
                 role = "ROLE=SOURCE"
             elif "goldstandard" in t.tags:
                 entity_type = t.tags["goldstandard_subtype"]
-                if entity_type in config.pair_types[self.pairtype]["target_types"]:
+                if entity_type in config.seedev_types.pair_types[self.pairtype]["target_types"]:
                     """if t.tags["goldstandard"] == "single":
                         matchtext = t.text
                     else:

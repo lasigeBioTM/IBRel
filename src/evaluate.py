@@ -10,6 +10,7 @@ import random
 import sys
 import time
 
+import config.corpus_paths
 from config import config
 from reader.chemdner_corpus import get_chemdner_gold_ann_set, run_chemdner_evaluation
 from reader.genia_corpus import get_genia_gold_ann_set
@@ -268,8 +269,8 @@ def main():
     parser.add_argument("action", default="evaluate",
                       help="Actions to be performed.")
     parser.add_argument("goldstd", default="chemdner_sample",
-                      help="Gold standard to be used.",
-                      choices=config.paths.keys())
+                        help="Gold standard to be used.",
+                        choices=config.corpus_paths.paths.keys())
     parser.add_argument("--corpus", dest="corpus",
                       default="data/chemdner_sample_abstracts.txt.pickle",
                       help="format path")
@@ -316,10 +317,10 @@ def main():
         results.save(options.results + "_combined.pickle")
 
     elif options.action in ("evaluate", "evaluate_list"):
-        if "annotations" in config.paths[options.goldstd]:
-            logging.info("loading gold standard %s" % config.paths[options.goldstd]["annotations"])
-            goldset = get_gold_ann_set(config.paths[options.goldstd]["format"], config.paths[options.goldstd]["annotations"],
-                                       options.etype, options.ptype, config.paths[options.goldstd]["text"])
+        if "annotations" in config.corpus_paths.paths[options.goldstd]:
+            logging.info("loading gold standard %s" % config.corpus_paths.paths[options.goldstd]["annotations"])
+            goldset = get_gold_ann_set(config.corpus_paths.paths[options.goldstd]["format"], config.corpus_paths.paths[options.goldstd]["annotations"],
+                                       options.etype, options.ptype, config.corpus_paths.paths[options.goldstd]["text"])
         else:
             goldset = None
         logging.info("using thresholds: chebi > {!s} ssm > {!s}".format(options.chebi, options.ssm))
