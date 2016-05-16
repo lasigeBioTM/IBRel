@@ -208,7 +208,7 @@ def get_relations_results(results, model, gold_pairs, ths, rules, compare_text=T
         reportfile.write("TPs: {!s}\nFPs: {!s}\nFNs: {!s}\n".format(len(tps), len(fps), len(fns)))
         reportfile.write(">\n")
         if len(tps) == 0:
-            precision, recall, fmeasure = 0, 0
+            precision, recall, fmeasure = 0, 0, 0
         else:
             precision, recall = len(tps)/(len(tps) + len(fps)), len(tps)/(len(tps) + len(fns))
             fmeasure = 2*precision*recall/(precision+recall)

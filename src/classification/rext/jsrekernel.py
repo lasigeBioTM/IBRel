@@ -61,7 +61,7 @@ class JSREKernel(ReModel):
                 "commons-logging.jar", "commons-collections.jar"]
         classpath = 'bin/jsre/jsre-1.1/bin/' + sep + sep.join(["bin/jsre/jsre-1.1/lib/" + l for l in libs])
         jsrecall = ['java', '-mx8g', '-classpath', classpath, "org.itc.irst.tcc.sre.Train",
-                          "-k",  "SL", "-n", "2", "-w", "2", "-m", "3072",  # "-c", str(2),
+                          "-k",  "SL", "-n", "3", "-w", "4", "-m", "3072",  # "-c", str(2),
                           self.temp_dir + self.modelname + ".txt", self.basedir + self.modelname]
         # print " ".join(jsrecall)
         jsrecall = Popen(jsrecall, stdout=PIPE, stderr=PIPE)
@@ -181,7 +181,7 @@ class JSREKernel(ReModel):
                     else:
                         sfalse += 1
                     # true/total ratio
-                    if train is True and trueddi == 0 and 1.0*strue/(strue+sfalse) < 0.01:
+                    if train is True and trueddi == 0 and 1.0*strue/(strue+sfalse) < 0.001:
                         sfalse -= 1
                         skipped += 1
                         continue

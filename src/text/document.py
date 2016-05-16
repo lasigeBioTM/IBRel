@@ -301,9 +301,10 @@ class Document(object):
                 elif t.text == "-RRB-" and open_paren == True:
                     first_text = sentence.text[first_elem[0].start:first_elem[-1].end]
                     second_text = sentence.text[second_elem[0].start:second_elem[-1].end]
-                    if len(first_text) > len(second_text):
-                        self.abbreviations[second_text] = first_text
-                    else:
+                    if len(first_text) > len(second_text): #abbreviation is the smallest word
+                        second_text, first_text = first_text, second_text
+                    # rules
+                    if not first_text.islower() and len(first_text) > 1:
                         self.abbreviations[first_text] = second_text
                     open_paren = False
                     first_elem = []
@@ -311,4 +312,5 @@ class Document(object):
                 elif open_paren:
                     second_elem.append(t)
         for abv in self.abbreviations:
-            print abv, ":", self.abbreviations[abv]
+            if not any([c.isalpha() for c in abv]):
+                print abv, ":", self.abbreviations[abv]
