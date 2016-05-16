@@ -1,6 +1,7 @@
 import logging
 import multiprocessing
 
+from classification.ner.crfsuitener import CrfSuiteModel
 from classification.ner.simpletagger import feature_extractors
 from classification.results import ResultSetNER
 from classification.ner.stanfordner import StanfordNERModel
@@ -31,17 +32,22 @@ class TaggerCollection(object):
             self.types = ["all"] + self.CHEMDNER_TYPES
         elif basepath.split("/")[-1].startswith("gpro"):
             self.types = self.GPRO_TYPES + ["all"]
+        else:
+            self.types = kwargs.get("subtypes")
+        print "training:", self.types
         self.basemodel = StanfordNERModel(self.basepath, "all")
+        # self.basemodel = CrfSuiteModel(self.basepath, "all")
 
     def train_types(self):
         """
         Train models for each subtype of entity, and a general model.
         :param types: subtypes of entities to train individual models, as well as a general model
         """
-        self.basemodel.load_data(self.corpus, feature_extractors.keys(), subtype="all")
+        self.basemodel.load_data(self.corpus, feature_extractors.keys())
         for t in self.types:
             typepath = self.basepath + "_" + t
-            model = StanfordNERModel(typepath, subtypes=self.basemodel.subtypes)
+            model = StanfordNERModel(typepath, etype=t)
+            # model = CrfSuiteModel(typepath, etype=t)
             model.copy_data(self.basemodel, t)
             logging.info("training subtype %s" % t)
             model.train()
@@ -50,6 +56,7 @@ class TaggerCollection(object):
     def load_models(self):
         for i, t in enumerate(self.types):
             model = StanfordNERModel(self.basepath + "_" + t, t, subtypes=self.basemodel.subtypes)
+            # model = CrfSuiteModel(self.basepath + "_" + t, t, subtypes=self.basemodel.subtypes)
             model.load_tagger(self.baseport + i)
             self.models[t] = model
 

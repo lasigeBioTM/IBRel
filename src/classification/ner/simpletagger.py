@@ -250,6 +250,7 @@ class SimpleTaggerModel(Model):
                         sentencelabels.append(tokenlabel)
                         sentencetokens.append(sentence.tokens[i])
                         sentencesubtypes.append(tokensubtype)
+                        # print sentencesubtypes
                 #logging.info("%s" % set(sentencesubtypes))
                 #if subtype == "all" or subtype in sentencesubtypes:
                 #logging.debug(sentencesubtypes)
@@ -258,7 +259,7 @@ class SimpleTaggerModel(Model):
                 self.labels.append(sentencelabels)
                 self.sids.append(sentence.sid)
                 self.tokens.append(sentencetokens)
-                self.subtypes.append(set(sentencesubtypes))
+                self.subtypes.append(sentencesubtypes)
                 self.sentences.append(sentence.text)
             didx += 1
         # save data back to corpus to improve performance
@@ -269,13 +270,24 @@ class SimpleTaggerModel(Model):
     def copy_data(self, basemodel, t="all"):
         #logging.debug(self.subtypes)
         if t != "all":
-            right_sents = [i for i in range(len(self.subtypes)) if t in self.subtypes[i]]
+            # right_sents = [i for i in range(len(basemodel.subtypes)) if t in basemodel.subtypes[i]]
             #logging.debug(right_sents)
-            self.data = [basemodel.data[i] for i in range(len(basemodel.subtypes)) if i in right_sents]
-            self.labels = [basemodel.labels[i] for i in range(len(basemodel.subtypes)) if i in right_sents]
-            self.sids = [basemodel.sids[i] for i in range(len(basemodel.subtypes)) if i in right_sents]
-            self.tokens =  [basemodel.tokens[i] for i in range(len(basemodel.subtypes)) if i in right_sents]
-            self.sentences = [basemodel.sentences[i] for i in range(len(basemodel.subtypes)) if i in right_sents]
+            # print t, self.subtypes
+            self.data = [basemodel.data[i] for i in range(len(basemodel.subtypes))]
+            labels = [basemodel.labels[i] for i in range(len(basemodel.subtypes))]
+            self.labels = []
+            for il, l in enumerate(labels):
+                self.labels.append([])
+                for it, tl in enumerate(l):
+                    # print it, tl, basemodel.subtypes[il][it]
+                    if basemodel.subtypes[il][it] == t:
+                        self.labels[-1].append(tl)
+                    else:
+                        self.labels[-1].append("other")
+                # print self.labels[-1]
+            self.sids = [basemodel.sids[i] for i in range(len(basemodel.subtypes))]
+            self.tokens =  [basemodel.tokens[i] for i in range(len(basemodel.subtypes))]
+            self.sentences = [basemodel.sentences[i] for i in range(len(basemodel.subtypes))]
         else:
             self.data = basemodel.data[:]
             self.labels = basemodel.labels[:]

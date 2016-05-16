@@ -8,7 +8,8 @@ import time
 import sys
 from pycorenlp import StanfordCoreNLP
 
-from classification.results import ResultsRE
+from classification.ner.taggercollection import TaggerCollection
+from classification.results import ResultsRE, ResultSetNER
 from classification.rext.crfre import CrfSuiteRE
 from classification.rext.jsrekernel import JSREKernel
 from classification.rext.multir import MultiR
@@ -17,7 +18,7 @@ from classification.rext.scikitre import ScikitRE
 from classification.rext.stanfordre import StanfordRE
 from classification.rext.svmtk import SVMTKernel
 from config import config
-from evaluate import get_relations_results, get_gold_ann_set
+from evaluate import get_relations_results, get_gold_ann_set, get_results
 from reader.seedev_corpus import SeeDevCorpus
 from text.corpus import Corpus
 from text.pair import Pairs
@@ -26,7 +27,7 @@ from text.pair import Pairs
 def write_seedev_results(results, path):
     if not os.path.isdir(path):
         os.makedirs(path)
-
+    print path
     for did in results.document_pairs:
         with open(path + "/" + did + ".a2", 'w') as resfile:
             n = 1
@@ -110,11 +111,19 @@ def main():
         #corpus = SeeDevCorpus("corpus/" + "&".join(options.goldstd))
         corpus_path = config.paths[options.goldstd[0]]["corpus"]
         logging.info("loading corpus %s" % corpus_path)
-        corpus = pickle.load(open(corpus_path, 'rb'))
-
+        basecorpus = pickle.load(open(corpus_path, 'rb'))
+        corpus = SeeDevCorpus(corpus_path)
+        corpus.documents = basecorpus.documents
         if options.actions == "add_sentences":
             corpus.add_more_sentences(options.models)
-
+        elif options.actions == "add_goldstandard":
+            corpus.convert_entities_to_goldstandard()
+            corpus.find_ds_relations()
+            #corpus.save(config.paths[options.goldstd[0]]["corpus"])
+        elif options.actions == "train_multiple":  # Train one classifier for each type of entity in this corpus
+            # logging.info(corpus.subtypes)
+            models = TaggerCollection(basepath=options.models, corpus=corpus, subtypes=config.all_entity_types)
+            models.train_types()
         elif options.actions == "train_relations":
             if options.ptype == "all":
                 ptypes = config.pair_types.keys()
@@ -137,7 +146,14 @@ def main():
                     model = CrfSuiteRE(corpus, p)
                 model.train()
         # testing
-
+        elif options.actions == "test_multiple":
+            logging.info("testing with multiple classifiers... {}".format(' '.join(options.submodels)))
+            models = TaggerCollection(basepath=options.models, subtypes=config.all_entity_types)
+            models.load_models()
+            results = models.test_types(corpus)
+            final_results = results.combine_results()
+            logging.info("saving results...")
+            final_results.save(options.output[1] + ".pickle")
         elif options.actions == "test_relations":
             if options.ptype == "all":
                 ptypes = config.pair_types.keys()
@@ -226,10 +242,25 @@ def main():
             recall = 1.0 * avg[2] / (avg[0] + avg[2])
             fscore = 2.0 * precision * recall / (recall + precision)
             print precision, recall, fscore
-        else:
-            res = corpus.test_sentence_classifier(options.ptype)
-            print res
+        #else:
+        #    res = corpus.test_sentence_classifier(options.ptype)
+        #    print res
+        elif options.actions == "evaluate_ner":
+            if os.path.exists(options.output[1] + ".pickle"):
+                results = pickle.load(open(options.output[1] + ".pickle", 'rb'))
+                results.load_corpus(options.goldstd[0])
+                results.path = options.output[1]
+            logging.info("loading gold standard %s" % config.paths[options.goldstd[0]]["annotations"])
+            for t in config.all_entity_types:
+                print t
+                results.path = options.output[1] + "_" + t
+                goldset = get_gold_ann_set(config.paths[options.goldstd[0]]["format"],
+                                           config.paths[options.goldstd[0]]["annotations"],
+                                           t, options.ptype, config.paths[options.goldstd[0]]["text"])
+                get_results(results, options.models + "_" + t, goldset[0], {}, {})
+
         corpus.save(config.paths[options.goldstd[0]]["corpus"])
+
 
     total_time = time.time() - start_time
     logging.info("Total time: %ss" % total_time)

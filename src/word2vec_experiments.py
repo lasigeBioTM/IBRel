@@ -16,7 +16,7 @@ from reader import pubmed
 from text.corpus import Corpus
 from text.document import Document
 import logging
-numeric_level = getattr(logging, "WARNING", None)
+numeric_level = getattr(logging, "DEBUG", None)
 logging_format = '%(asctime)s %(levelname)s %(filename)s:%(lineno)s:%(funcName)s %(message)s'
 logging.basicConfig(level=numeric_level, format=logging_format)
 logging.getLogger().setLevel(numeric_level)
@@ -216,10 +216,14 @@ def load_tair_relations():
 
 def annotate_corpus_entities(reltype, corpuspath="corpora/Thaliana/thaliana-documents_10.pickle"):
     corpus = pickle.load(open(corpuspath, 'rb'))
+    for d in corpus.documents:
+        for sentence in corpus.documents[d].sentences:
+            sentence.sid = d + "." + sentence.sid.split(".")[-1]
     entities, relations = load_gold_relations(reltype)
     matcher = MatcherModel("goldstandard")
     matcher.names = set(entities.keys())
     corpus, entitiesfound = matcher.test(corpus)
+
     print "saving corpus..."
     corpus.save(corpuspath)
 
@@ -259,7 +263,7 @@ def annotate_corpus_relations(reltype, corpuspath="corpora/Thaliana/thaliana-doc
 #train_model()
 
 
-# annotate_corpus_entities("all")
-# annotate_corpus_relations("all")
+#annotate_corpus_entities("all")
+#annotate_corpus_relations("all")
 #match_relations("Regulates_Process")
 #print load_tair_relations()

@@ -7,7 +7,8 @@ import os
 import sys
 import pprint
 import itertools
-
+from nltk.corpus import stopwords
+import nltk
 import numpy as np
 import progressbar as pb
 import time
@@ -139,7 +140,12 @@ class SeeDevCorpus(Corpus):
         annfiles = [ann_dir + '/' + f for f in os.listdir(ann_dir) if f.endswith('.a2')]
         total = len(annfiles)
         time_per_abs = []
+        default_stopwords = set(nltk.corpus.stopwords.words('english'))
+        custom_stopwords = set(('-', '.', ',', '-lrb-', '-rrb-', 'et', 'al', ';', ':', '/'))
+
+        all_stopwords = default_stopwords | custom_stopwords
         unique_relations = set()
+        reltype_texts = {}
         for current, f in enumerate(annfiles):
             logging.debug('%s:%s/%s', f, current + 1, total)
             did = f.split(".")[0].split("/")[-1]
@@ -182,6 +188,29 @@ class SeeDevCorpus(Corpus):
                         relations_stats[rtype][entity2.type + "_target"] += 1
                         entity1_text = entity1.text.encode("utf-8")
                         entity2_text = entity2.text.encode("utf-8")
+                        sentence_text = []
+                        entity1_orders = [t.order for t in entity1.tokens]
+                        entity2_orders = [t.order for t in entity2.tokens]
+                        entity_orders = entity1_orders + entity2_orders
+                        entity_orders.sort()
+                        # print entity_orders
+                        for t in sentence1.tokens:
+                            if t.order in entity1_orders and (len(sentence_text) == 0 or sentence_text[-1] != "ARG1"):
+                                #sentence_text.append("ARG1-" + entity1.type)
+                                continue
+                            elif t.order in entity2_orders and  (len(sentence_text) == 0 or sentence_text[-1] != "ARG2"):
+                                #sentence_text.append("ARG2-" + entity1.type)
+                                continue
+                            elif "goldstandard" in t.tags and  (len(sentence_text) == 0 or sentence_text[-1] != "ENTITY"):
+                                #sentence_text.append("ENTITY")
+                                continue
+                            elif t.text.lower() not in all_stopwords and not t.text.istitle() and t.text.isalpha():
+                                sentence_text.append(t.text)
+                            if rtype not in reltype_texts:
+                                reltype_texts[rtype] = []
+                            reltype_texts[rtype].append(sentence_text)
+                            #print " ".join(sentence_text)
+                            #print
                         rel_text = "{}#{}\t{}\t{}#{}".format(entity1.type, entity1_text, rtype, entity2.type, entity2_text)
                         unique_relations.add(rel_text)
                         # if rel_text not in unique_relations:
@@ -201,6 +230,25 @@ class SeeDevCorpus(Corpus):
             for r in unique_relations:
                 relfile.write(r.decode("utf-8") + '\n')
         #pp.pprint(relations_stats)
+        alltokens = []
+        for rtype in reltype_texts:
+            alltokens += list(itertools.chain(*reltype_texts[rtype]))
+        alldist = nltk.FreqDist(alltokens)
+        allmc = alldist.most_common(150)
+        allmc = set([x[0] for x in allmc])
+        for rtype in reltype_texts:
+            fdist1 = nltk.FreqDist(list(itertools.chain(*reltype_texts[rtype])))
+            mc = fdist1.most_common(150)
+            mc = set([x[0] for x in mc])
+            int_words = mc - allmc
+            with codecs.open("seedev_int_words_{}.txt".format(rtype), 'w', 'utf-8') as relfile:
+                print
+                print rtype
+                for i in int_words:
+                    relfile.write(i + '\n')
+                    print i
+            #print rtype, len(int_words), int_words
+            #print
 
     def get_features(self, pairtype):
         f = []
@@ -316,14 +364,67 @@ class SeeDevCorpus(Corpus):
         :param corpuspath: corpus path
         :return:
         """
+        nsentences = 0
+        for did in self.documents:
+            nsentences += len(self.documents[did].sentences)
+        print "base corpus has {} sentences".format(nsentences)
         corpus2 = pickle.load(open(corpuspath, 'rb'))
+        nsentences = 0
         for did in corpus2.documents:
-            for sentence in corpus2.documents[did].sentences:
-                if any([len(e.targets)> 1 for e in sentence.entities.elist["goldstandard"]]):
-                    print "found sentence with relations:", sentence.sid
-                    self.documents[sentence.sid] = Document(sentence.text, sentences=[sentence])
+            if did in self.documents:
+                print "repeated did:", did
+            else:
+                self.documents[did] = corpus2.documents[did]
+                nsentences += len(corpus2.documents[did].sentences)
+            #for sentence in corpus2.documents[did].sentences:
+                #if any([len(e.targets)> 1 for e in sentence.entities.elist["goldstandard"]]):
+                #    print "found sentence with relations:", sentence.sid
+                #if len(sentence.entities.elist["goldstandard"]) > 1:
+                #self.documents[sentence.sid] = Document(sentence.text, sentences=[sentence])
+        print "added {} sentences".format(nsentences)
         self.save("corpora/Thaliana/seedev-extended.pickle")
 
+    def convert_entities_to_goldstandard(self, basemodel="models/seedev_train_entity"):
+        for did in self.documents:
+            for sentence in self.documents[did].sentences:
+                sentence.entities.elist["goldstandard"] = []
+                for source in sentence.entities.elist:
+                    if source.startswith(basemodel):
+                        # logging.info("adding to goldstandard: {}, {} entities".format(source, len(sentence.entities.elist[source])))
+                        sentence.entities.elist["goldstandard"] += sentence.entities.elist[source]
+
+    def find_ds_relations(self):
+        rtypes = config.ds_pair_types
+        #del rtypes["Has_Sequence_Identical_To"]
+        #del rtypes["Is_Functionally_Equivalent_To"]
+        rel_words = get_relwords(rtypes)
+        for did in self.documents:
+            for sentence in self.documents[did].sentences:
+                sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
+                sentence_words = set([t.text for t in sentence.tokens])
+                # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
+                for rtype in rtypes:
+                    # logging.info(rtype)
+                    if len(sentence_words & rel_words[rtype]) > 1 and len(sentence_entities) < 5:
+                        pairtypes = (config.pair_types[rtype]["source_types"], config.pair_types[rtype]["target_types"])
+                        for pair in itertools.permutations(sentence_entities, 2):
+                            if pair[0].type in pairtypes[0] and pair[1].type in pairtypes[1] and pair[0].text != pair[1].text:
+
+                                    logging.info(u"found relation {0}: {1.text}.{1.type}=>{2.text}.{2.type} because of {3}".
+                                                 format(rtype, pair[0], pair[1], str(sentence_words & rel_words[rtype])))
+                                    logging.info("context: {}".format(sentence.text.encode("utf-8")))
+                                    logging.info("")
+                                    pair[0].targets.append((pair[1].eid, rtype))
+
+
+def get_relwords(rtypes, basedir="seedev_int_words"):
+    relwords = {}
+    for rtype in rtypes:
+        relwords[rtype] = set()
+        with open(basedir + "_{}.txt".format(rtype), 'r') as wfile:
+            for l in wfile:
+                relwords[rtype].add(l.strip())
+    return relwords
 
 def get_seedev_gold_ann_set(goldpath, entitytype, pairtype):
     logging.info("loading gold standard annotations... {}".format(goldpath))
@@ -343,21 +444,24 @@ def get_seedev_gold_ann_set(goldpath, entitytype, pairtype):
                     else:
                         etype, dstart, dend = ann.split(" ")
                         dstart, dend = int(dstart), int(dend)
+                        if etype == entitytype or entitytype == "all":
+                            gold_offsets.add((did, dstart, dend, etext))
+
                     tid_to_offsets[did + "." + tid] = (dstart, dend, etext)
     gold_relations = set()
     annfiles = [goldpath + '/' + f for f in os.listdir(goldpath) if f.endswith('.a2')]
     for current, f in enumerate(annfiles):
-            did = f.split(".")[0].split("/")[-1]
-            with open(f, 'r') as txt:
-                for line in txt:
-                    eid, ann = line.strip().split("\t")
-                    ptype, sourceid, targetid = ann.split(" ")
-                    if ptype == pairtype or pairtype == "all":
-                        sourceid = sourceid.split(":")[-1]
-                        targetid = targetid.split(":")[-1]
-                        source = tid_to_offsets[did + "." + sourceid]
-                        target = tid_to_offsets[did + "." + targetid]
-                        gold_relations.add((did, source[:2], target[:2], u"{}={}>{}".format(source[2], ptype, target[2])))
-                        #gold_relations.add((did, source[:2], target[:2], u"{}=>{}".format(source[2], target[2])))
+        did = f.split(".")[0].split("/")[-1]
+        with open(f, 'r') as txt:
+            for line in txt:
+                eid, ann = line.strip().split("\t")
+                ptype, sourceid, targetid = ann.split(" ")
+                if ptype == pairtype or pairtype == "all":
+                    sourceid = sourceid.split(":")[-1]
+                    targetid = targetid.split(":")[-1]
+                    source = tid_to_offsets[did + "." + sourceid]
+                    target = tid_to_offsets[did + "." + targetid]
+                    gold_relations.add((did, source[:2], target[:2], u"{}={}>{}".format(source[2], ptype, target[2])))
+                    #gold_relations.add((did, source[:2], target[:2], u"{}=>{}".format(source[2], target[2])))
     return gold_offsets, gold_relations
 
