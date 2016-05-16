@@ -4,6 +4,8 @@ import pickle
 import sys
 import os
 
+import pexpect
+
 sys.path.append(os.path.abspath(os.path.dirname(__file__) + '../..'))
 
 
@@ -166,4 +168,37 @@ class Corpus(object):
                     yield sentence
                 elif hassource is None:
                     yield sentence
+
+    def get_sentence(self, sid):
+        for d in self.documents:
+            for sentence in self.documents[d].sentences:
+                if sentence.sid == sid:
+                    return sentence
+
+    def load_genia(self):
+        os.chdir("bin/geniatagger-3.0.2/")
+        c = pexpect.spawn('./geniatagger')
+        c.expect("loading named_entity_models..done.\r\n")
+        os.chdir("..")
+        os.chdir("..")
+        for did in self.documents:
+            for sentence in self.documents[did].sentences:
+                c.sendline(" ".join([t.text for t in sentence.tokens]))
+                c.expect("\r\n\r\n")
+                genia_results = c.before.split("\n")[1:]
+                if len(genia_results) != len(sentence.tokens):
+                    print "error with genia results"
+                    print " ".join([t.text for t in sentence.tokens])
+                    print genia_results
+                else:
+                    for i, t in enumerate(genia_results):
+                        values = t.split("\t")
+                        #if values[2] != sentence.tokens[i].pos:
+                        #    print "pos:", values[0], values[2], sentence.tokens[i].pos
+                        sentence.tokens[i].pos = values[2]
+                        sentence.tokens[i].genia_tag = values[4]
+
+        c.kill(0)
+
+
 
