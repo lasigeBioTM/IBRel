@@ -10,7 +10,7 @@ import time
 
 from pycorenlp import StanfordCoreNLP
 
-import config.corpus_paths
+from config.corpus_paths import paths
 from classification.ner.crfsuitener import CrfSuiteModel
 from classification.ner.matcher import MatcherModel
 from classification.ner.mirna_matcher import MirnaMatcher
@@ -95,7 +95,7 @@ def main():
                                "crossvalidation", "train_relations", "test_relations", "load_genia"])
     parser.add_argument("--goldstd", default="", dest="goldstd", nargs="+",
                         help="Gold standard to be used. Will override corpus, annotations",
-                        choices=config.corpus_paths.paths.keys())
+                        choices=paths.keys())
     parser.add_argument("--submodels", default="", nargs='+', help="sub types of classifiers"),
     parser.add_argument("-i", "--input", dest="input", action="store",
                       default='''Administration of a higher dose of indinavir should be \\
@@ -140,20 +140,20 @@ considered when coadministering with megestrol acetate.''',
             print "load only one corpus each time"
             sys.exit()
         options.goldstd = options.goldstd[0]
-        corpus_format = config.corpus_paths.paths[options.goldstd]["format"]
-        corpus_path = config.corpus_paths.paths[options.goldstd]["text"]
-        corpus_ann = config.corpus_paths.paths[options.goldstd]["annotations"]
+        corpus_format = paths[options.goldstd]["format"]
+        corpus_path = paths[options.goldstd]["text"]
+        corpus_ann = paths[options.goldstd]["annotations"]
 
         corenlp_client = StanfordCoreNLP('http://localhost:9000')
         corpus = load_corpus(options.goldstd, corpus_path, corpus_format, corenlp_client)
-        corpus.save(config.corpus_paths.paths[options.goldstd]["corpus"])
+        corpus.save(paths[options.goldstd]["corpus"])
         if corpus_ann: #add annotation if it is not a test set
             corpus.load_annotations(corpus_ann, options.etype, options.ptype)
-            corpus.save(config.corpus_paths.paths[options.goldstd]["corpus"])
+            corpus.save(paths[options.goldstd]["corpus"])
     elif options.actions == "load_genia":
         options.goldstd = options.goldstd[0]
-        corpus_path = config.corpus_paths.paths[options.goldstd]["corpus"]
-        corpus_ann = config.corpus_paths.paths[options.goldstd]["annotations"]
+        corpus_path = paths[options.goldstd]["corpus"]
+        corpus_ann = paths[options.goldstd]["annotations"]
         logging.info("loading corpus %s" % corpus_path)
         corpus = pickle.load(open(corpus_path, 'rb'))
         corpus.load_genia()
@@ -162,19 +162,19 @@ considered when coadministering with megestrol acetate.''',
             print "load only one corpus each time"
             sys.exit()
         options.goldstd = options.goldstd[0]
-        corpus_path = config.corpus_paths.paths[options.goldstd]["corpus"]
-        corpus_ann = config.corpus_paths.paths[options.goldstd]["annotations"]
+        corpus_path = paths[options.goldstd]["corpus"]
+        corpus_ann = paths[options.goldstd]["annotations"]
         logging.info("loading corpus %s" % corpus_path)
         corpus = pickle.load(open(corpus_path, 'rb'))
         logging.debug("loading annotations...")
         corpus.clear_annotations(options.etype)
         corpus.load_annotations(corpus_ann, options.etype, options.ptype)
         # corpus.get_invalid_sentences()
-        corpus.save(config.corpus_paths.paths[options.goldstd]["corpus"])
+        corpus.save(paths[options.goldstd]["corpus"])
     else:
         corpus = Corpus("corpus/" + "&".join(options.goldstd))
         for g in options.goldstd:
-            corpus_path = config.corpus_paths.paths[g]["corpus"]
+            corpus_path = paths[g]["corpus"]
             logging.info("loading corpus %s" % corpus_path)
             this_corpus = pickle.load(open(corpus_path, 'rb'))
             corpus.documents.update(this_corpus.documents)

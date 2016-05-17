@@ -16,10 +16,15 @@ all_entity_types = ("Gene",
                      "Tissue",
                      "Development_Phase",
                      "Environmental_Factor")
+
 all_entity_groups = {"DNA_Product": ("RNA", "Protein", "Protein_Family", "Protein_Complex", "Protein_Domain"),
                      "DNA": ("Gene", "Gene_Family", "Box", "Promoter"),
                      "Dynamic_Process": ("Regulatory_Network", "Pathway"),
                      "Internal_Factor": ("Tissue", "Development_Phase", "Genotype")}
+all_entity_groups["Functional_Molecule"] = all_entity_groups["DNA_Product"] + ("Hormone",)
+all_entity_groups["Molecule"] = all_entity_groups["DNA"] + all_entity_groups["Functional_Molecule"]
+all_entity_groups["Factor"] = all_entity_groups["Internal_Factor"] + ("Environmental_Factor",)
+
 ds_pair_types = {
     "Binds_To",
 "Composes_Primary_Structure",
@@ -177,10 +182,6 @@ event_types = {"wherewhen": {"subtypes": ['Exists_At_Stage', 'Is_Localized_In', 
                                'Composes_Primary_Structure', 'Composes_Protein_Complex', ]},
                "interaction": {"subtypes": ['Interacts_With', 'Binds_To']} #'Is_Linked_To']}
                }
-
-all_entity_groups["Functional_Molecule"] = all_entity_groups["DNA_Product"] + ("Hormone",)
-all_entity_groups["Molecule"] = all_entity_groups["DNA"] + all_entity_groups["Functional_Molecule"]
-all_entity_groups["Factor"] = all_entity_groups["Internal_Factor"] + ("Environmental_Factor",)
 
 for e in event_types:
     stypes = [pair_types[t]["source_types"] for t in event_types[e]["subtypes"]]
