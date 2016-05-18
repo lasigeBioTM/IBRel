@@ -46,16 +46,16 @@ paths = {
     },
 
     ### BioCreative 2 Gene mention subtask
-    'bc2gn_train': {
+    'bc2gm_train': {
         'text': bc2gn_base + "bc2geneMention/train/train.in",
         'annotations': bc2gn_base + "bc2geneMention/train/GENE.eval",
-        'corpus': "data/BC2GN-train.pickle",
+        'corpus': "data/BC2GM-train.pickle",
         'format': "bc2"
     },
-    'bc2gn_test': {
+    'bc2gm_test': {
         'text': bc2gn_base + "BC2GM/test/test.in",
         'annotations': bc2gn_base + "BC2GM/test/GENE.eval",
-        'corpus': "data/BC2GN-test.pickle",
+        'corpus': "data/BC2GM-test.pickle",
         'format': "bc2"
     },
 
