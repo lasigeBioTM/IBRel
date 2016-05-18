@@ -26,12 +26,14 @@ from classification.rext.scikitre import ScikitRE
 from classification.rext.stanfordre import StanfordRE
 from classification.rext.svmtk import SVMTKernel
 from config import config
+from reader.bc2gm_corpus import BC2GMCorpus
 from reader.chebi_corpus import ChebiCorpus
 from reader.chemdner_corpus import ChemdnerCorpus
 from reader.ddi_corpus import DDICorpus
 from reader.genia_corpus import GeniaCorpus
 from reader.gpro_corpus import GproCorpus
 from reader.jnlpba_corpus import JNLPBACorpus
+from reader.lll_corpus import LLLCorpus
 from reader.mirna_corpus import MirnaCorpus
 from reader.mirtext_corpus import MirtexCorpus
 from reader.pubmed_corpus import PubmedCorpus
@@ -83,6 +85,12 @@ def load_corpus(goldstd, corpus_path, corpus_format, corenlp_client):
         corpus.load_corpus(corenlp_client)
     elif corpus_format == "jnlpba":
         corpus = JNLPBACorpus(corpus_path)
+        corpus.load_corpus(corenlp_client)
+    elif corpus_format == "bc2":
+        corpus = BC2GMCorpus(corpus_path)
+        corpus.load_corpus(corenlp_client)
+    elif corpus_format == "lll":
+        corpus = LLLCorpus(corpus_path)
         corpus.load_corpus(corenlp_client)
     return corpus
 

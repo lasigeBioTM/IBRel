@@ -191,12 +191,11 @@ class Sentence(object):
                 entity.text = newtext
             if "text" in kwargs and newtext != kwargs["text"]:
                 if newtext not in kwargs["text"] and kwargs["text"] not in newtext:
+                    logging.info("diferent text:|system {} {} |{}|=>|{}| {} {} input|{} {}".format(tlist[0].start, tlist[-1].end, newtext, kwargs["text"],
+                                                                                                   start, end, self.sid,
+                                                                                                   self.text))
                     logging.info("text does not match: {}=>{}".format(newtext, kwargs["text"]))
-                    print exclude, self.text[tlist[0].start:tlist[-1].end]
-                    print self.text[tlist[0].start:exclude[0][0]]
-                    print self.text[exclude[0][0]:exclude[0][1]]
-                    print self.text[exclude[0][1]:tlist[-1].end]
-
+                    sys.exit()
                     # return None
                 else:
                     logging.info("diferent text:|system {} {} |{}|=>|{}| {} {} input|{} {}".format(tlist[0].start, tlist[-1].end, newtext, kwargs["text"],
