@@ -5,7 +5,7 @@ import time
 import argparse
 import sys
 
-import config.corpus_paths
+from config.corpus_paths import paths
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__) + '../..'))
 from text.corpus import Corpus
@@ -103,8 +103,8 @@ class ResultsNER(object):
         pass
 
     def load_corpus(self, goldstd):
-        logging.info("loading corpus %s" % config.corpus_paths.paths[goldstd]["corpus"])
-        corpus = pickle.load(open(config.corpus_paths.paths[goldstd]["corpus"]))
+        logging.info("loading corpus %s" % paths[goldstd]["corpus"])
+        corpus = pickle.load(open(paths[goldstd]["corpus"]))
 
         for did in corpus.documents:
             for sentence in corpus.documents[did].sentences:
@@ -193,7 +193,7 @@ def main():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument("action", default="evaluate", help="Actions to be performed.")
     parser.add_argument("goldstd", default="chemdner_sample", help="Gold standard to be used.",
-                        choices=config.corpus_paths.paths.keys())
+                        choices=paths.keys())
     parser.add_argument("--corpus", dest="corpus",
                       default="data/chemdner_sample_abstracts.txt.pickle",
                       help="format path")
