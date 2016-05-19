@@ -81,7 +81,7 @@ class StanfordNERModel(SimpleTaggerModel):
         # Popen(["jar", "-uf", self.STANFORD_NER, "{}.ser.gz".format(self.path)]).communicate()
         logging.info("saved model file to {}".format(self.STANFORD_NER))
 
-    def test(self, corpus, port=9191):
+    def test(self, corpus, port=9181):
         self.tagger = ner.SocketNER("localhost", port, output_format='inlineXML')
         tagged_sentences = []
         logging.info("sending sentences to tagger {}...".format(self.path))
@@ -195,7 +195,7 @@ class StanfordNERModel(SimpleTaggerModel):
         return tagged
 
 
-    def load_tagger(self, port=9191):
+    def load_tagger(self, port=9181):
         """
         Start the server process with the classifier
         :return:
