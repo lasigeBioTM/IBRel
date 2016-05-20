@@ -251,7 +251,8 @@ class Document(object):
                 # print "found it!"
                 return s
         for s in self.sentences:
-            print s.tokens[0].dstart <= start, s.tokens[-1].dend >= end, s.tokens[0].dstart, s.tokens[-1].dend, s.text
+            logging.debug("{} {} {} {} {}".format(s.tokens[0].dstart <= start, s.tokens[-1].dend >= end,
+                                                s.tokens[0].dstart, s.tokens[-1].dend, s.text))
         return None
 
     def get_offsets(self, esource, ths, rules):

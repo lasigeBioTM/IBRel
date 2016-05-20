@@ -26,6 +26,7 @@ from classification.rext.scikitre import ScikitRE
 from classification.rext.stanfordre import StanfordRE
 from classification.rext.svmtk import SVMTKernel
 from config import config
+from reader.aimed_corpus import AIMedCorpus
 from reader.bc2gm_corpus import BC2GMCorpus
 from reader.chebi_corpus import ChebiCorpus
 from reader.chemdner_corpus import ChemdnerCorpus
@@ -91,6 +92,9 @@ def load_corpus(goldstd, corpus_path, corpus_format, corenlp_client):
         corpus.load_corpus(corenlp_client)
     elif corpus_format == "lll":
         corpus = LLLCorpus(corpus_path)
+        corpus.load_corpus(corenlp_client)
+    elif corpus_format == "aimed":
+        corpus = AIMedCorpus(corpus_path)
         corpus.load_corpus(corenlp_client)
     return corpus
 

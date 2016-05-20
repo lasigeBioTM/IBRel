@@ -38,7 +38,7 @@ paths = {
     },
 
     ### AIMed ###
-    'aimed': {
+    'aimed_proteins': {
         'text': "corpora/AIMed/proteins",
         'annotations': "corpora/AIMed/proteins",
         'corpus': "data/aimed.pickle",
