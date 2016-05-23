@@ -185,7 +185,7 @@ class Entities(object):
         for s in self.elist:
             #logging.info("%s - %s" % (self.sid, s))
             # use everything except what's already combined and gold standard
-            if (s.startswith(base_model) or base_model == "all") and s not in (name, "goldstandard"):
+            if (s.startswith(base_model) or base_model == "all") and s != name and not s.startswith("goldstandard"):
                 for e in self.elist[s]: # TODO: filter for classifier confidence
                     #if any([word in e.text for word in self.stopwords]):
                     #    logging.info("ignored stopword %s" % e.text)

@@ -45,7 +45,7 @@ class JNLPBACorpus(Corpus):
                     doc_offset = 0
                     sentences = []
                 elif l.strip() == "" and sentence_text != "": # new sentence
-                    logging.debug("creating mew sentence: {}".format(sentence_text))
+                    #logging.debug("creating mew sentence: {}".format(sentence_text))
                     sid = did + ".s" + str(len(sentences))
                     this_sentence = Sentence(sentence_text, offset=doc_offset, sid=sid, did=did)
                     doc_offset += len(sentence_text) + 1
@@ -89,7 +89,7 @@ class JNLPBACorpus(Corpus):
                     doc_offset = 0
                     sentences = []
                 elif l.strip() == "" and sentence_text != "":  # new sentence
-                    logging.debug("creating mew sentence: {}".format(sentence_text))
+                    #logging.debug("creating mew sentence: {}".format(sentence_text))
                     sid = did + ".s" + str(len(sentences))
                     this_sentence = self.documents[did].get_sentence(sid)
                     if not added: # in case the last token was an entity
@@ -97,7 +97,7 @@ class JNLPBACorpus(Corpus):
                         added = True
                     #print sentence_entities
                     for e in sentence_entities:
-                        logging.debug("adding this entity: {}".format(e[2]))
+                        #logging.debug("adding this entity: {}".format(e[2]))
                         eid = this_sentence.tag_entity(e[0], e[1], etype,
                                                   text=e[2])
                         if eid is None:
@@ -147,7 +147,7 @@ def get_jnlpba_gold_ann_set(goldann, etype):
                 doc_offset = 0
                 sentences = []
             elif l.strip() == "" and sentence_text != "":  # new sentence
-                logging.debug("creating mew sentence: {}".format(sentence_text))
+                #logging.debug("creating mew sentence: {}".format(sentence_text))
                 if not added:  # in case the last token was an entity
                     gold_offsets.add((did, doc_offset + estart, doc_offset + eend, entity_text))
                     added = True
