@@ -158,6 +158,7 @@ considered when coadministering with megestrol acetate.''',
 
         corenlp_client = StanfordCoreNLP('http://localhost:9000')
         corpus = load_corpus(options.goldstd, corpus_path, corpus_format, corenlp_client)
+        corpus.load_genia()
         corpus.save(paths[options.goldstd]["corpus"])
         if corpus_ann: #add annotation if it is not a test set
             corpus.load_annotations(corpus_ann, options.etype, options.ptype)

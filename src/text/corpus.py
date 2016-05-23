@@ -190,13 +190,20 @@ class Corpus(object):
                     print "error with genia results"
                     print " ".join([t.text for t in sentence.tokens])
                     print genia_results
+                    for i, t in enumerate(sentence.tokens):
+                        # if values[2] != sentence.tokens[i].pos:
+                        #    print "pos:", values[0], values[2], sentence.tokens[i].pos
+                        sentence.tokens[i].genia_pos = sentence.tokens[i].pos
+                        sentence.tokens[i].genia_tag = sentence.tokens[i].tag
+                        sentence.tokens[i].genia_chunk = "None"
                 else:
-                    for i, t in enumerate(genia_results):
+                    for i, t in enumerate(c):
                         values = t.split("\t")
                         #if values[2] != sentence.tokens[i].pos:
                         #    print "pos:", values[0], values[2], sentence.tokens[i].pos
-                        sentence.tokens[i].pos = values[2]
+                        sentence.tokens[i].genia_pos = values[2]
                         sentence.tokens[i].genia_tag = values[4]
+                        sentence.tokens[i].genia_chunk = values[3]
 
         c.kill(0)
 
