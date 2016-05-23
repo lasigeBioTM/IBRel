@@ -195,7 +195,7 @@ class Sentence(object):
                                                                                                    start, end, self.sid,
                                                                                                    self.text))
                     logging.info("text does not match: {}=>{}".format(newtext, kwargs["text"]))
-                    sys.exit()
+                    #sys.exit()
                     # return None
                 else:
                     logging.info("diferent text:|system {} {} |{}|=>|{}| {} {} input|{} {}".format(tlist[0].start, tlist[-1].end, newtext, kwargs["text"],
@@ -245,7 +245,7 @@ class Sentence(object):
                     tlist[t].tags[source] = "middle"
                     tlist[t].tags[source + "_" + etype] = "middle"
                     tlist[t].tags[source + "_subtype"] = etype
-        #logging.debug([t.tags for t in self.tokens])
+        # logging.debug([t.tags for t in tlist])
 
     def write_bioc_results(self, parent, source):
         bioc_sentence = ET.SubElement(parent, "sentence")

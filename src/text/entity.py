@@ -184,7 +184,8 @@ class Entities(object):
         offsets = Offsets()
         for s in self.elist:
             #logging.info("%s - %s" % (self.sid, s))
-            if s.startswith(base_model) and s != name: #use everything
+            # use everything except what's already combined and gold standard
+            if (s.startswith(base_model) or base_model == "all") and s not in (name, "goldstandard"):
                 for e in self.elist[s]: # TODO: filter for classifier confidence
                     #if any([word in e.text for word in self.stopwords]):
                     #    logging.info("ignored stopword %s" % e.text)
@@ -193,13 +194,16 @@ class Entities(object):
                     next_eid = "{0}.e{1}".format(e.sid, len(combined))
                     eid_offset = Offset(e.dstart, e.dend, text=e.text, sid=e.sid, eid=next_eid)
                     added = False
-                    # check for perfect overlaps
+                    # check for perfect overlaps only
                     for i, o in enumerate(offsets.offsets):
                         overlap = eid_offset.overlap(o)
                         if overlap == perfect_overlap:
                             combined[o.eid].recognized_by.append(s)
                             combined[o.eid].score[s] = e.score
-                            combined[o.eid].ssm_score_all[s] = e.ssm_score
+                            # if hasattr(e, "ssm_score"):
+                            #     combined[o.eid].ssm_score_all[s] = e.ssm_score
+                            # else:
+                            #     combined[o.eid].ssm_score_all[s] = 0
                             added = True
                             #logging.info(combined[o.eid].ssm_score_all)
                             #logging.info("added {0}-{1} to entity {2}".format(s.split("_")[-1], e.text, combined[o.eid].text))
@@ -208,7 +212,10 @@ class Entities(object):
                         offsets.offsets.add(eid_offset)
                         e.recognized_by = [s]
                         e.score = {s: e.score}
-                        e.ssm_score_all= {s: e.ssm_score}
+                        # if hasattr(e, "ssm_score"):
+                        #     e.ssm_score_all= {s: e.ssm_score}
+                        # else:
+                        #     e.ssm_score_all = {s: 0}
                         combined[next_eid] = e
                         #logging.info("new entity: {0}-{1}".format(s.split("_")[-1], combined[next_eid].text))
         self.elist[name] = combined.values()

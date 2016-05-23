@@ -124,18 +124,37 @@ class ResultsNER(object):
             for sentence in self.corpus.documents[did].sentences:
                 #logging.debug(sentence.sid)
                 sentence.entities.combine_entities(basemodel, name)
-                for e in sentence.entities.elist[name]:
-                    total += 1
+                #for e in sentence.entities.elist[name]:
+                #    total += 1
                     #logging.info("{} - {}".format(e.text, e.score))
-                    if len(e.recognized_by) > 1:
-                        scores += sum(e.score.values())/len(e.score.values())
-                    elif len == 1:
-                        scores += e.score.values()[0]
+                    # if len(e.recognized_by) > 1:
+                    #     scores += sum(e.score.values())/len(e.score.values())
+                    # elif len == 1:
+                    #     scores += e.score.values()[0]
                     #if e.score < 0.8:
                     #    logging.info("{0} score of {1}".format(e.text.encode("utf-8"),
                     #                                            e.score))
         if total > 0:
             logging.info("{0} entities average confidence of {1}".format(total, scores/total))
+
+    def add_results(self, results):
+        all_models = set()
+        # merge the results of this set with another set
+        dids = set(self.corpus.documents.keys()).union(set(results.corpus.documents.keys()))
+        for did in dids:
+            if did not in self.corpus.documents:
+                self.corpus.documents[did] = results.corpus.document[did]
+            elif did not in results.corpus.documents:
+                results.corpus.documents[did] = self.corpus.documents[did]
+            else:
+                for sentence in results.corpus.documents[did].sentences:
+                    base_sentence = self.corpus.documents[did].get_sentence(sentence.sid)
+                    for model in sentence.entities.elist:
+                        if model != "goldstandard" and model not in base_sentence.entities.elist:
+                            base_sentence.entities.elist[model] = sentence.entities.elist[model]
+                    all_models = all_models.union(set(base_sentence.entities.elist.keys()))
+        # print all_models
+
 
 
 class ResultSetNER(object):

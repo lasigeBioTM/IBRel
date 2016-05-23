@@ -274,7 +274,7 @@ def main():
     parser.add_argument("--corpus", dest="corpus",
                       default="data/chemdner_sample_abstracts.txt.pickle",
                       help="format path")
-    parser.add_argument("--results", dest="results", help="Results object pickle.")
+    parser.add_argument("--results", dest="results", help="Results object pickle.", nargs='+')
     parser.add_argument("--models", dest="models", help="model destination path, without extension", default="combined")
     parser.add_argument("--ensemble", dest="ensemble", help="name/path of ensemble classifier", default="combined")
     parser.add_argument("--chebi", dest="chebi", help="Chebi mapping threshold.", default=0, type=float)
@@ -300,21 +300,34 @@ def main():
     logging.basicConfig(level=numeric_level, format=logging_format)
     logging.getLogger().setLevel(numeric_level)
     logging.info("Processing action {0} on {1}".format(options.action, options.goldstd))
-    logging.info("loading results %s" % options.results + ".pickle")
-    if os.path.exists(options.results + ".pickle"):
-        results = pickle.load(open(options.results + ".pickle", 'rb'))
-        results.path = options.results
-    else:
-        print "results not found"
-        sys.exit()
+    results_list = []
+    for results_path in options.results:
+        logging.info("loading results %s" % results_path + ".pickle")
+        if os.path.exists(results_path + ".pickle"):
+            results = pickle.load(open(results_path + ".pickle", 'rb'))
+            results.load_corpus(options.goldstd)
+            results.path = results_path
+            results_list.append(results)
+        else:
+            print "results not found"
+            sys.exit()
 
     if options.action == "combine":
-        # add another set of annotations to each sentence, ending in combined
-        # each entity from this dataset should have a unique ID and a recognized_by attribute
-        results.load_corpus(options.goldstd)
-        logging.info("combining results...")
-        results.combine_results(options.models, options.models + "_combined")
-        results.save(options.results + "_combined.pickle")
+        # merge the results of various results corresponding to different classifiers
+        # the entities of each sentence are added according to the classifier of each result
+        # every result should correspond to the same gold standard
+        # save to the first results path
+        #results.load_corpus(options.goldstd)
+        #logging.info("combining results...")
+        #results.combine_results(options.models, options.models + "_combined")
+        #results.save(options.results + "_combined.pickle")
+        base_result = results_list[0]
+        for result in results_list[1:]:
+            logging.info("adding {}...".format(result.path))
+            base_result.add_results(result)
+        base_result.combine_results("all", "combined")
+        base_result.save(options.models + ".pickle")
+
 
     elif options.action in ("evaluate", "evaluate_list"):
         if "annotations" in paths[options.goldstd]:
@@ -324,24 +337,26 @@ def main():
         else:
             goldset = None
         logging.info("using thresholds: chebi > {!s} ssm > {!s}".format(options.chebi, options.ssm))
-        results.load_corpus(options.goldstd)
-        results.path = options.results
+        #results.load_corpus(options.goldstd)
+        #results.path = options.results
         ths = {"chebi": options.chebi, "ssm": options.ssm}
         if options.action == "evaluate":
-            if options.ptype:
-                get_relations_results(results, options.models, goldset[1], ths, options.rules)
-            else:
-                get_results(results, options.models, goldset[0], ths, options.rules)
+            for result in results_list:
+                if options.ptype: # evaluate this pair type
+                    get_relations_results(result, options.models, goldset[1], ths, options.rules)
+                else: # evaluate an entity type
+                    get_results(result, options.models, goldset[0], ths, options.rules)
             #if options.bceval:
             #    write_chemdner_files(results, options.models, goldset, ths, options.rules)
             #    evaluation = run_chemdner_evaluation(config.paths[options.goldstd]["cem"],
             #                                         options.results + ".tsv")
             #    print evaluation
         elif options.action == "evaluate_list": # ignore the spans, the gold standard is a list of unique entities
-            if options.ptype:
-                get_list_results(results, options.models, goldset[1], ths, options.rules, mode="re")
-            else:
-                get_list_results(results, options.models, goldset[0], ths, options.rules)
+            for result in results_list:
+                if options.ptype:
+                    get_list_results(result, options.models, goldset[1], ths, options.rules, mode="re")
+                else:
+                    get_list_results(result, options.models, goldset[0], ths, options.rules)
 
     total_time = time.time() - start_time
     logging.info("Total time: %ss" % total_time)
