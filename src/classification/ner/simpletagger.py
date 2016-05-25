@@ -29,17 +29,52 @@ feature_extractors = {# "text": lambda x, i: x.tokens[i].text,
                       "lemma": lambda x, i: x.tokens[i].lemma,
                       "prevlemma": lambda x, i: prev_lemma(x,i),
                       "nextlemma": lambda x, i: next_lemma(x,i),
-                      "postag": lambda x, i: x.tokens[i].pos,
+                      "postag": lambda x, i: x.tokens[i].genia_pos,
                       "prevpostag": lambda x, i: prev_pos(x,i),
                       "nextpostag": lambda x, i: next_pos(x,i),
                       "wordclass": lambda x, i: wordclass(x.tokens[i].text),
                       "prevwordclass": lambda x, i: prev_wordclass(x, i),
                       "nextwordclass": lambda x, i: next_wordclass(x, i),
-                      "simplewordclass": lambda x, i: simplewordclass(x.tokens[i].text),
-                      # "greek": lambda x, i: str(has_greek_symbol(x.tokens[i].text)),
-                      # "aminoacid": lambda x, i: str(any(w in amino_acids for w in x.tokens[i].text.split('-'))),
-                      # "periodictable": lambda x, i: str(x.tokens[i].text in element_base.keys() or x.tokens[i].text.title() in zip(*element_base.values())[0]), # this should probably be its own function ffs
+                      "simplewordclass": lambda x, i: simplewordclass(x.tokens[i].text)
                       }
+
+chem_features = feature_extractors.copy()
+chem_features.update({ "greek": lambda x, i: str(has_greek_symbol(x.tokens[i].text)),
+                                       "aminoacid": lambda x, i: str(any(w in amino_acids for w in x.tokens[i].text.split('-'))),
+                                       "periodictable": lambda x, i: str(x.tokens[i].text in element_base.keys() or x.tokens[i].text.title() in zip(*element_base.values())[0])
+                                     })
+
+prot_features = feature_extractors.copy()
+prot_features.update({"genia_tag": lambda x, i: genia_tag(x, i),
+                      "genia_chunk": lambda x, i: genia_chunk(x, i)})
+
+mirna_features = feature_extractors.copy()
+mirna_features.update({"mir": lambda x, i: mirna(x, i),
+                       # "prev_mir": lambda x, i: x.tokens[i-1].text.lower().startswith("mir"),
+                       })
+
+def genia_chunk(sentence, i):
+    if hasattr(sentence[i], "genia_chunk"):
+        print sentence[i].genia_chunk
+        return "GENIA-" + sentence[i].genia_chunk
+    else:
+        return "NOGENIA"
+
+def genia_tag(sentence, i):
+    if hasattr(sentence[i], "genia_tag"):
+        print sentence[i].genia_tag
+        return "GENIA-" + sentence[i].genia_tag
+    else:
+        return "NOGENIA"
+
+def mirna(sentence, i):
+    # TODO: regex
+    if sentence.tokens[i].text.lower().startswith("mir"):
+        return "MIR_START"
+    elif sentence.tokens[i].text.lower() == "-":
+        return "MIR_DASH"
+    else:
+        return "NOMIR"
 
 def word_in_dictionary(word, dictionary):
     # TODO:
@@ -109,13 +144,13 @@ def prev_pos(sentence, i):
     if i == 0:
         return "BOS"
     else:
-        return sentence.tokens[i-1].pos
+        return sentence.tokens[i-1].genia_pos
 
 def next_pos(sentence, i):
     if i == len(sentence.tokens) - 1:
         return "EOS"
     else:
-        return sentence.tokens[i+1].pos
+        return sentence.tokens[i+1].genia_pos
 
 def word_case(word):
     if word.islower():
@@ -308,11 +343,14 @@ class SimpleTaggerModel(Model):
             label = sentence.tokens[i].tags.get("goldstandard_" + subtype, "other")
         features = []
         for f in flist:
-            if f not in sentence.tokens[i].features:
-                fvalue = feature_extractors[f](sentence, i)
-                sentence.tokens[i].features[f] = fvalue
+            #if f not in sentence.tokens[i].features:
+            if subtype == "protein":
+                fvalue = prot_features[f](sentence, i)
             else:
-                fvalue = sentence.tokens[i].features[f]
+                fvalue = feature_extractors[f](sentence, i)
+            sentence.tokens[i].features[f] = fvalue
+            #else: uncomment if it gets too slow
+            #    fvalue = sentence.tokens[i].features[f]
             features.append(f + "=" + fvalue)
         # if label != "other":
         #     logging.debug("{} {}".format(sentence.tokens[i], label))
