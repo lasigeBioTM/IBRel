@@ -6,8 +6,37 @@ import time
 
 import sys
 
-import config.corpus_paths
+from config.corpus_paths import paths
 from config import config
+from postprocessing import chebi_resolution
+from postprocessing.ssm import get_ssm
+
+
+def normalize_entities(results, path, source):
+    mapped = 0
+    not_mapped = 0
+    total_score = 0
+    for idid, did in enumerate(results.corpus):
+        logging.info("{}/{}".format(idid, len(results.corpus)))
+        for sid in results.corpus[did]:
+            for s in results.corpus[did][sid].elist:
+                if s.startswith(source):
+                    # if s != source:
+                    #    logging.info("processing %s" % s)
+                    for entity in results.corpus[did][sid].elist[s]:
+                        entity.normalize()
+                        if entity.normalized_score > 0:
+                            mapped += 1
+                            total_score += entity.normalized_score
+                        else:
+                            not_mapped += 1
+    if mapped == 0:
+        percentmapped = 0
+    else:
+        percentmapped = total_score / mapped
+    logging.info("{0} mapped, {1} not mapped, average score: {2}".format(mapped, not_mapped, percentmapped))
+    logging.info("saving results to %s" % path)
+    pickle.dump(results, open(path, "wb"))
 
 def add_chebi_mappings(results, path, source, save=True):
     """
@@ -109,7 +138,7 @@ def main():
                       help="Actions to be performed.")
     parser.add_argument("goldstd", default="chemdner_sample",
                         help="Gold standard to be used.",
-                        choices=config.corpus_paths.paths.keys())
+                        choices=paths.keys())
     parser.add_argument("--corpus", dest="corpus",
                       default="data/chemdner_sample_abstracts.txt.pickle",
                       help="format path")
@@ -122,7 +151,6 @@ def main():
     parser.add_argument("--log", action="store", dest="loglevel", default="WARNING", help="Log level")
     parser.add_argument("--doctype", dest="doctype", help="type of document to be considered", default="all")
     parser.add_argument("--entitytype", dest="etype", help="type of entities to be considered", default="all")
-    parser.add_argument("--external", action="store_true", default=False, help="Run external evaluation script, depends on corpus type")
     options = parser.parse_args()
 
     numeric_level = getattr(logging, options.loglevel.upper(), None)
@@ -150,6 +178,9 @@ def main():
     # if options.action == "go":
     #    add_go_mappings(results, options.results + ".pickle", options.models)
     elif options.action == "mirna":
+        pass
+    elif options.action == "protein":
+        normalize_entities(results, options.results + ".pickle", options.models)
         pass
     elif options.action == "ssm":
         if options.measure.endswith("go"):

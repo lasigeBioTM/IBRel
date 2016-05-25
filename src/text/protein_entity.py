@@ -34,7 +34,7 @@ if os.path.isfile(uniprotdic):
     logging.info("loading uniprot cache...")
     uniprot = pickle.load(open(uniprotdic, "rb"))
     loadeduniprot = True
-    logging.info("loaded chebi dictionary with %s entries", str(len(uniprot)))
+    logging.info("loaded uniprot dictionary with %s entries", str(len(uniprot)))
 else:
     uniprot = {}
     loadeduniprot = False
@@ -71,6 +71,9 @@ class ProteinEntity(Entity):
         :param rules:
         :return: True if entity does not fall into any of the rules, False if it does
         """
+        if self.ssm_score < ths["ssm"]:
+            logging.info("excluded {} because of ssm ({}<{})".format(self.text, str(self.ssm_score), str(ths["ssm"])))
+            return False
         if "stopwords" in rules:
             words = self.text.split(" ")
             words += self.text.split("-")
@@ -93,6 +96,10 @@ class ProteinEntity(Entity):
                 return False
         if "fixdash" in rules:
             self.text = self.text.replace("-", "")
+        if "uniprot" in rules:
+            if self.normalized_score <= 0:
+                logging.info("excluded {} because of uniprot".format(self.text))
+                return False
         return True
 
     def normalize(self):
@@ -112,7 +119,7 @@ class ProteinEntity(Entity):
 
             c = r.text
             if "\n" not in c:
-                # print "nothing found on uniprot for {}".format(self.text)
+                logging.info("nothing found on uniprot for {}".format(self.text))
                 c = "NA\t"*6
             else:
                 c = c.split("\n")[1].strip()
@@ -133,6 +140,11 @@ class ProteinEntity(Entity):
             #print gos
             if len(self.go_ids) > 0:
                 self.get_best_go()
+        else:
+            self.normalized = ""
+            self.normalized_score = 0
+            self.normalized_ref = "uniprot"
+        logging.info("mapped  {} to {}".format(self.text, self.normalized))
 
     def get_best_go(self):
         cur = db.cursor()
@@ -151,7 +163,11 @@ class ProteinEntity(Entity):
         res = cur.fetchone()
         if res is not None:
             # print self.text, res[1:]
+            logging.info("best GO for {}: {}".format(self.text, " ".join([str(r) for r in res])))
             self.best_go = res[0]
+        else:
+            logging.info("NO GO")
+            self.best_go = ""
 
     # def normalize(self):
     #     term = MySQLdb.escape_string(self.text)

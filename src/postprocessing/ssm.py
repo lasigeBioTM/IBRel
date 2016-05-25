@@ -7,7 +7,7 @@ import pickle
 from optparse import OptionParser
 import logging
 from config.config import chebi_conn as db
-# from config.config import go_conn as dbwebgo
+from config.config import go_conn as dbwebgo
 
 measures = ['resnik', 'simui', 'simgic', 'simgic_hindex', 'simui_hindex']
 go_measures = ["resnik_go", "simui_go", "simui_hindex_go", "simgic_hindex_go"]
@@ -70,7 +70,7 @@ def simui_go(id1, id2):
 			FROM  ( 
 				SELECT DISTINCT t3.id 
 				FROM graph_path p1, graph_path p2, term t1, term t2, term t3 
-                WHERE t1.acc = '%s' AND t2.acc = '%s' AND 
+                WHERE t1.acc = %s AND t2.acc = %s AND
                 t1.id = p1.term2_id AND t2.id = p2.term2_id
 				AND p1.term1_id=p2.term1_id 
 				AND p1.term1_id=t3.id)
@@ -80,12 +80,12 @@ def simui_go(id1, id2):
 		 	FROM (  
                 SELECT t2.id   
                 FROM graph_path p1, term t1, term t2
-                WHERE t1.acc = '%s' AND t1.id = p1.term2_id
+                WHERE t1.acc = %s AND t1.id = p1.term2_id
                 AND p1.term1_id = t2.id
                 UNION  
                 SELECT t4.id
                 FROM graph_path p2, term t3, term t4
-                WHERE t3.acc = '%s' AND t3.id = p2.term2_id
+                WHERE t3.acc = %s AND t3.id = p2.term2_id
                 AND p2.term1_id = t4.id) 
 		 	AS x )"""
     cur.execute(query, (id1,id2,id1,id2))
@@ -308,7 +308,7 @@ def get_ontology_id(entity, ontology):
     if ontology == "chebi":
         resid = entity.chebi_id
     elif ontology == "go":
-        resid = entity.go_id
+        resid = entity.best_go
     return resid
 
 
@@ -360,7 +360,7 @@ def get_ssm(entities, measure, ontology="chebi", hindex=4):
             if ontology == "chebi":
                 res1.ssm_best_name = entities[max_ssm[0]].chebi_name
             elif ontology == "go":
-                res1.ssm_best_name = entities[max_ssm[0]].go_name
+                res1.ssm_best_name = entities[max_ssm[0]].best_go
             res1.ssm_best_text = entities[max_ssm[0]].text
             #res1.ssm_score = max_ssm[1]
             res1.ssm_score = max_ssm[1]
