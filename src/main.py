@@ -170,6 +170,7 @@ considered when coadministering with megestrol acetate.''',
         logging.info("loading corpus %s" % corpus_path)
         corpus = pickle.load(open(corpus_path, 'rb'))
         corpus.load_genia()
+        corpus.save(paths[options.goldstd]["corpus"])
     elif options.actions == "annotate": # rext-add annotation to corpus
         if len(options.goldstd) > 1:
             print "load only one corpus each time"
