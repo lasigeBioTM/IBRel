@@ -64,17 +64,17 @@ class CrfSuiteModel(SimpleTaggerModel):
         results = ResultsNER(self.path)
         results.corpus = corpus
         for isent, sentence in enumerate(self.predicted):
-            results = self.process_sentence(sentence, self.sids[isent], results)
+            results = self.process_sentence(sentence, isent, results)
         logging.info("found {} entities".format(len(results.entities)))
         return results
 
-    def process_sentence(self, predicted, sid, results):
-        sentence = results.corpus.documents['.'.join(sid.split('.')[:-1])].get_sentence(sid)
+    def process_sentence(self, predicted, isent, results):
+        sentence = results.corpus.get_sentence(self.sids[isent])
         if len(predicted) != len(sentence.tokens):
             print "len(predicted) != len(sentence.tokens); {}!={}".format(len(predicted), len(sentence.tokens))
             sys.exit()
         if sentence is None:
-            print sid
+            print self.sids[isent]
             print "not found!"
             sys.exit()
         sentence.tagged = predicted
@@ -84,7 +84,7 @@ class CrfSuiteModel(SimpleTaggerModel):
             if t == "single":
                 single_entity = create_entity(tokens=[token],
                                       sid=sentence.sid, did=sentence.did,
-                                      text=token.text, score=1, etype=self.etype)
+                                      text=token.text, score=self.scores[isent][it], etype=self.etype)
                 eid = sentence.tag_entity(start=token.start, end=token.end, etype=self.etype,
                                             entity=single_entity, source=self.path)
                 single_entity.eid = eid
@@ -92,28 +92,30 @@ class CrfSuiteModel(SimpleTaggerModel):
             elif t == "start":
                 new_entity = create_entity(tokens=[token],
                                                    sid=sentence.sid, did=sentence.did,
-                                                   text=token.text, score=1, etype=self.etype)
+                                                   text=token.text, score=self.scores[isent][it], etype=self.etype)
             elif t == "middle":
                 if not new_entity:
                     logging.info("starting with inside...")
                     new_entity = create_entity(tokens=[token],
                                                    sid=sentence.sid, did=sentence.did,
-                                                   text=token.text, score=1, etype=self.etype)
+                                                   text=token.text, score=self.scores[isent][it], etype=self.etype)
                 else:
                     new_entity.tokens.append(token)
+                    new_entity.score += self.scores[isent][it]
             elif t == "end":
                 if not new_entity:
                     new_entity = create_entity(tokens=[token],
                                                sid=sentence.sid, did=sentence.did,
                                                text=token.text,
-                                               score=1, etype=self.etype)
+                                               score=self.scores[isent][it], etype=self.etype)
                     logging.debug("started from a end: {0}".format(new_entity))
                 else:
                     new_entity.tokens.append(token)
                     new_entity.text = sentence.text[new_entity.tokens[0].start:new_entity.tokens[-1].end]
                     new_entity.end = new_entity.start + len(new_entity.text)
                     new_entity.dend = new_entity.dstart + len(new_entity.text)
-
+                    new_entity.score += self.scores[isent][it]
+                    new_entity.score = new_entity.score/len(new_entity.tokens)
                 #logging.info("%s end: %s" % (new_entity.sid, str(new_entity)))
                 #logging.debug("found the end: %s", ''.join([t.text for t in new_entity.tokens]))
                 eid = sentence.tag_entity(new_entity.tokens[0].start, new_entity.tokens[-1].end, self.etype,
