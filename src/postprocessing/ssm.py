@@ -52,7 +52,7 @@ def resnik_go(id1, id2):
     cur = dbwebgo.cursor()
     query = """SELECT MAX(t3.ic) 
 		FROM graph_path p1, graph_path p2, term t1, term t2, term t3 
-        WHERE t1.acc = '%s' AND t2.acc = '%s' AND t1.id = p1.term2_id AND t2.id = p2.term2_id
+        WHERE t1.acc = %s AND t2.acc = %s AND t1.id = p1.term2_id AND t2.id = p2.term2_id
 		AND p1.term1_id = p2.term1_id 
 		AND p1.term1_id = t3.id;"""
     cur.execute(query, (id1, id2))

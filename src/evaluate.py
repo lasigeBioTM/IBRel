@@ -339,7 +339,9 @@ def main():
         logging.info("using thresholds: chebi > {!s} ssm > {!s}".format(options.chebi, options.ssm))
         #results.load_corpus(options.goldstd)
         #results.path = options.results
-        ths = {"chebi": options.chebi, "ssm": options.ssm}
+        ths = {"chebi": options.chebi}
+        if options.ssm > 0:
+            ths["ssm"] = options.ssm
         if options.action == "evaluate":
             for result in results_list:
                 if options.ptype: # evaluate this pair type
