@@ -72,6 +72,7 @@ class MirnaCorpus(Corpus):
 
     def load_annotations(self, ann_dir, etype):
         time_per_abs = []
+        pmids = []
         logging.info("loading miRNA annotations...")
         with open(ann_dir, 'r') as xml:
             #parse DDI corpus file
@@ -79,6 +80,8 @@ class MirnaCorpus(Corpus):
             root = ET.fromstring(xml.read())
             for doc in root.findall("document"):
                 did = doc.get('id')
+                pmid = doc.get('origId')
+                pmids.append(pmid)
                 for sentence in doc.findall('sentence'):
                     sid = sentence.get('id')
                     this_sentence = self.documents[did].get_sentence(sid)
@@ -111,6 +114,8 @@ class MirnaCorpus(Corpus):
                             if source:
                                 source.targets.append((original_to_eids[p_e2], p_type))
         # self.evaluate_normalization()
+        with open(ann_dir + "-pmids.txt", 'w') as pmidsfile:
+            pmidsfile.write("\n".join(pmids))
 
 def get_ddi_mirna_gold_ann_set(goldpath, entitytype, pairtype):
     logging.info("loading gold standard... {}".format(goldpath))

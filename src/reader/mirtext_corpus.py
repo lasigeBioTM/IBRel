@@ -51,6 +51,7 @@ class MirtexCorpus(Corpus):
         logging.info("average time per abstract: %ss" % abs_avg)
 
     def load_annotations(self, ann_dir, etype, pairtype="all"):
+        pmids = []
         annfiles = [ann_dir + '/' + f for f in os.listdir(ann_dir) if f.endswith('.ann')]
         total = len(annfiles)
         time_per_abs = []
@@ -80,6 +81,7 @@ class MirtexCorpus(Corpus):
         for current, f in enumerate(annfiles):
             logging.debug('%s:%s/%s', f, current + 1, total)
             did = f.split(".")[0]
+            pmids.append(did)
             with open(f, 'r') as txt:
                 for line in txt:
                     # print line
@@ -98,6 +100,9 @@ class MirtexCorpus(Corpus):
                                 print "could not find sentence for this span: {}-{}".format(dstart, dend)
         self.find_relations()
         # self.evaluate_normalization()
+        with open(ann_dir + "-pmids.txt") as pmidsfile:
+            pmidsfile.write("\n".join(pmids))
+
 
     def find_relations(self):
         # automatically find the relations from the gold standard at sentence level

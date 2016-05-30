@@ -10,8 +10,11 @@ from text.corpus import Corpus
 from text.document import Document
 from text.sentence import Sentence
 
-type_match = {"DNA": "protein",
-              "protein": "protein"}
+type_match = {"DNA": "dna",
+              "protein": "protein",
+              "cell_type": "",
+              "cell_line": "",
+              "RNA": ""}
 
 class JNLPBACorpus(Corpus):
     def __init__(self, corpusdir, **kwargs):
@@ -73,7 +76,8 @@ class JNLPBACorpus(Corpus):
 
     def load_annotations(self, ann_dir, etype, ptype):
         added = True
-        with codecs.open(self.path, 'r', "utf-8") as corpusfile:
+        pmids = []
+        with codecs.open(ann_dir, 'r', "utf-8") as corpusfile:
             doc_text = ""
             sentences = []
             for i, l in enumerate(corpusfile):
@@ -81,7 +85,9 @@ class JNLPBACorpus(Corpus):
                     if doc_text != "":
                         # logging.info(len(newdoc.sentences))
                         doc_text = ""
-                    did = "JNLPBA" + l.strip().split(":")[-1]
+                    pmid = l.strip().split(":")[-1]
+                    pmids.append(pmid)
+                    did = "JNLPBA" + pmid
                     self.documents[did].get_abbreviations()
                     logging.debug("starting new document:" + did)
                     sentence_text = ""
@@ -115,12 +121,12 @@ class JNLPBACorpus(Corpus):
                     if sentence_text != "":
                         sentence_text += " "
                     t = l.strip().split("\t")
-                    if len(t) > 1 and t[1] == "B-" + etype:
+                    if len(t) > 1 and t[1] != "O" and "B-" + type_match[t[1].split("-")[1]] == "B-" + etype:
                         estart = len(sentence_text)
                         eend = estart + len(t[0])
                         entity_text = t[0]
                         added = False
-                    elif len(t) > 1 and  t[1] == "I-" + etype:
+                    elif len(t) > 1 and t[1] != "O" and "I-" + type_match[t[1].split("-")[1]] == "I-" + etype:
                         eend += 1 + len(t[0])
                         entity_text += " " + t[0]
                     else: # not B- I-
@@ -128,6 +134,8 @@ class JNLPBACorpus(Corpus):
                             sentence_entities.append((estart, eend, entity_text))
                             added = True
                     sentence_text += t[0]
+        with codecs.open(ann_dir + "-pmids.txt", 'w', "utf-8") as pmidsfile:
+            pmidsfile.write("\n".join(pmids))
 
 def get_jnlpba_gold_ann_set(goldann, etype):
     gold_offsets = set()
@@ -161,12 +169,12 @@ def get_jnlpba_gold_ann_set(goldann, etype):
                 if sentence_text != "":
                     sentence_text += " "
                 t = l.strip().split("\t")
-                if len(t) > 1 and t[1] == "B-" + etype:
+                if len(t) > 1 and t[1] != "O" and "B-" + type_match[t[1].split("-")[1]] == "B-" + etype:
                     estart = len(sentence_text)
                     eend = estart + len(t[0])
                     entity_text = t[0]
                     added = False
-                elif len(t) > 1 and t[1] == "I-" + etype:
+                elif len(t) > 1 and t[1] != "O" and "I-" + type_match[t[1].split("-")[1]] == "I-" + etype:
                     eend += 1 + len(t[0])
                     entity_text += " " + t[0]
                 else:  # not B- I-

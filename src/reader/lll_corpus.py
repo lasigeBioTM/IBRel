@@ -47,13 +47,15 @@ class LLLCorpus(Corpus):
         # logging.info("average time per abstract: %ss" % abs_avg)
 
     def load_annotations(self, ann_dir, etype, pairtype="all"):
-
+        pmids = []
         logging.info("loading annotations file...")
         with codecs.open(ann_dir, 'r', "utf-8") as trainfile:
             for line in trainfile:
                 # logging.debug('%s:%s/%s', f, current + 1, total)
                 if line.startswith("ID"):
                     did = line.strip().split("\t")[1]
+                    pmid = did.split("-")[0]
+                    pmids.append(pmid)
                     sid = did + ".s0"
                     sentence = self.documents[did].sentences[0]
                 elif line.startswith("words"):
@@ -74,6 +76,9 @@ class LLLCorpus(Corpus):
                         # print offsets[wid]
                         start, end, text = offsets[wid] # get agent(6)
                         sentence.tag_entity(start, end, "protein", text=text)
+        with codecs.open(ann_dir + "-pmids.txt", 'w', "utf-8") as pmidfile:
+            pmidfile.write("\n".join(pmids))
+
 
 
 
