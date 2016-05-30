@@ -52,35 +52,59 @@ class BC2GMCorpus(Corpus):
     def load_annotations(self, ann_dir, etype, pairtype="all"):
         pmids = []
         pmid_regex = re.compile(r"(P)(\d+)(\D)")
+        tagged = 0
+        not_tagged = 0
         logging.info("loading annotations file...")
         with codecs.open(ann_dir, 'r', "utf-8") as inputfile:
             for line in inputfile:
                 # logging.info("processing annotation %s/%s" % (n_lines, total_lines))
                 did, offset, text = line.strip().split('|')
                 # P00064414A1098
-                pmid = pmid_regex.match(did)
-                pmid = str(int(pmid))
+                #print did
+                #pmid = pmid_regex.match(did)
+                #pmid = pmid.group(1)
+                pmid = str(int(did[5:]))
                 pmids.append(pmid)
                 start, end = offset.split(" ")
-                start, end = int(start), int(end) + 1
+                start, end = int(start), int(end)
                 # pmid = "PMID" + pmid
                 if did in self.documents:
                     sentence = self.documents[did].find_sentence_containing(start, end, chemdner=False)
+                    sentence_space_offsets = {} # number of spaces until each char in this sentence
+                    current_spaces = 0
+                    # store how many spaces until a given char index, where the index does not account for spaces
+                    # used to match the GENETAG notation to the more normal notation used by IBEnt where the spaces are
+                    # accounted for
+                    for ic, char in enumerate(sentence.text):
+                        if char.isspace():
+                            current_spaces += 1
+                            continue
+                        sentence_space_offsets[ic-current_spaces] = current_spaces
+
                     if sentence is not None:
                         # "IMPORTANT: The start and end offsets do not count white space characters."
-                        space_offset = sentence.text[:start].count(" ")
-                        space_offset = sentence.text[:start + space_offset+1].count(" ")
-                        end_space_offset = sentence.text[:end].count(" ")
-                        end_space_offset = sentence.text[:end + end_space_offset + 1].count(" ")
+                        #space_offset = sentence.text[:start].count(" ")
+                        #space_offset = sentence.text[:start + space_offset+1].count(" ")
+                        #end_space_offset = sentence.text[:end].count(" ")
+                        #end_space_offset = sentence.text[:end + end_space_offset + 1].count(" ")
                         # print start, sentence.offset, space_offset, sentence.text[:start+space_offset+1]
-                        start_offset = start - sentence.offset + sentence.text[:start+space_offset+1].count(" ")
-                        end_offset = end - sentence.offset + sentence.text[:end+end_space_offset+1].count(" ")
-                        sentence.tag_entity(start_offset, end_offset,
-                                            "protein", text=text)
+                        start_offset = start - sentence.offset #+ sentence.text[:start+space_offset+1].count(" ")
+                        start_offset += sentence_space_offsets[start_offset]
+                        end_offset = end - sentence.offset # +  sentence.text[:end+end_space_offset+1].count(" ")
+                        # + 1 because this corpus considers the last index to be part of the entity
+                        end_offset += sentence_space_offsets[end_offset] + 1
+                        eid = sentence.tag_entity(start_offset, end_offset,
+                                                  "protein", text=text)
+                        if eid is None:
+                            not_tagged += 1
+                            print sentence.sid, text, start, end, sentence.offset, sentence_space_offsets
+                        else:
+                            tagged += 1
                     else:
                         print "could not find sentence for this span: {}-{}".format(start, end)
                 else:
                     logging.info("%s not found!" % did)
+        print "tagged: {} not tagged: {}".format(tagged, not_tagged)
         with codecs.open(ann_dir + "-pmids.txt", 'w', "utf-8") as pmid_list:
             pmid_list.write("\n".join(pmids))
 
@@ -99,18 +123,25 @@ def get_b2gm_gold_ann_set(goldann, text_path):
             # logging.info("processing annotation %s/%s" % (n_lines, total_lines))
             did, offset, text = line.strip().split('|')
             start, end = offset.split(" ")
-            start, end = int(start), int(end) + 1
+            start, end = int(start), int(end)
             sentence_text = sentences[did]
+            sentence_space_offsets = {}  # number of spaces until each char in this sentence
+            current_spaces = 0
+            for ic, char in enumerate(sentence_text):
+                if char.isspace():
+                    current_spaces += 1
+                    continue
+                sentence_space_offsets[ic - current_spaces] = current_spaces
             # pmid = "PMID" + pmid
             # "IMPORTANT: The start and end offsets do not count white space characters."
-            space_offset = sentence_text[:start].count(" ")
-            space_offset = sentence_text[:start + space_offset + 1].count(" ")
-            end_space_offset = sentence_text[:end].count(" ")
-            end_space_offset = sentence_text[:end + end_space_offset + 1].count(" ")
+            #space_offset = sentence_text[:start].count(" ")
+            #space_offset = sentence_text[:start + space_offset + 1].count(" ")
+            #end_space_offset = sentence_text[:end].count(" ")
+            #end_space_offset = sentence_text[:end + end_space_offset + 1].count(" ")
             # print start, sentence.offset, space_offset, sentence.text[:start+space_offset+1]
-            start_offset = start + sentence_text[:start + space_offset + 1].count(" ")
-            end_offset = end + sentence_text[:end + end_space_offset + 1].count(" ")
-            gold_offsets.add((did, start_offset, end_offset, text))
+            start_offset = start + sentence_space_offsets[start] # sentence_text[:start + space_offset + 1].count(" ")
+            end_offset = end + sentence_space_offsets[end] # + sentence_text[:end + end_space_offset + 1].count(" ")
+            gold_offsets.add((did, start_offset, end_offset + 1, text))
     return gold_offsets, None
 
 

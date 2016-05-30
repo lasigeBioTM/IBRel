@@ -77,6 +77,8 @@ class JNLPBACorpus(Corpus):
     def load_annotations(self, ann_dir, etype, ptype):
         added = True
         pmids = []
+        tagged = 0
+        not_tagged = 0
         with codecs.open(ann_dir, 'r', "utf-8") as corpusfile:
             doc_text = ""
             sentences = []
@@ -108,8 +110,10 @@ class JNLPBACorpus(Corpus):
                                                   text=e[2])
                         if eid is None:
                             print "did not add this entity: {}".format(e[2])
+                            not_tagged += 1
                         else:
-                            this_sentence.entities.get_entity(eid).normalize()
+                            tagged += 1
+                        #    this_sentence.entities.get_entity(eid).normalize()
                     doc_offset += len(sentence_text) + 1
                     doc_text += sentence_text + " "
                     sentences.append(this_sentence)
@@ -134,6 +138,7 @@ class JNLPBACorpus(Corpus):
                             sentence_entities.append((estart, eend, entity_text))
                             added = True
                     sentence_text += t[0]
+        print "tagged: {} not tagged: {}".format(tagged, not_tagged)
         with codecs.open(ann_dir + "-pmids.txt", 'w', "utf-8") as pmidsfile:
             pmidsfile.write("\n".join(pmids))
 
