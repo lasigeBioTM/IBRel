@@ -51,6 +51,8 @@ class MirtexCorpus(Corpus):
         logging.info("average time per abstract: %ss" % abs_avg)
 
     def load_annotations(self, ann_dir, etype, pairtype="all"):
+        tagged = 0
+        not_tagged = 0
         pmids = []
         annfiles = [ann_dir + '/' + f for f in os.listdir(ann_dir) if f.endswith('.ann')]
         total = len(annfiles)
@@ -95,11 +97,16 @@ class MirtexCorpus(Corpus):
                                 # e[0] and e[1] are relative to the document, so subtract sentence offset
                                 start = dstart - sentence.offset
                                 end = dend - sentence.offset
-                                sentence.tag_entity(start, end, type_match[entity_type], text=etext)
+                                eid = sentence.tag_entity(start, end, type_match[entity_type], text=etext)
+                                if eid is not None:
+                                    tagged += 1
+                                else:
+                                    not_tagged += 1
                             else:
                                 print "could not find sentence for this span: {}-{}".format(dstart, dend)
         self.find_relations()
         # self.evaluate_normalization()
+        print "tagged: {} not tagged: {}".format(tagged, not_tagged)
         with open(ann_dir + "-pmids.txt") as pmidsfile:
             pmidsfile.write("\n".join(pmids))
 

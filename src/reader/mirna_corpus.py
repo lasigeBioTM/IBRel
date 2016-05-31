@@ -70,9 +70,11 @@ class MirnaCorpus(Corpus):
             #sys.exit()
         return offsets
 
-    def load_annotations(self, ann_dir, etype):
+    def load_annotations(self, ann_dir, etype, rtype):
         time_per_abs = []
         pmids = []
+        tagged = 0
+        not_tagged = 0
         logging.info("loading miRNA annotations...")
         with open(ann_dir, 'r') as xml:
             #parse DDI corpus file
@@ -103,6 +105,10 @@ class MirnaCorpus(Corpus):
                         if entity_type and (etype == "all" or (etype != "all" and etype == entity_type)):
                             eid = this_sentence.tag_entity(offsets[0], offsets[-1], entity_type,
                                                      text=entity.get("text"), original_id=original_eid)
+                            if eid is not None:
+                                tagged += 1
+                            else:
+                                not_tagged += 1
                             original_to_eids[original_eid] = eid
                     for pair in sentence.findall('pair'):
                         p_type = pair.get("type")
@@ -114,6 +120,7 @@ class MirnaCorpus(Corpus):
                             if source:
                                 source.targets.append((original_to_eids[p_e2], p_type))
         # self.evaluate_normalization()
+        print "tagged: {} not tagged: {}".format(tagged, not_tagged)
         with open(ann_dir + "-pmids.txt", 'w') as pmidsfile:
             pmidsfile.write("\n".join(pmids))
 
