@@ -3,11 +3,10 @@ import os
 from subprocess import Popen, PIPE
 import codecs
 import sys
-
 import re
 
 import itertools
-
+from config import config
 from classification.rext.kernelmodels import ReModel
 # from nltk import WordNetLemmatizer
 from nltk.stem.porter import *
@@ -27,15 +26,17 @@ class SVMTKernel(ReModel):
         self.pids = {}
         # self.lmtzr = WordNetLemmatizer()
         self.stemmer = PorterStemmer()
-        self.generate_data(corpus, pairtypes=relationtype)
+        self.pair_type = relationtype
+        self.generate_data(corpus)
 
 
-    def generate_data(self, corpus, pairtypes=("mirna", "protein")):
+    def generate_data(self, corpus):
         if os.path.isfile(self.temp_dir + self.modelname + ".txt"):
             os.remove(self.temp_dir + self.modelname + ".txt")
         xerrors = 0
 
             #print pairs
+        pairtypes = (config.relation_types[self.pair_type]["source_types"], config.relation_types[self.pair_type]["target_types"])
         for sentence in corpus.get_sentences("goldstandard"):
             doc_lines = []
             pcount = 0
@@ -81,8 +82,10 @@ class SVMTKernel(ReModel):
                     #else:
                     # tree = self.normalize_leaves(tree)
                     line = self.get_svm_train_line(tree, pair)
-                    if pair[1].eid not in pair[0].targets:
+                    if (pair[1].eid, self.pair_type) not in pair[0].targets:
                         line = '-' + line
+                    else:
+                        logging.debug("true relations: {}={}>{}".format(pair[0].text, self.pair_type, pair[1].text))
                     self.pids[pid] = pair
                     doc_lines.append(line)
                     pcount += 1
@@ -155,11 +158,10 @@ class SVMTKernel(ReModel):
             # results.pairs[pid] = pair
             if float(score) < 0:
                 # pair.recognized_by["svmtk"] = -1
-                logging.info(score)
-                pass
+                logging.debug(score)
             else:
                 did = ".".join(pid.split(".")[:-1])
-                pair = corpus.documents[did].add_relation(self.pids[pid][0], self.pids[pid][1], "pair", relation=True)
+                pair = corpus.documents[did].add_relation(self.pids[pid][0], self.pids[pid][1], self.pair_type, relation=True)
                 #pair = self.get_pair(pid, corpus)
                 results.pairs[pid] = pair
                 pair.recognized_by["svmtk"] = 1

@@ -53,8 +53,8 @@ if use_go:
 
 relation_types = {"miRNA-gene":
         {"source_role": "agent",
-         "source_types": ("mirna", "protein"),
+         "source_types": ("mirna"),
          "target_role": "target",
-         "target_types": ("mirna", "protein"),
+         "target_types": ("protein"),
          "event": "interaction",
          "keywords": ["bind", "ligand", "interact"]},}

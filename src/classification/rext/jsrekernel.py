@@ -4,7 +4,6 @@ import logging
 import random
 import sys
 
-import config.config
 from classification.rext.kernelmodels import ReModel
 from subprocess import Popen, PIPE
 import platform

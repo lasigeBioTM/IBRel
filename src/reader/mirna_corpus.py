@@ -12,9 +12,9 @@ from text.document import Document
 from text.sentence import Sentence
 
 type_match = {"Specific_miRNAs": "mirna",
-              #"Non-Specific_miRNAs": "mirna",
+              # "Non-Specific_miRNAs": "mirna",
               "Genes/Proteins": "protein",
-              #"Non-Specific_miRNAs-Genes/Proteins": "miRNA-gene",
+              # "Non-Specific_miRNAs-Genes/Proteins": "miRNA-gene",
               "Specific_miRNAs-Genes/Proteins": "miRNA-gene",
               "Non-Specific_miRNAs-Diseases": "miRNA-disease",
               "Specific_miRNAs-Diseases": "miRNA-disease",
