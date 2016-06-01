@@ -41,8 +41,8 @@ class ResultsRE(object):
         pickle.dump(self, open(path, "wb"))
 
     def load_corpus(self, goldstd):
-        logging.info("loading corpus %s" % config.corpus_paths.paths[goldstd]["corpus"])
-        corpus = pickle.load(open(config.corpus_paths.paths[goldstd]["corpus"]))
+        logging.info("loading corpus %s" % paths[goldstd]["corpus"])
+        corpus = pickle.load(open(paths[goldstd]["corpus"]))
 
         for did in corpus.documents:
             for sentence in corpus.documents[did].sentences:

@@ -12,15 +12,22 @@ from text.document import Document
 from text.sentence import Sentence
 
 type_match = {"Specific_miRNAs": "mirna",
-              # "Non-Specific_miRNAs": "mirna",
-              "Genes/Proteins": "protein"}
+              #"Non-Specific_miRNAs": "mirna",
+              "Genes/Proteins": "protein",
+              #"Non-Specific_miRNAs-Genes/Proteins": "miRNA-gene",
+              "Specific_miRNAs-Genes/Proteins": "miRNA-gene",
+              "Non-Specific_miRNAs-Diseases": "miRNA-disease",
+              "Specific_miRNAs-Diseases": "miRNA-disease",
+              "Relation_Trigger": "entity",
+              "Diseases": "disease",
+              "Species": "entity"}
 
 
 class MirnaCorpus(Corpus):
     def __init__(self, corpusdir, **kwargs):
         super(MirnaCorpus, self).__init__(corpusdir, **kwargs)
         self.subtypes = ["miRNA", "disease", "protein"]
-        self.rel_types = ["Specific_miRNAs-Genes/Proteins"]
+        #self.rel_types = ["Specific_miRNAs-Genes/Proteins"]
 
     def load_corpus(self, corenlpserver, process=True):
         # self.path is just one file with every document
@@ -99,10 +106,13 @@ class MirnaCorpus(Corpus):
                         original_eid = entity.get('id')
                         entity_offset = entity.get('charOffset')
                         offsets = self.getOffsets(entity_offset)
-                        entity_type = type_match.get(entity.get("type"))
+                        try:
+                            entity_type = type_match.get(entity.get("type"))
+                        except KeyError:
+                            continue
                         #print this_sentence.text[offsets[0]:offsets[-1]], entity.get("text")
                         #if "protein" in entity_type.lower() or "mirna" in entity_type.lower():
-                        if entity_type and (etype == "all" or (etype != "all" and etype == entity_type)):
+                        if entity_type and (etype == "all" or etype == entity_type):
                             eid = this_sentence.tag_entity(offsets[0], offsets[-1], entity_type,
                                                      text=entity.get("text"), original_id=original_eid)
                             if eid is not None:
@@ -110,14 +120,24 @@ class MirnaCorpus(Corpus):
                             else:
                                 not_tagged += 1
                             original_to_eids[original_eid] = eid
+                        else:
+                            logging.debug("skipped {}-{}: {}".format(entity.get("type"), original_eid, entity.get("text")))
                     for pair in sentence.findall('pair'):
-                        p_type = pair.get("type")
+                        try:
+                            p_type = type_match[pair.get("type")]
+                        except KeyError:
+                            continue
                         p_true = pair.get("interaction")
-                        if p_type in self.rel_types and p_true == "True":
+                        #print p_type, self.rel_types
+                        if (p_type == rtype or rtype == "all") and p_true == "True":
                             p_e1 = pair.get("e1")
                             p_e2 = pair.get("e2")
+                            # if this relations contains one entity that was ignored, skip
+                            if p_e1 not in original_to_eids or p_e2 not in original_to_eids:
+                                continue
                             source = this_sentence.entities.get_entity(original_to_eids[p_e1])
                             if source:
+                                logging.info("adding this relation: {}={}>{}".format(source.text, p_type, original_to_eids[p_e2]))
                                 source.targets.append((original_to_eids[p_e2], p_type))
         # self.evaluate_normalization()
         print "tagged: {} not tagged: {}".format(tagged, not_tagged)
@@ -156,11 +176,14 @@ def get_ddi_mirna_gold_ann_set(goldpath, entitytype, pairtype):
                 if etype == entitytype:
                     gold_offsets.add((did, start, end, entity.get("text")))
             for pair in sentence.findall('pair'):
-                p_type = pair.get("type")
+                try:
+                    p_type = type_match[pair.get("type")]
+                except KeyError:
+                    continue
                 p_true = pair.get("interaction")
                 if p_type == pairtype and p_true == "True":
                     pair = (did, original_id_to_offset[pair.get("e1")], original_id_to_offset[pair.get("e2")],
-                                    "{}=>{}".format(original_id_to_text[pair.get("e1")], original_id_to_text[pair.get("e2")]))
+                                    "{}={}>{}".format(original_id_to_text[pair.get("e1")], p_type, original_id_to_text[pair.get("e2")]))
                     gold_pairs.add(pair)
 
             doctext += " " + sentence_text # generate the full text of this document

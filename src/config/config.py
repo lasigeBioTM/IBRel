@@ -50,3 +50,11 @@ if use_go:
                               user=go_user,
                               passwd=go_pw,
                               db=go_db)
+
+relation_types = {"miRNA-gene":
+        {"source_role": "agent",
+         "source_types": ("mirna", "protein"),
+         "target_role": "target",
+         "target_types": ("mirna", "protein"),
+         "event": "interaction",
+         "keywords": ["bind", "ligand", "interact"]},}
