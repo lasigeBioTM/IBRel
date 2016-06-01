@@ -346,6 +346,8 @@ class SimpleTaggerModel(Model):
             #if f not in sentence.tokens[i].features:
             if subtype == "protein":
                 fvalue = prot_features[f](sentence, i)
+            elif subtype == "mirna":
+                fvalue = mirna_features[f](sentence, i)
             else:
                 fvalue = feature_extractors[f](sentence, i)
             sentence.tokens[i].features[f] = fvalue
