@@ -108,7 +108,7 @@ class ProteinEntity(Entity):
         if self.text in uniprot:
             c = uniprot[self.text]
         else:
-            query = {"query": self.text,
+            query = {"query": self.text + 'AND organism:"Homo sapiens (Human) [9606]" AND proteome:up000005640',
                      "sort": "score",
                      "columns": "id,entry name,reviewed,protein names,organism,go,go-id",
                      "format": "tab",
