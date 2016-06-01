@@ -12,6 +12,7 @@ import time
 
 from config.corpus_paths import paths
 from config import config
+from reader.bc2gm_corpus import get_b2gm_gold_ann_set
 from reader.chemdner_corpus import get_chemdner_gold_ann_set, run_chemdner_evaluation
 from reader.genia_corpus import get_genia_gold_ann_set
 from reader.jnlpba_corpus import get_jnlpba_gold_ann_set
@@ -43,6 +44,8 @@ def get_gold_ann_set(corpus_type, gold_path, entity_type, pair_type, text_path):
         goldset = get_seedev_gold_ann_set(gold_path, entity_type, pair_type)
     elif corpus_type == "jnlpba":
         goldset = get_jnlpba_gold_ann_set(gold_path, entity_type)
+    elif corpus_type == "bc2":
+        goldset = get_b2gm_gold_ann_set(gold_path, text_path)
     return goldset
 
 
