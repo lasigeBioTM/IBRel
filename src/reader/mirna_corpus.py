@@ -122,7 +122,7 @@ class MirnaCorpus(Corpus):
         # self.evaluate_normalization()
         print "tagged: {} not tagged: {}".format(tagged, not_tagged)
         with open(ann_dir + "-pmids.txt", 'w') as pmidsfile:
-            pmidsfile.write("\n".join(pmids))
+            pmidsfile.write("\n".join(pmids) + "\n")
 
 def get_ddi_mirna_gold_ann_set(goldpath, entitytype, pairtype):
     logging.info("loading gold standard... {}".format(goldpath))

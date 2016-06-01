@@ -61,9 +61,9 @@ class BC2GMCorpus(Corpus):
                 did, offset, text = line.strip().split('|')
                 # P00064414A1098
                 #print did
-                #pmid = pmid_regex.match(did)
-                #pmid = pmid.group(1)
-                pmid = str(int(did[5:]))
+                pmid = pmid_regex.match(did)
+                pmid = str(int(pmid.group(2)))
+                #pmid = str(int(did[5:]))
                 pmids.append(pmid)
                 start, end = offset.split(" ")
                 start, end = int(start), int(end)
@@ -106,7 +106,7 @@ class BC2GMCorpus(Corpus):
                     logging.info("%s not found!" % did)
         print "tagged: {} not tagged: {}".format(tagged, not_tagged)
         with codecs.open(ann_dir + "-pmids.txt", 'w', "utf-8") as pmid_list:
-            pmid_list.write("\n".join(pmids))
+            pmid_list.write("\n".join(pmids) + "\n")
 
 
 def get_b2gm_gold_ann_set(goldann, text_path):

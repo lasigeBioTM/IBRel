@@ -60,17 +60,18 @@ class MirtexCorpus(Corpus):
         doc_to_relations = {}
         with open(ann_dir + "/" + "annotations.tsv") as afile:
             for l in afile:
-                v = l.strip().split("\t")
-                did = self.path + '/' + v[0]
-                if pairtype == "all" or v[-1] == pairtype:
-                    if did not in doc_to_relations:
-                        doc_to_relations[did] = set()
-                    e1 = v[1].split(";")
-                    for source in e1:
-                        e2 = v[2].split(";")
-                        for target in e2:
-                            doc_to_relations[did].add((source.strip().replace('"', ''),
-                                                        target.strip().replace('"', '')))
+                if not l.isspace():
+                    v = l.strip().split("\t")
+                    did = self.path + '/' + v[0]
+                    if pairtype == "all" or v[-1] == pairtype:
+                        if did not in doc_to_relations:
+                            doc_to_relations[did] = set()
+                        e1 = v[1].split(";")
+                        for source in e1:
+                            e2 = v[2].split(";")
+                            for target in e2:
+                                doc_to_relations[did].add((source.strip().replace('"', ''),
+                                                            target.strip().replace('"', '')))
         # print doc_to_relations
         # print self.documents.keys()
         # print doc_to_relations.keys()
@@ -83,7 +84,7 @@ class MirtexCorpus(Corpus):
         for current, f in enumerate(annfiles):
             logging.debug('%s:%s/%s', f, current + 1, total)
             did = f.split(".")[0]
-            pmids.append(did)
+            pmids.append(did.split("/")[-1])
             with open(f, 'r') as txt:
                 for line in txt:
                     # print line
@@ -107,8 +108,8 @@ class MirtexCorpus(Corpus):
         self.find_relations()
         # self.evaluate_normalization()
         print "tagged: {} not tagged: {}".format(tagged, not_tagged)
-        with open(ann_dir + "-pmids.txt") as pmidsfile:
-            pmidsfile.write("\n".join(pmids))
+        with open(ann_dir[:-1] + "-pmids.txt", 'w') as pmidsfile:
+            pmidsfile.write("\n".join(pmids) + "\n")
 
 
     def find_relations(self):
