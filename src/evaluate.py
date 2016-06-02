@@ -62,23 +62,25 @@ def get_unique_gold_ann_set(goldann):
 
 def compare_results(offsets, goldoffsets, corpus, getwords=True, evaltype="entity"):
     """
-    Compare system results with a gold standard
-    :param offsets: system results, offset tuples (did, start, end, text)
-    :param goldoffsets: Set with the gold standard annotations (did, start, end [, text])
+    Compare system results with a gold standard, works for both NER and RE
+    :param offsets: system results dictionary, offset tuples (did, start, end, text): more info
+    :param goldoffsets: dictionary with the gold standard annotations (did, start, end [, text]): more info
     :param corpus: Reference corpus
     :return: Lines to write into a report files, set of TPs, FPs and FNs
     """
     #TODO: check if size of offsets and goldoffsets tuples is the same
     report = []
-    if not getwords:
-        offsets = set([x[:3] for x in offsets])
-        goldoffsets = set([x[:3] for x in goldoffsets])
-    tps = offsets & goldoffsets
-    fps = offsets - goldoffsets
-    fns = goldoffsets - offsets
-    fpreport, fpwords = get_report(fps, corpus, getwords=getwords)
-    fnreport, fnwords = get_report(fns, corpus, getwords=getwords)
-    tpreport, tpwords = get_report(tps, corpus, getwords=getwords)
+    #if not getwords:
+    # offsets = set([x[:4] for x in offsets.keys()])
+    if type(goldoffsets) is set:
+        goldoffsets = {s: [] for s in goldoffsets}
+    # goldoffsets = set([x[:4] for x in goldoffsets.keys()])
+    tps = set(offsets.keys()) & set(goldoffsets.keys())
+    fps = set(offsets.keys()) - set(goldoffsets.keys())
+    fns = set(goldoffsets.keys()) - set(offsets.keys())
+    fpreport, fpwords = get_report(fps, corpus, offsets, getwords=getwords)
+    fnreport, fnwords = get_report(fns, corpus, goldoffsets, getwords=getwords)
+    tpreport, tpwords = get_report(tps, corpus, offsets, getwords=getwords)
     alldocs = set(fpreport.keys())
     alldocs = alldocs.union(fnreport.keys())
     alldocs = alldocs.union(tpreport.keys())
@@ -109,7 +111,7 @@ def compare_results(offsets, goldoffsets, corpus, getwords=True, evaltype="entit
     return report, tps, fps, fns
 
 
-def get_report(results, corpus, getwords=True):
+def get_report(results, corpus, more_info, getwords=True):
     """
         Get more information from CHEMDNER results.
         :return: Lines to write to a report file, word that appear in this set
@@ -138,7 +140,7 @@ def get_report(results, corpus, getwords=True):
         if did not in report:
             report[did] = []
         if getwords:
-            line = u"{}\t{}:{}\t{}".format(did, start, end, tokentext)
+            line = u"{}\t{}:{}\t{}\t{}".format(did, start, end, tokentext, "\t".join(more_info[t]))
         else:
             line = did + '\t' + start + ":" + end
         report[did].append(line)
@@ -185,7 +187,7 @@ def get_list_results(results, models, goldset, ths, rules, mode="ner"):
 
 
 def get_relations_results(results, model, gold_pairs, ths, rules, compare_text=True):
-    system_pairs = []
+    system_pairs = {}
     pcount = 0
     ptrue = 0
     npairs = 0
@@ -198,15 +200,16 @@ def get_relations_results(results, model, gold_pairs, ths, rules, compare_text=T
                 if val:
                     ptrue += 1
                     pair = (did, (p.entities[0].dstart, p.entities[0].dend), (p.entities[1].dstart, p.entities[1].dend),
-                            u"{}={}>{}".format(p.entities[0].text, p.relation, p.entities[1].text))
-                             # u"{}=>{}".format(p.entities[0].text, p.entities[1].text))
-                    system_pairs.append(pair)
+                              u"{}={}>{}".format(p.entities[0].text, p.relation, p.entities[1].text))
+                    #system_pairs.append(pair)
+                    between_text = results.corpus.documents[p.entities[0].did].text[p.entities[0].dend:p.entities[1].dstart]
+                    system_pairs[pair] = [u"{}=>{}".format(p.entities[0].type, p.entities[1].type), between_text]
     # print random.sample(system_pairs, 5)
     # print random.sample(gold_pairs, 5)
     # print pcount, ptrue, npairs
     if not compare_text:
         gold_pairs = [(o[0], o[1], o[2], "") for o in gold_pairs]
-    reportlines, tps, fps, fns = compare_results(set(system_pairs), gold_pairs, results.corpus, getwords=compare_text)
+    reportlines, tps, fps, fns = compare_results(system_pairs, gold_pairs, results.corpus, getwords=compare_text)
     with codecs.open(results.path + "_report.txt", 'w', "utf-8") as reportfile:
         print "writing report to {}_report.txt".format(results.path)
         reportfile.write("TPs: {!s}\nFPs: {!s}\nFNs: {!s}\n".format(len(tps), len(fps), len(fns)))
