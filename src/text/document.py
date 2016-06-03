@@ -255,11 +255,11 @@ class Document(object):
                                                 s.tokens[0].dstart, s.tokens[-1].dend, s.text))
         return None
 
-    def get_offsets(self, esource, ths, rules):
+    def get_entity_offsets(self, esource, ths, rules):
         offsets = []
         for s in self.sentences:
             if s.entities:
-                offsets += s.entities.get_offsets(esource, ths, rules)
+                offsets += s.entities.get_entity_offsets(esource, ths, rules)
         return offsets
 
     def get_entity(self, eid, source="goldstandard"):

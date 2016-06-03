@@ -99,7 +99,7 @@ class SVMTKernel(ReModel):
         if os.path.isfile(self.basedir + self.modelname):
             os.remove(self.basedir + self.modelname)
         svmlightargs = ["./bin/svm-light-TK-1.2/svm-light-TK-1.2.1/svm_learn", "-t", "5",
-                               # "-L", "0.5", "-T", "2", "-S", "2", "-g", "1",
+                               "-L", "0.5", "-T", "2", "-S", "2", "-g", "1",
                               "-D", "1", "-C", "T", self.temp_dir + self.modelname + ".txt",
                               self.basedir + self.modelname]
         print " ".join(svmlightargs)

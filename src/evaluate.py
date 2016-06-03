@@ -237,7 +237,7 @@ def get_results(results, models, gold_offsets, ths, rules, compare_text=True):
     :param ths: Validation thresholds
     :param rules: Validation rules
     """
-    offsets = results.corpus.get_offsets(models, ths, rules)
+    offsets = results.corpus.get_entity_offsets(models, ths, rules)
     # logging.debug(offsets)
     for o in offsets:
         if o[0] not in results.corpus.documents:
@@ -246,7 +246,7 @@ def get_results(results, models, gold_offsets, ths, rules, compare_text=True):
     if not compare_text: #e.g. gold standard does not include the original text
         offsets = [(o[0], o[1], o[2], "") for o in offsets]
     # logging.info("system entities: {}; gold entities: {}".format(offsets, gold_offsets))
-    reportlines, tps, fps, fns = compare_results(set(offsets), gold_offsets, results.corpus, getwords=compare_text)
+    reportlines, tps, fps, fns = compare_results(offsets, gold_offsets, results.corpus, getwords=compare_text)
     with codecs.open(results.path + "_report.txt", 'w', "utf-8") as reportfile:
         print "writing report to {}_report.txt".format(results.path)
         reportfile.write("TPs: {!s}\nFPs: {!s}\nFNs: {!s}\n".format(len(tps), len(fps), len(fns)))
@@ -316,6 +316,7 @@ def main():
             results_list.append(results)
         else:
             print "results not found"
+            print results_path
             sys.exit()
 
     if options.action == "combine":

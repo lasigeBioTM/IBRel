@@ -206,7 +206,6 @@ class StanfordNERModel(SimpleTaggerModel):
                     "-tokenizerFactory", "edu.stanford.nlp.process.WhitespaceTokenizer", "-tokenizerOptions",
                     "tokenizeNLs=true"]
         logging.info(' '.join(ner_args))
-        print ' '.join(ner_args)
         logging.info("Starting the server for {}...".format(self.path))
         self.process = Popen(ner_args, stdin = PIPE, stdout = PIPE, stderr = PIPE, shell=False)
         while True:

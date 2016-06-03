@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 import atexit
 import logging
 import pickle
@@ -101,6 +102,17 @@ class ProteinEntity(Entity):
                 logging.info("excluded {} because of uniprot".format(self.text))
                 return False
         return True
+
+    def normalize_entrez(self):
+        global ncbigene
+        if self.text in uniprot:
+            c = uniprot[self.text]
+        else:
+            query = {"term": self.text,
+                     "db": "gene"}
+            headers = {'User-Agent': 'IBEnt (CentOS) alamurias@lasige.di.fc.ul.pt'}
+            r = requests.get('http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?', query, headers=headers)
+            logging.debug("Request Status: " + str(r.status_code))
 
     def normalize(self):
         global uniprot

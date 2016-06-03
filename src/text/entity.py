@@ -220,7 +220,7 @@ class Entities(object):
                         #logging.info("new entity: {0}-{1}".format(s.split("_")[-1], combined[next_eid].text))
         self.elist[name] = combined.values()
 
-    def get_offsets(self, esource, ths, rules):
+    def get_entity_offsets(self, esource, ths, rules):
         spans = []
         offsets = Offsets()
         for s in self.elist:
@@ -239,7 +239,9 @@ class Entities(object):
                         exclude.append(contained_by)
                     toadd, v, overlapped, to_exclude = offsets.add_offset(eid_offset, exclude_this_if=exclude, exclude_others_if=[])
                     if toadd:
-                        spans.append((e.dstart, e.dend, e.text))
+                        extra_info = ['genia_tags:"' + "+".join([t.genia_tag for t in e.tokens]) + '"']
+                        extra_info.append('recognized_by:"' + "+".join(e.recognized_by) + '"')
+                        spans.append((e.dstart, e.dend, e.text, extra_info))
                         # logging.info("added {}".format(e.text))
                     else:
                         logging.debug("did not add {}".format(e.text))

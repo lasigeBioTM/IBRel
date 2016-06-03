@@ -34,8 +34,8 @@ def normalize_entities(results, path, source):
         percentmapped = 0
     else:
         percentmapped = total_score / mapped
-    logging.info("{0} mapped, {1} not mapped, average score: {2}".format(mapped, not_mapped, percentmapped))
-    logging.info("saving results to %s" % path)
+    print "{0} mapped, {1} not mapped, average score: {2}".format(mapped, not_mapped, percentmapped)
+    print "saving results to %s" % path
     pickle.dump(results, open(path, "wb"))
 
 def add_chebi_mappings(results, path, source, save=True):

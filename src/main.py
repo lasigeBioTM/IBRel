@@ -10,6 +10,7 @@ import time
 
 from pycorenlp import StanfordCoreNLP
 
+from classification.ner.banner import BANNERModel
 from config.corpus_paths import paths
 from classification.ner.crfsuitener import CrfSuiteModel
 from classification.ner.matcher import MatcherModel
@@ -127,7 +128,7 @@ considered when coadministering with megestrol acetate.''',
     parser.add_argument("-o", "--output", "--format", dest="output",
                         nargs=2, help="format path; output formats: xml, html, tsv, text, chemdner.")
     parser.add_argument("--crf", dest="crf", help="CRF implementation", default="stanford",
-                        choices=["stanford", "crfsuite"])
+                        choices=["stanford", "crfsuite", "banner"])
     parser.add_argument("--log", action="store", dest="loglevel", default="WARNING", help="Log level")
     parser.add_argument("--kernel", action="store", dest="kernel", default="svmtk", help="Kernel for relation extraction")
     options = parser.parse_args()
@@ -253,6 +254,8 @@ considered when coadministering with megestrol acetate.''',
                     model = StanfordNERModel(options.models, options.etype)
                 elif options.crf == "crfsuite":
                     model = CrfSuiteModel(options.models, options.etype)
+                elif options.crf == "banner":
+                    model = BANNERModel(options.models, options.etype)
                 model.load_tagger()
                 model.load_data(corpus, feature_extractors.keys(), mode="test")
                 final_results = model.test(corpus)
