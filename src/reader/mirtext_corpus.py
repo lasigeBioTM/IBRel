@@ -9,10 +9,14 @@ import time
 
 from text.corpus import Corpus
 from text.document import Document
+from text.mirna_entity import mirna_graph
+from text.protein_entity import get_uniprot_name
 from text.sentence import Sentence
 
 type_match = {"MiRNA": "mirna",
-              "Gene": "protein"}
+              "Gene": "protein",
+              "miRNA-gene regulation": "miRNA-gene",
+              "gene-miRNA regulation": "miRNA-gene"}
 class MirtexCorpus(Corpus):
     """
     DDI corpus used for NER and RE on the SemEval DDI tasks of 2011 and 2013.
@@ -63,7 +67,7 @@ class MirtexCorpus(Corpus):
                 if not l.isspace():
                     v = l.strip().split("\t")
                     did = self.path + '/' + v[0]
-                    if pairtype == "all" or v[-1] == pairtype:
+                    if pairtype == "all" or type_match.get(v[-1]) == pairtype:
                         if did not in doc_to_relations:
                             doc_to_relations[did] = set()
                         e1 = v[1].split(";")
@@ -105,14 +109,14 @@ class MirtexCorpus(Corpus):
                                     not_tagged += 1
                             else:
                                 print "could not find sentence for this span: {}-{}".format(dstart, dend)
-        self.find_relations()
+        self.find_relations(pairtype)
         # self.evaluate_normalization()
         print "tagged: {} not tagged: {}".format(tagged, not_tagged)
         with open(ann_dir[:-1] + "-pmids.txt", 'w') as pmidsfile:
             pmidsfile.write("\n".join(pmids) + "\n")
 
 
-    def find_relations(self):
+    def find_relations(self, pairtype):
         # automatically find the relations from the gold standard at sentence level
         for sentence in self.get_sentences(hassource="goldstandard"):
             did = sentence.did
@@ -130,7 +134,7 @@ class MirtexCorpus(Corpus):
                         # print "excluded:", between_text
                         continue
                     # print between_text
-                    pair[0].targets.append(pair[1].eid)
+                    pair[0].targets.append((pair[1].eid, pairtype))
 
 def get_mirtex_gold_ann_set(goldpath, entitytype, pairtype):
     logging.info("loading gold standard... {}".format(goldpath))
@@ -151,12 +155,14 @@ def get_mirtex_gold_ann_set(goldpath, entitytype, pairtype):
         for l in afile:
             v = l.strip().split("\t")
             did = goldpath + '/' + v[0]
-            if pairtype == "all" or v[-1] == pairtype:
+            if pairtype == "all" or type_match.get(v[-1]) == pairtype:
                 e1 = v[1].split(";")
-                for source in e1:
+                for mirna in e1:
+                    norm_mirna = mirna_graph.map_label(mirna)
                     e2 = v[2].split(";")
-                    for target in e2:
-                        gold_relations.add((did, source, target))
+                    for gene in e2:
+                        norm_gene = get_uniprot_name(gene)
+                        gold_relations.add((did, norm_mirna[0], norm_gene[0]))
     return gold_offsets, gold_relations
 
 

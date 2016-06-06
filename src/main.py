@@ -118,7 +118,7 @@ considered when coadministering with megestrol acetate.''',
                       default=["chemdner", "CHEMDNER/CHEMDNER_SAMPLE_JUNE25/chemdner_sample_abstracts.txt"],
                       help="format path")
     parser.add_argument("--annotations", dest="annotations")
-    parser.add_argument("--tag", dest="tag", default="0", help="Tag to identify the text.")
+    parser.add_argument("--tag", dest="tag", default="0", help="Tag to identify the experiment")
     parser.add_argument("--models", dest="models", help="model destination path, without extension")
     parser.add_argument("--entitytype", dest="etype", help="type of entities to be considered", default="all")
     parser.add_argument("--pairtype", dest="ptype", help="type of pairs to be considered", default="all")
@@ -221,9 +221,9 @@ considered when coadministering with megestrol acetate.''',
             models.train_types()
         elif options.actions == "train_relations":
             if options.kernel == "jsre":
-                model = JSREKernel(corpus, options.ptype)
+                model = JSREKernel(corpus, options.ptype, modelname=options.tag)
             elif options.kernel == "svmtk":
-                model = SVMTKernel(corpus, options.ptype)
+                model = SVMTKernel(corpus, options.ptype, modelname=options.tag)
             elif options.kernel == "stanfordre":
                 model = StanfordRE(corpus, options.ptype)
             elif options.kernel == "multir":
@@ -300,11 +300,11 @@ considered when coadministering with megestrol acetate.''',
             final_results.save(options.output[1] + ".pickle")
         elif options.actions == "test_relations":
             if options.kernel == "jsre":
-                model = JSREKernel(corpus, options.ptype, train=False)
+                model = JSREKernel(corpus, options.ptype, train=False, modelname=options.tag)
             elif options.kernel == "svmtk":
-                model = SVMTKernel(corpus, options.ptype)
+                model = SVMTKernel(corpus, options.ptype, modelname=options.tag)
             elif options.kernel == "rules":
-                model = RuleClassifier(corpus, options.ptype)
+                model = RuleClassifier(corpus, options.ptype, modelname=options.tag)
             elif options.kernel == "stanfordre":
                 model = StanfordRE(corpus, options.ptype)
             elif options.kernel == "scikit":

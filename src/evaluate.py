@@ -151,7 +151,7 @@ def get_report(results, corpus, more_info, getwords=True):
 
 def get_list_results(results, models, goldset, ths, rules, mode="ner"):
     """
-    Write results files considering only unique entities, as well as a report file with basic stats
+    Write results files considering only doc-level unique entities, as well as a report file with basic stats
     :param results: ResultsNER object
     :param models: Base model path
     :param goldset: Set with gold standard annotations
@@ -165,9 +165,9 @@ def get_list_results(results, models, goldset, ths, rules, mode="ner"):
     with codecs.open(results.path + "_final.tsv", 'w', 'utf-8') as outfile:
         outfile.write('\n'.join(['\t'.join(x) for x in sysresults]))
     if goldset:
-        lineset = set([(l[0], l[1].lower(), l[2].lower()) for l in sysresults])
-        goldset = set([(g[0], g[1].lower(), g[2].lower()) for g in goldset])
-        reportlines, tps, fps, fns = compare_results(lineset, goldset, results.corpus, getwords=False)
+        #lineset = set([(l[0], l[1].lower(), l[2].lower()) for l in sysresults])
+        #goldset = set([(g[0], g[1].lower(), g[2].lower()) for g in goldset])
+        reportlines, tps, fps, fns = compare_results(sysresults, goldset, results.corpus, getwords=False)
         with codecs.open(results.path + "_report.txt", 'w', "utf-8") as reportfile:
             reportfile.write("TPs: {!s}\nFPs: {!s}\n FNs: {!s}\n".format(len(tps), len(fps), len(fns)))
             if len(tps) == 0:

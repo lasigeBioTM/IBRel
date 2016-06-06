@@ -26,6 +26,9 @@ class Entity(object):
         self.targets = [] # targets should be (eid, relationtype)
         self.score = kwargs.get("score", 0)
         self.original_id = kwargs.get("original_id")
+        self.normalized = self.text
+        self.normalized_score = 0
+        self.normalized_ref = "text"
         # logging.info("created entity {} with score {}".format(self.text, self.score))
         # print "entity", args, kwargs
 
@@ -107,7 +110,7 @@ class Entities(object):
         self.elist[esource + "_" + entity.type].append(entity)
 
     def get_unique_entities(self, source, ths, rules):
-        entities = set()
+        entities = {}
         offsets = Offsets()
         for s in self.elist:
             if s.startswith(source):
@@ -121,7 +124,7 @@ class Entities(object):
                         exclude.append(contained_by)
                     toadd, v, alt = offsets.add_offset(eid_offset, exclude_if=exclude)
                     if toadd:
-                        entities.add((e.text,))
+                        entities[e.text] = []
         return entities
 
 

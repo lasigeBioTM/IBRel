@@ -40,19 +40,20 @@ class Corpus(object):
         logging.info("saved corpus to " + savedir)
 
     def get_unique_results(self, source, ths, rules, mode):
-        allentries = set()
-        for d in self.documents:
+        allentitites = {}
+        for did in self.documents:
             if mode == "ner":
-                doc_entities = self.documents[d].get_unique_results(source, ths, rules, mode)
-                allentries.update(doc_entities)
+                doc_entities = self.documents[did].get_unique_results(source, ths, rules, mode)
+                for e in doc_entities:
+                    allentitites[(self.did, e)] = doc_entities[e]
             elif mode == "re":
-                doc_pairs = set()
+                doc_pairs = {}
                 # logging.info(len(self.documents[d].pairs.pairs))
-                for p in self.documents[d].pairs.pairs:
+                for p in self.documents[did].pairs.pairs:
                     if source in p.recognized_by:
-                        doc_pairs.add((d, p.entities[0].text, p.entities[1].text))
-                allentries.update(doc_pairs)
-        return allentries
+                        doc_pairs[(did, p.entities[0].normalized, p.entities[1].normalized)] = []
+                allentitites.update(doc_pairs)
+        return allentitites
 
     def write_chemdner_results(self, source, outfile, ths={"chebi":0.0}, rules=[]):
         """

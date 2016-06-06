@@ -167,15 +167,15 @@ class Document(object):
         return totalchars
 
     def get_unique_results(self, source, ths, rules, mode):
-        entries = set()
+        doc_entities = {}
         for s in self.sentences:
             if s.entities:
                 if mode == "ner":
-                    sentence_entries = s.entities.get_unique_entities(source, ths, rules)
+                    sentence_entitites = s.entities.get_unique_entities(source, ths, rules)
                 elif mode == "re":
-                    sentence_entries = s.entities.get_unique_relations(source)
-                entries.update(sentence_entries)
-        return entries
+                    sentence_entitites = s.entities.get_unique_relations(source)
+        doc_entities.update(sentence_entitites)
+        return doc_entities
 
     def write_chemdner_results(self, source, outfile, ths={"chebi":0.0}, rules=[]):
         lines = []

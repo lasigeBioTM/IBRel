@@ -47,6 +47,48 @@ def exit_handler():
 
 atexit.register(exit_handler)
 
+
+def get_uniprot_name(text):
+    global uniprot
+    # first check if a chebi mappings dictionary is loaded in memory
+    if text in uniprot:
+        c = uniprot[text]
+    else:
+        query = {"query": text + ' AND organism:"Homo sapiens (Human) [9606]"',
+                 "sort": "score",
+                 "columns": "id,entry name,reviewed,protein names,organism,go,go-id",
+                 "format": "tab",
+                 "limit": "1"}
+        headers = {'User-Agent': 'IBEnt (CentOS) alamurias@lasige.di.fc.ul.pt'}
+        r = requests.get('http://www.uniprot.org/uniprot/', query, headers=headers)
+        logging.debug("Request Status: " + str(r.status_code))
+
+        c = r.text
+        if "\n" not in c:
+            logging.info("nothing found on uniprot for {}".format(text))
+            c = "NA\t" * 6
+        else:
+            c = c.split("\n")[1].strip()
+            uniprot[text] = c
+    values = c.split("\t")
+    normalized = text
+    normalized_score = 0
+    go_ids = []
+    if len(values) > 3:
+
+        # print
+        # print self.text, values[0], values[1]
+        # print values[3]
+        normalized = values[0]
+        normalized_score = 100
+
+        if len(values) > 5:
+            # gos = values[5].split(";")
+            # print values[6]
+            go_ids = [v.strip() for v in values[6].split(";")]
+    logging.info("mapped  {} to {}".format(text, normalized))
+    return normalized, normalized_score, go_ids
+
 class ProteinEntity(Entity):
     def __init__(self, tokens, sid, *args, **kwargs):
         # Entity.__init__(self, kwargs)
@@ -56,6 +98,7 @@ class ProteinEntity(Entity):
         self.sid = sid
         self.go_ids = []
         self.best_go = None
+        self.normalize()
 
     tf_regex = re.compile(r"\A[A-Z]+\d*\w*\d*\Z")
 
@@ -115,48 +158,17 @@ class ProteinEntity(Entity):
             logging.debug("Request Status: " + str(r.status_code))
 
     def normalize(self):
-        global uniprot
-        # first check if a chebi mappings dictionary is loaded in memory
-        if self.text in uniprot:
-            c = uniprot[self.text]
-        else:
-            query = {"query": self.text + 'AND organism:"Homo sapiens (Human) [9606]" AND proteome:up000005640',
-                     "sort": "score",
-                     "columns": "id,entry name,reviewed,protein names,organism,go,go-id",
-                     "format": "tab",
-                     "limit": "1"}
-            headers = {'User-Agent': 'IBEnt (CentOS) alamurias@lasige.di.fc.ul.pt'}
-            r = requests.get('http://www.uniprot.org/uniprot/', query, headers=headers)
-            logging.debug("Request Status: " + str(r.status_code))
+        uniprot_values = get_uniprot_name(self.text)
 
-            c = r.text
-            if "\n" not in c:
-                logging.info("nothing found on uniprot for {}".format(self.text))
-                c = "NA\t"*6
-            else:
-                c = c.split("\n")[1].strip()
-                uniprot[self.text] = c
-        values = c.split("\t")
-        if len(values) > 3:
 
-            #print
-            #print self.text, values[0], values[1]
-            #print values[3]
-            self.normalized = values[0]
-            self.normalized_score = 100
-            self.normalized_ref = "uniprot"
-            if len(values) > 5:
-                #gos = values[5].split(";")
-                #print values[6]
-                self.go_ids = [v.strip() for v in values[6].split(";")]
-            #print gos
-            if len(self.go_ids) > 0:
-                self.get_best_go()
-        else:
-            self.normalized = ""
-            self.normalized_score = 0
-            self.normalized_ref = "uniprot"
-        logging.info("mapped  {} to {}".format(self.text, self.normalized))
+        self.normalized = uniprot_values[0]
+        self.normalized_score = uniprot_values[1]
+        self.normalized_ref = "uniprot"
+
+        self.go_ids = uniprot_values[2]
+        if len(self.go_ids) > 0:
+            self.get_best_go()
+
 
     def get_best_go(self):
         cur = db.cursor()

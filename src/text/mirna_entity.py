@@ -32,6 +32,7 @@ class MirnaEntity(Entity):
         self.mirna_name = 0
         self.sid = sid
         self.nextword = kwargs.get("nextword")
+        self.normalize()
 
     def validate(self, ths, rules, *args, **kwargs):
         """
@@ -88,5 +89,5 @@ class MirnaEntity(Entity):
         else:
             self.normalized, self.normalized_score= mirna_graph.map_label(self.text)
             self.normalized_ref = "mirbase"
-        logging.debug("{}=>{}:{}".format(self.text.encode("utf-8"), self.normalized, self.normalized_score))
+        logging.info("{}=>{}:{}".format(self.text.encode("utf-8"), self.normalized, self.normalized_score))
 
