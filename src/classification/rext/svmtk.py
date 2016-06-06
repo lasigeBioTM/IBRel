@@ -21,7 +21,7 @@ class SVMTKernel(ReModel):
 
     def __init__(self, corpus, relationtype, modelname="svm_tk_classifier.model"):
         super(SVMTKernel, self).__init__()
-        self.modelname = modelname
+        self.modelname = relationtype + "_" + modelname + "_svmtk"
         self.test_svmtk = []
         self.pids = {}
         # self.lmtzr = WordNetLemmatizer()

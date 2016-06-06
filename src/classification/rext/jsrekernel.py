@@ -16,9 +16,9 @@ from text.pair import Pairs
 
 class JSREKernel(ReModel):
 
-    def __init__(self, corpus, relationtype, modelname="ratio_slk_classifier.model", train=False):
+    def __init__(self, corpus, relationtype, modelname="slk_classifier.model", train=False):
         super(JSREKernel, self).__init__()
-        self.modelname = relationtype + "_" + modelname
+        self.modelname = relationtype + "_" + modelname + "_jsre"
         self.pairtype = relationtype
         self.test_jsre = []
         self.pairs = {}
