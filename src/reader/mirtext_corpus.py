@@ -154,13 +154,20 @@ def get_mirtex_gold_ann_set(goldpath, entitytype, pairtype):
     with open(goldpath + "/" + "annotations.tsv") as afile:
         for l in afile:
             v = l.strip().split("\t")
+            if len(v) < 3:
+                continue
             did = goldpath + '/' + v[0]
+            logging.info("{} {} {}".format(did, pairtype, v[-1]))
             if pairtype == "all" or type_match.get(v[-1]) == pairtype:
                 e1 = v[1].split(";")
                 for mirna in e1:
+                    mirna = mirna.replace('"', '')
+                    logging.info(mirna)
                     norm_mirna = mirna_graph.map_label(mirna)
                     e2 = v[2].split(";")
                     for gene in e2:
+                        gene = gene.replace('"', '')
+                        logging.info(gene)
                         norm_gene = get_uniprot_name(gene)
                         gold_relations.add((did, norm_mirna[0], norm_gene[0]))
     return gold_offsets, gold_relations

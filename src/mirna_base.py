@@ -1,5 +1,9 @@
 import argparse
+import atexit
 import logging
+import os
+import pickle
+
 from rdflib import URIRef, BNode, Literal, ConjunctiveGraph, Namespace
 from rdflib.namespace import RDF, RDFS
 from rdflib.plugins.sparql import prepareQuery
@@ -9,6 +13,25 @@ from fuzzywuzzy import process
 from config import config
 pp = pprint.PrettyPrinter(indent=2)
 MIRBASE = Namespace("http://www.mirbase.org/")
+
+mirbasedic_path = "data/mirbase_dic.pickle"
+
+if os.path.isfile(mirbasedic_path):
+    logging.info("loading mirbase cache...")
+    mirbasedic = pickle.load(open(mirbasedic_path, "rb"))
+    loadedmirbase = True
+    logging.info("loaded mirbase dictionary with %s entries", str(len(mirbasedic)))
+else:
+    mirbasedic = {}
+    loadedmirbase = False
+    logging.info("new mirbase dictionary")
+
+def exit_handler():
+    logging.info('Saving mirbase cache...!')
+    pickle.dump(mirbasedic, open(mirbasedic_path, "wb"))
+
+atexit.register(exit_handler)
+
 class MirbaseDB(object):
     def __init__(self, db_path):
         self.g = ConjunctiveGraph()
@@ -89,29 +112,36 @@ class MirbaseDB(object):
         return mirna_dic
 
     def map_label(self, label):
-        label = label.lower()
-        label = label.replace("microrna", "mir")
-        label = label.replace("mirna", "mir")
-        if not label.startswith("hsa-"):
-            label = "hsa-" + label
+        global mirbasedic
+        # first check if a chebi mappings dictionary is loaded in memory
+        if label in mirbasedic:
+            result = mirbasedic[label]
+        else:
+            new_label = label.lower()
+            new_label = new_label.replace("microrna", "mir")
+            new_label = new_label.replace("mirna", "mir")
+            if not new_label.startswith("hsa-"):
+                new_label = "hsa-" + new_label
+            result = process.extractOne(new_label, self.choices)
 
-        result = process.extractOne(label, self.choices)
-        # result = process.extract(label, choices, limit=3)
-        """if result[1] != 100:
-            print
-            print "original:", label.encode("utf-8"), result
-            # if label[-1].isdigit():
-            #     label += "a"
-            # else:
-            new_label = label + "-1"
-            revised_result = process.extractOne(new_label, self.choices)
-            if revised_result[1] != 100:
-                new_label = label + "a"
-                revised_result = process.extractOne(new_label, self.choices)
-            if revised_result[1] > result[1]:
-                result = revised_result
-                print "revised:", label.encode("utf-8"), result"""
-
+            # result = process.extract(label, choices, limit=3)
+            if result[1] != 100:
+                #print
+                # print "original:", new_label.encode("utf-8"), result
+                # if label[-1].isdigit():
+                #     label += "a"
+                # else:
+                new_new_label = new_label + "-1"
+                revised_result = process.extractOne(new_new_label, self.choices)
+                if revised_result[1] != 100:
+                    new_new_label = new_label + "a"
+                    revised_result = process.extractOne(new_new_label, self.choices)
+                if revised_result[1] > result[1]:
+                    result = revised_result
+                new_label = new_new_label
+                    #print "revised:", new_label.encode("utf-8"), result
+            # print "mapped {} to {} to {}".format(label, new_label, result)
+            mirbasedic[label] = result
         return result
 
 

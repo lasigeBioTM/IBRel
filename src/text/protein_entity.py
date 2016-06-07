@@ -19,7 +19,8 @@ __author__ = 'Andre'
 prot_words = set()
 prot_stopwords = set(["chromosome", "factor", "conserved", "gene", "anti", "mir", "regulatory", "terminal", "element",
                       "activator", "cell", "box", "transcriptional", "transcription", "growth", "talk", "epithelial",
-                      "alpha", "microrna", "chip", "chipseq", "interferons", "tweak", "allele"])
+                      "alpha", "microrna", "micrornas", "chip", "chipseq", "interferons", "tweak", "allele", "mirnas",
+                      "mirs", "protein", "proteins", "hsa", "genotype", "mRNA"])
 # words that may seem like they are not part of named chemical entities but they are
 
 # words that are never part of chemical entities
@@ -39,7 +40,7 @@ if os.path.isfile(uniprotdic):
 else:
     uniprot = {}
     loadeduniprot = False
-    logging.info("new chebi dictionary")
+    logging.info("new uniprot dictionary")
 
 def exit_handler():
     logging.info('Saving uniprot cache...!')

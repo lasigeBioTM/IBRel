@@ -159,7 +159,6 @@ def get_list_results(results, models, goldset, ths, rules, mode="ner"):
     :param rules: Validation rules
     """
     print "saving results to {}".format(results.path + ".tsv")
-
     sysresults = results.corpus.get_unique_results(models, ths, rules, mode)
     print "{} unique entries".format(len(sysresults))
     with codecs.open(results.path + "_final.tsv", 'w', 'utf-8') as outfile:
