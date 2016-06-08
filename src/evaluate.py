@@ -10,6 +10,14 @@ import random
 import sys
 import time
 
+from sklearn import svm
+from sklearn.dummy import DummyClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.externals import joblib
+from sklearn.linear_model import SGDClassifier
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.pipeline import Pipeline
+
 from config.corpus_paths import paths
 from config import config
 from reader.bc2gm_corpus import get_b2gm_gold_ann_set
@@ -318,7 +326,7 @@ def main():
             print results_path
             sys.exit()
 
-    if options.action == "combine":
+    if options.action in ("combine", "train_ensemble", "test_ensemble"):
         # merge the results of various results corresponding to different classifiers
         # the entities of each sentence are added according to the classifier of each result
         # every result should correspond to the same gold standard
@@ -331,9 +339,28 @@ def main():
         for result in results_list[1:]:
             logging.info("adding {}...".format(result.path))
             base_result.add_results(result)
-        base_result.combine_results("all", "combined")
-        base_result.save(options.models + ".pickle")
 
+        if options.action == "combine":
+            base_result.combine_results("all", "combined")
+            base_result.save(options.models + ".pickle")
+        elif options.action == "train_ensemble":
+            pipeline = Pipeline(
+                [
+                    ('clf', SGDClassifier(loss='hinge', penalty='l1', alpha=0.0001, n_iter=5, random_state=42)),
+                    #('clf', SGDClassifier())
+                     #('clf', svm.NuSVC(nu=0.01 ))
+                    #('clf', RandomForestClassifier(class_weight={False:1, True:1}, n_jobs=-1))
+                     #('clf', MultinomialNB())
+                   # ('clf', )
+                    #('clf', DummyClassifier(strategy="constant", constant=True))
+                ])
+            print pipeline
+            base_result.train_ensemble(pipeline, options.models, options.etype)
+        elif options.action == "test_ensemble":
+            pipeline = joblib.load("{}/{}/{}.pkl".format("models/ensemble/", options.models, options.models))
+            print pipeline
+            base_result.test_ensemble(pipeline, options.models, options.etype)
+            base_result.save("results/" + options.models + ".pickle")
 
     elif options.action in ("evaluate", "evaluate_list"):
         if "annotations" in paths[options.goldstd]:

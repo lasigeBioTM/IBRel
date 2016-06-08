@@ -5,6 +5,11 @@ import time
 import argparse
 import sys
 
+from sklearn.dummy import DummyClassifier
+from sklearn.externals import joblib
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.pipeline import Pipeline
+
 from config.corpus_paths import paths
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__) + '../..'))
@@ -59,6 +64,7 @@ class ResultsNER(object):
         self.entities = {}
         self.name = name
         self.corpus = Corpus(self.name)
+        self.basedir = "models/ensemble/"
 
     def get_ensemble_results(self, ensemble, corpus, model):
         """
@@ -155,6 +161,82 @@ class ResultsNER(object):
                     all_models = all_models.union(set(base_sentence.entities.elist.keys()))
         # print all_models
 
+    def train_ensemble(self, pipeline, modelname, etype):
+        train_data, labels, offsets = self.generate_data(etype)
+        print "training ensemble classifier..."
+        pipeline = pipeline.fit(train_data, labels)
+        if not os.path.exists(self.basedir + modelname):
+            os.makedirs(self.basedir + modelname)
+        logging.info("Training complete, saving to {}/{}/{}.pkl".format(self.basedir, modelname, modelname))
+        joblib.dump(pipeline, "{}/{}/{}.pkl".format(self.basedir, modelname, modelname))
+
+    def test_ensemble(self, pipeline, modelname, etype):
+        train_data, labels, offsets = self.generate_data(etype, mode="test")
+        pred = pipeline.predict(train_data)
+        print pred
+        for i, p in enumerate(pred):
+            if p == True:
+                sentence = self.corpus.get_sentence(offsets.keys()[i][0])
+                sentence.tag_entity(offsets.keys()[i][1], offsets.keys()[i][2], etype, source=modelname)
+
+
+    def generate_data(self, etype, mode="train"):
+        """
+        Use scikit to train a pipeline to classify entities as correct or incorrect
+        features consist in the classifiers that identified the entity
+        :param modelname:
+        :return:
+        """
+        offsets = {}
+        features = set()
+        gs_labels = {}
+        # collect offsets from every model (except gold standard) and add classifier score
+        all_models = set()
+        # merge the results of this set with another set
+        for did in self.corpus.documents:
+            # logging.debug(did)
+            for sentence in self.corpus.documents[did].sentences:
+                for s in sentence.entities.elist:
+                    # logging.info("%s - %s" % (self.sid, s))
+                    # use everything except what's already combined and gold standard
+                    if not s.startswith("goldstandard") and s.endswith(etype):
+                        features.add(s)
+                        for e in sentence.entities.elist[s]:
+                            # if any([word in e.text for word in self.stopwords]):
+                            #    logging.info("ignored stopword %s" % e.text)
+                            #    continue
+                            # eid_alt =  e.sid + ":" + str(e.dstart) + ':' + str(e.dend)
+                            #next_eid = "{0}.e{1}".format(e.sid, len(combined))
+                            #eid_offset = Offset(e.dstart, e.dend, text=e.text, sid=e.sid, eid=next_eid)
+                            # check for perfect overlaps only
+                            offset = (sentence.sid, e.start, e.end)
+                            if offset not in offsets:
+                                offsets[offset] = {}
+                            offsets[offset][s] = e.score
+                    elif mode == "train" and s == "goldstandard_" + etype:
+                        for e in sentence.entities.elist[s]:
+                            offset = (sentence.sid, e.start, e.end)
+                            gs_labels[offset] = True
+
+        train_data = []
+        train_labels = []
+        features = sorted(list(features))
+        for o in offsets:
+            of = []
+            for f in features:
+                if f in offsets[o]:
+                    of.append(offsets[o][f])
+                else:
+                    of.append(0)
+            train_data.append(of)
+            if mode == "train" and gs_labels.get(o) == True:
+                train_labels.append(True)
+            else:
+                train_labels.append(False)
+        print features
+        for i, l in enumerate(train_labels[:10]):
+            print train_data[i], l
+        return train_data, train_labels, offsets
 
 
 class ResultSetNER(object):
