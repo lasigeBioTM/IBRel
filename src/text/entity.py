@@ -15,10 +15,11 @@ class Entity(object):
         self.sid = kwargs.get("sid", None)
         self.eid = kwargs.get("eid")
         self.tokens = tokens
-        self.start = tokens[0].start
-        self.end = tokens[-1].end
-        self.dstart = tokens[0].dstart
-        self.dend = tokens[-1].dend
+        if len(tokens) > 0:
+            self.start = tokens[0].start
+            self.end = tokens[-1].end
+            self.dstart = tokens[0].dstart
+            self.dend = tokens[-1].dend
         self.exclude = None
         self.dexclude = None
         self.recognized_by = []
@@ -188,7 +189,7 @@ class Entities(object):
         for s in self.elist:
             #logging.info("%s - %s" % (self.sid, s))
             # use everything except what's already combined and gold standard
-            if (s.startswith(base_model) or base_model == "all") and s != name and not s.startswith("goldstandard"):
+            if (s.endswith(base_model) or base_model == "all") and s != name and not s.startswith("goldstandard"):
                 for e in self.elist[s]: # TODO: filter for classifier confidence
                     #if any([word in e.text for word in self.stopwords]):
                     #    logging.info("ignored stopword %s" % e.text)
