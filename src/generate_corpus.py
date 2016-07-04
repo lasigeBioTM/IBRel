@@ -3,6 +3,7 @@ import logging
 import xml.etree.ElementTree as ET
 import codecs
 import os
+import sys
 import pickle
 from time import sleep
 from pycorenlp import StanfordCoreNLP
@@ -10,6 +11,7 @@ from pycorenlp import StanfordCoreNLP
 import config.corpus_paths
 from classification.ner.matcher import MatcherModel
 from config import config
+from postprocessing import ssm
 from reader import pubmed
 from text.corpus import Corpus
 from text.document import Document
@@ -58,11 +60,12 @@ def process_documents(corpus_path):
             lcount += 1
             starts.add(l[:20])
 
-            newdoc = Document(l.strip())
+            newdoc = Document(l.strip(), did="d" + str(lcount))
             newdoc.process_document(corenlp_client)
             #for sentence in newdoc.sentences:
             #    print [t.text for t in sentence.tokens]
             newtext = ""
+            newdoc.did = "d" + str(lcount)
             corpus.documents["d" + str(lcount)] = newdoc
             """for s in newdoc.sentences:
                 for t in s.tokens:
@@ -100,43 +103,38 @@ def load_gold_relations(reltype):
     return entities, relations
 
 
-def annotate_corpus_entities(reltype, corpuspath="corpora/Thaliana/thaliana-documents_10.pickle"):
-    corpus = pickle.load(open(corpuspath, 'rb'))
-    for d in corpus.documents:
-        for sentence in corpus.documents[d].sentences:
-            sentence.sid = d + "." + sentence.sid.split(".")[-1]
-    entities, relations = load_gold_relations(reltype)
-    matcher = MatcherModel("goldstandard")
-    matcher.names = set(entities.keys())
-    corpus, entitiesfound = matcher.test(corpus)
+def annotate_corpus_relations(corpus, model, corpuspath):
 
-    print "saving corpus..."
-    corpus.save(corpuspath)
-
-
-def annotate_corpus_relations(reltype, corpuspath="corpora/Thaliana/thaliana-documents_10.pickle"):
-    corpus = pickle.load(open(corpuspath, 'rb'))
     logging.info("getting relations...")
-    entities, relations = load_gold_relations(reltype)
+    # entities, relations = load_gold_relations(reltype)
     logging.info("finding relations...")
     # print entities.keys()[:20]
     for did in corpus.documents:
         for sentence in corpus.documents[did].sentences:
-            for entity in sentence.entities.elist["goldstandard"]:
-                if entity.text in entities:
-                    for etype in entities[entity.text]:
-                        source = etype + "#" + entity.text
-                        if source in relations:
-                            for target in relations[source]:
-                                target_type, target_text = target[0].split("#")
-                                for entity2 in sentence.entities.elist["goldstandard"]:
-                                    #print entity2.text,"||", target_text, target_type
-                                    if entity2.text == target_text: # and entity2.type == target_type:
-                                        entity.targets.append((entity2.eid, target[1]))
-                                        print "found relation:", entity.text, entity2.text
+            sentences_mirnas = []
+            sentence_tfs = []
+            #print sentence.entities.elist
+            for entity in sentence.entities.elist[model]:
+                if entity.type == "mirna":
+                    sentences_mirnas.append(entity)
+                elif entity.type == "protein":
+                    sentence_tfs.append(entity)
+            for mirna in sentences_mirnas:
+                for tf in sentence_tfs:
+                    ss = ssm.simui_go(mirna.best_go, tf.best_go)
+                    if ss > 0:
+                        print ss, mirna.text, tf.text, mirna.best_go, tf.best_go
+
     print "saving corpus..."
     corpus.save(corpuspath)
+negative_pmids = open("negative_pmids.txt", 'r').readlines()
 
-#negative_pmids = open("negative_pmids.txt", 'r').readlines()
-#get_pubmed_abstracts(["mirna"], "corpora/mirna-ds/abstracts.txt", negative_pmids)
-#process_documents("corpora/mirna-ds/abstracts.txt")
+if sys.argv[1] == "download":
+    get_pubmed_abstracts(["mirna"], "corpora/mirna-ds/abstracts.txt", negative_pmids)
+elif sys.argv[1] == "process":
+    process_documents("corpora/mirna-ds/abstracts.txt")
+elif sys.argv[1] == "annotate":
+    results = pickle.load(open("results/mirna_ds_entities.pickle", 'rb'))
+    results.load_corpus("mirna_ds")
+    corpus = results.corpus
+    annotate_corpus_relations(corpus, "combined", "corpora/mirna-ds/abstracts.txt_1.pickle")

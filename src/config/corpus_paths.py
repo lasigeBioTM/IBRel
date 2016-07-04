@@ -15,6 +15,13 @@ seedev_base = "corpora/SeeDev/"
 bc2gn_base = "corpora/BC2GN/"
 lll_base = "corpora/LLL/"
 paths = {
+
+    'mirna_ds':{
+        'corpus': "corpora/mirna-ds/abstracts.txt_1.pickle",
+        'format': "mirna",
+        'annotations': ""
+    },
+
     ### LLL ###
     'lll_train':{
        'text': lll_base + "genic_interaction_data.txt",

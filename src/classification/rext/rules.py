@@ -14,7 +14,7 @@ from text.pair import Pairs
 
 
 class RuleClassifier(ReModel):
-    def __init__(self, corpus, ptype, rules=["same_line", "list_items", "dist", "same_text", "all"]):
+    def __init__(self, corpus, ptype, rules=["triggers"]):
         """
         Rule based classifier
         rules: List of rules to use
@@ -38,17 +38,15 @@ class RuleClassifier(ReModel):
         pcount = 0
         ptrue = 0
         unique_relations = {}
-        for did in self.corpus.documents:
-            doc_entities = self.corpus.documents[did].get_entities("goldstandard")
+        pairtypes = (config.relation_types[self.ptype]["source_types"], config.relation_types[self.ptype]["target_types"])
+        # pairtypes = (config.event_types[pairtype]["source_types"], config.event_types[pairtype]["target_types"])
+        for sentence in self.corpus.get_sentences("goldstandard"):
+            #doc_entities = self.corpus.documents[did].get_entities("goldstandard")
+            did = sentence.did
+            sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
             # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
             # doc_entities += sentence_entities
-            for pair in itertools.permutations(doc_entities, 2):
-                sid1 = pair[0].eid.split(".")[-2]
-                sid2 = pair[1].eid.split(".")[-2]
-                sn1 = int(sid1[1:])
-                sn2 = int(sid2[1:])
-                if abs(sn2 - sn1) > 0:
-                    continue
+            for pair in itertools.permutations(sentence_entities, 2):
                 if self.ptype in ("Has_Sequence_Identical_To", "Is_Functionally_Equivalent_To") and pair[0].type != pair[1].type:
                     continue
                 if pair[0].text == pair[1].text:
@@ -56,11 +54,8 @@ class RuleClassifier(ReModel):
                 pid = did + ".p" + str(pcount)
                 self.pids[pid] = pair
                 self.pairs[pid] = 0
-                sentence1 = self.corpus.documents[did].get_sentence(pair[0].sid)
-                # sentence2 = self.corpus.documents[did].get_sentence(e2.sid)
-                logging.info("relation: {}=>{}".format(pair[0].type, pair[1].type))
-                if pair[0].type in config.seedev_types.pair_types[self.ptype]["source_types"] and\
-                   pair[1].type in config.seedev_types.pair_types[self.ptype]["target_types"]:
+                # logging.info("relation: {}=>{}".format(pair[0].type, pair[1].type))
+                if pair[0].type in pairtypes[0] and pair[1].type in pairtypes[1]:
                     # logging.info("mirna-dna relation: {}=>{}".format(pair[0].text, pair[1].text))
 
                     #rel_text = "{0.type}#{0.text}\t{1}\t{2.type}#{2.text}".format(pair[0], self.ptype, pair[1])
