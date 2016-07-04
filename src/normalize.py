@@ -178,7 +178,7 @@ def main():
     # if options.action == "go":
     #    add_go_mappings(results, options.results + ".pickle", options.models)
     elif options.action == "mirna":
-        pass
+        normalize_entities(results, options.results + ".pickle", options.models)
     elif options.action == "protein":
         normalize_entities(results, options.results + ".pickle", options.models)
         pass

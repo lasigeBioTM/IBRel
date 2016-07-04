@@ -97,30 +97,30 @@ def simui_go(id1, id2):
 
 def simui_hindex_go(id1, id2, h=4):
     cur = dbwebgo.cursor()
-    cur.execute("""SELECT (
-            SELECT COUNT(y.ic)
-            FROM  (
-                SELECT DISTINCT f.id, f.ic
-                FROM graph_path p1, graph_path p2, term f, term f1, term f2
-                WHERE p1.term2_id = f1.id AND f1.acc = %s AND p2.term2_id = f2.id AND f2.acc = %s AND p1.term1_id=p2.term1_id AND p1.term1_id=f.id AND f.hindex >= %s)
-            AS y )
-         /(
-            SELECT COUNT(x.ic)
-            FROM (
-                SELECT f1.id, f1.ic
-                FROM graph_path p1, term f1, term f3
-                WHERE f1.acc = f3.id
-                    AND f3.acc = %s
-                    AND p1.term1_id = f1.id
-                    AND f1.hindex >= %s
+    query = """SELECT (
+			SELECT COUNT(y.id)
+			FROM  (
+				SELECT DISTINCT t3.id
+				FROM graph_path p1, graph_path p2, term t1, term t2, term t3
+                WHERE t1.acc = %s AND t2.acc = %s AND
+                t1.id = p1.term2_id AND t2.id = p2.term2_id
+				AND p1.term1_id=p2.term1_id
+				AND p1.term1_id=t3.id AND t3.hindex >= %s)
+			AS y )
+		 /(
+		 	SELECT COUNT(x.id)
+		 	FROM (
+                SELECT t2.id
+                FROM graph_path p1, term t1, term t2
+                WHERE t1.acc = %s AND t1.id = p1.term2_id
+                AND p1.term1_id = t2.id AND t2.hindex >= %s
                 UNION
-                SELECT f2.id, f2.ic
-                FROM graph_path p2, term f2, term f4
-                WHERE f2.acc = f4.id
-                    AND f4.acc = %s
-                    AND p2.term1_id = f2.id
-                    AND f2.hindex >= %s)
-            AS x )""", (id1,id2,h,id1,h,id2,h))
+                SELECT t4.id
+                FROM graph_path p2, term t3, term t4
+                WHERE t3.acc = %s AND t3.id = p2.term2_id
+                AND p2.term1_id = t4.id AND t4.hindex >= %s)
+		 	AS x )"""
+    cur.execute(query, (id1,id2,h,id1,h,id2,h))
     res = cur.fetchone()[0]
     if res is None:
         res = '0'

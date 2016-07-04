@@ -1,10 +1,13 @@
 from __future__ import division, absolute_import
 import logging
 import pickle
+import random
 import sys
 import os
 
 import pexpect
+
+from postprocessing import ssm
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__) + '../..'))
 
@@ -48,10 +51,11 @@ class Corpus(object):
                     allentitites[(self.did, e)] = doc_entities[e]
             elif mode == "re":
                 doc_pairs = {}
-                # logging.info(len(self.documents[d].pairs.pairs))
+                # logging.info(self.documents[did].pairs.pairs)
                 for p in self.documents[did].pairs.pairs:
                     if source in p.recognized_by:
-                        doc_pairs[(did, p.entities[0].normalized, p.entities[1].normalized)] = []
+                        doc_pairs[(did, p.entities[0].normalized, p.entities[1].normalized)] = [(p.entities[0].text,
+                                                                                                 p.entities[1].text)]
                 allentitites.update(doc_pairs)
         return allentitites
 
@@ -165,7 +169,7 @@ class Corpus(object):
     def get_sentences(self, hassource=None):
         for did in self.documents:
             for sentence in self.documents[did].sentences:
-                if hassource and 'goldstandard' in sentence.entities.elist:
+                if hassource and hassource in sentence.entities.elist:
                     yield sentence
                 elif hassource is None:
                     yield sentence
@@ -208,6 +212,81 @@ class Corpus(object):
                         sentence.tokens[i].genia_chunk = values[3]
 
         c.kill(0)
+
+    def run_ss_analysis(self, pairtype):
+        correct_count = 0  # numver of real miRNA-gene pairs with common gos
+        incorrect_count = 0  # number of random miRNA-gene pairs with common go
+        all_tfs = []
+        all_mirnas = []
+        diff_count = []
+        nexp = 10
+        for did in self.documents:
+            #for sentence in self.documents[did].sentences:
+            all_tfs = []
+            all_mirnas = []
+            correct_count = 0  # numver of real miRNA-gene pairs with common gos
+            incorrect_count = 0  # number of random miRNA-gene pairs with common go
+            all_mirnas = self.documents[did].get_entities('goldstandard_mirna')
+            all_tfs = self.documents[did].get_entities('goldstandard_protein')
+            #count true relations
+            if len(all_mirnas) > 0 and len(all_tfs) > 0:
+                # for entity in sentence.entities.elist["goldstandard"]:
+                #     if entity.type == "protein":
+                #         all_tfs.append(entity)
+                #     elif entity.type == "mirna":
+                #         all_mirnas.append(entity)
+
+                    #     correct_count += 1
+                #if len(all_tfs) > 1 and len(all_mirnas) > 1:
+                    # print sentence.sid
+                correct = 0
+                incorrect = 0
+                while correct < nexp and incorrect < nexp:
+                    random_tf = random.choice(all_tfs)
+                    random_mirna = random.choice(all_mirnas)
+                    # print dir(random_mirna)
+                    # common_gos = set(random_tf.go_ids).intersection(set(random_mirna.go_ids))
+                    if correct < nexp and (random_tf.eid, pairtype) in random_mirna.targets:
+                        # if len(common_gos) > 0:
+                        # if random_mirna.best_go.startswith("GO:") and random_tf.best_go.startswith("GO"):
+                        # print random_mirna.best_go, random_tf.best_go
+                        max_ss = []
+                        for mirnago in random_mirna.go_ids:
+                            for mirnatf in random_tf.go_ids:
+                                ss = ssm.simui_go(mirnago, mirnatf)
+                                max_ss.append(ss)
+                                #if max_ss > ss:
+                                #    max_ss = ss
+                                    # ss = ssm.simui_go(random_mirna.best_go, random_tf.best_go)
+                                    # print "correct:", ss
+                        if len(max_ss) > 0:
+                            correct_count += sum(max_ss)*1.0/len(max_ss)
+                        # correct_count += len(common_gos)
+                        correct += 1
+                    elif incorrect < nexp:
+                        # if len(common_gos) > 0:
+                        # if random_mirna.best_go.startswith("GO:") and random_tf.best_go.startswith("GO"):
+                        max_ss = []
+                        for mirnago in random_mirna.go_ids:
+                            for mirnatf in random_tf.go_ids:
+                                # ss = ssm.simui_hindex_go(mirnago, mirnatf, h=0)
+                                ss = ssm.simui_go(mirnago, mirnatf)
+                                max_ss.append(ss)
+                                #if max_ss > ss:
+                                #    max_ss = ss
+                                    # ss = ssm.simui_go(random_mirna.best_go, random_tf.best_go)
+                                    # print "correct:", ss
+                        if len(max_ss) > 0:
+                            incorrect_count += sum(max_ss)*1.0/len(max_ss)
+                        # incorrect_count += len(common_gos)
+                        incorrect += 1
+                if correct_count != 0 and incorrect_count != 0:
+                    print "{}={}-{} ({} mirnas, {} tfs)".format(correct_count / nexp - incorrect_count / nexp,
+                                                                correct_count / nexp, incorrect_count / nexp,
+                                                                len(all_mirnas), len(all_tfs))
+                    diff_count.append(correct_count / nexp - incorrect_count / nexp)
+
+        print sum(diff_count) * 1.0 / len(diff_count)
 
 
 

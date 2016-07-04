@@ -1,9 +1,9 @@
 import logging
 
-from mirna_base import MirbaseDB
+from mirna_base import MirbaseDB, MIRBASE
 from text.entity import Entity
 from config import config
-
+from config.config import go_conn as db
 __author__ = 'Andre'
 
 mirna_stopwords = set(["mediated", "expressing", "deficient", "transfected", "dependent", "family", "specific", "null",
@@ -32,6 +32,7 @@ class MirnaEntity(Entity):
         self.mirna_name = 0
         self.sid = sid
         self.nextword = kwargs.get("nextword")
+        self.go_ids = []
         self.normalize()
 
     def validate(self, ths, rules, *args, **kwargs):
@@ -86,8 +87,43 @@ class MirnaEntity(Entity):
             self.normalized = "microrna"
             self.normalized_score = 100
             self.normalized_ref = "text"
+            self.go_ids = []
+            self.best_go = ""
         else:
             self.normalized, self.normalized_score= mirna_graph.map_label(self.text)
             self.normalized_ref = "mirbase"
+
+            base_mirna = mirna_graph.labels[self.normalized]
+            # print base_mirna
+            for go in mirna_graph.g.objects(base_mirna, MIRBASE["goa"]):
+                # print str(go)
+                self.go_ids.append(str(go))
+            if len(self.go_ids) > 0:
+                self.get_best_go()
+            else:
+                self.best_go = ""
         logging.info("{}=>{}:{}".format(self.text.encode("utf-8"), self.normalized, self.normalized_score))
+
+    def get_best_go(self):
+        cur = db.cursor()
+        # synonym
+
+        query = """SELECT DISTINCT t.acc, t.name, t.ic
+                       FROM term t
+                       WHERE t.acc IN (%s)
+                       ORDER BY t.ic ASC
+                       LIMIT 1;"""  # or DESC
+        # print "QUERY", query
+
+
+        format_strings = ','.join(['%s'] * len(self.go_ids))
+        cur.execute(query % format_strings, (self.go_ids))
+        res = cur.fetchone()
+        if res is not None:
+            # print self.text, res[1:]
+            logging.info("best GO for {} ({}): {}".format(self.text, len(self.go_ids), " ".join([str(r) for r in res])))
+            self.best_go = res[0]
+        else:
+            logging.info("NO GO")
+            self.best_go = ""
 

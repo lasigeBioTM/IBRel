@@ -169,6 +169,9 @@ class ProteinEntity(Entity):
         self.go_ids = uniprot_values[2]
         if len(self.go_ids) > 0:
             self.get_best_go()
+        else:
+            logging.info("NO GO for {}".format(self.text))
+            self.best_go = ""
 
 
     def get_best_go(self):
@@ -178,7 +181,7 @@ class ProteinEntity(Entity):
         query = """SELECT DISTINCT t.acc, t.name, t.ic
                        FROM term t
                        WHERE t.acc IN (%s)
-                       ORDER BY t.ic DESC
+                       ORDER BY t.ic ASC
                        LIMIT 1;""" # or DESC
             # print "QUERY", query
 
@@ -191,7 +194,7 @@ class ProteinEntity(Entity):
             logging.info("best GO for {}: {}".format(self.text, " ".join([str(r) for r in res])))
             self.best_go = res[0]
         else:
-            logging.info("NO GO")
+            logging.info("NO GO for {}".format(self.text))
             self.best_go = ""
 
     # def normalize(self):

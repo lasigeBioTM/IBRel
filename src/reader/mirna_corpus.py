@@ -1,4 +1,6 @@
 from __future__ import unicode_literals
+
+import random
 import time
 import logging
 import sys
@@ -6,6 +8,9 @@ import os
 from xml.etree import ElementTree as ET
 
 import progressbar as pb
+
+from postprocessing import ssm
+
 sys.path.append(os.path.abspath(os.path.dirname(__file__) + '../..'))
 from text.corpus import Corpus
 from text.document import Document
@@ -143,6 +148,8 @@ class MirnaCorpus(Corpus):
         print "tagged: {} not tagged: {}".format(tagged, not_tagged)
         with open(ann_dir + "-pmids.txt", 'w') as pmidsfile:
             pmidsfile.write("\n".join(pmids) + "\n")
+        self.run_ss_analysis()
+
 
 def get_ddi_mirna_gold_ann_set(goldpath, entitytype, pairtype):
     logging.info("loading gold standard... {}".format(goldpath))

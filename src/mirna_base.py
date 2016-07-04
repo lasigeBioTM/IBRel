@@ -66,6 +66,37 @@ class MirbaseDB(object):
                         mature_previous_name = Literal(mature_p)
                         self.g.add((mature_instance, MIRBASE["previous_acc"], mature_previous_name))
                 self.g.add((mirna_instance, MIRBASE["stemloopOf"], mature_instance))
+        self.get_label_to_acc()
+        self.choices = self.labels.keys()
+        goa_data = self.parse_goa_gaf("data/goa_human_rna.gaf")
+        for label in self.labels:
+            if label in goa_data:
+                for go_id in goa_data[label]:
+                    mirna_instance = self.labels[label]
+                    self.g.add((mirna_instance, MIRBASE["goa"], Literal(go_id)))
+
+    def parse_goa_gaf(self, gaf_file):
+        goa_dic = {}
+        with open(gaf_file) as gaf:
+            for l in gaf:
+                if l[0] != "!":
+                    values = l.split("\t")
+                    db_id = values[1]
+                    go_id = values[4]
+                    mirna_id = values[9].replace(".", "")
+                    mirna_id = mirna_id.replace("Homo sapiens ", "")
+                    mirna_id = mirna_id.replace("(human) ", "")
+                    mirna_id = mirna_id.replace("microRNA miR", "miR")
+                    if not mirna_id.startswith("hsa-"):
+                        mirna_id = "hsa-" + mirna_id
+                    mirna = self.map_label(mirna_id)
+                    if mirna[1] != 100:
+                        print mirna_id, mirna
+                    if mirna[0] not in goa_dic:
+                        goa_dic[mirna[0]] = []
+                    goa_dic[mirna[0]].append(go_id)
+        print "# of mirnas with gos: {}".format(len(goa_dic))
+        return goa_dic
 
 
     def parse_mirbase(self, mirbase_root):
@@ -111,6 +142,7 @@ class MirbaseDB(object):
         # pp.pprint(mirna_dic)
         return mirna_dic
 
+
     def map_label(self, label):
         global mirbasedic
         # first check if a chebi mappings dictionary is loaded in memory
@@ -122,6 +154,10 @@ class MirbaseDB(object):
             new_label = new_label.replace("mirna", "mir")
             if not new_label.startswith("hsa-"):
                 new_label = "hsa-" + new_label
+            if label[0].isdigit():
+                new_label = "hsa-mir-" + label
+            elif label[0] == "-" and label[1:].isdigit():
+                new_label = "hsa-mir" + label
             result = process.extractOne(new_label, self.choices)
 
             # result = process.extract(label, choices, limit=3)
@@ -153,9 +189,9 @@ class MirbaseDB(object):
 
     def get_label_to_acc(self):
         for subj, pred, obj in self.g.triples((None, RDFS.label, None)):
-            self.labels[str(obj)] = str(subj)
+            self.labels[str(obj)] = subj
         for subj, pred, obj in self.g.triples((None, RDFS.label, None)):
-            self.labels[str(obj)] = str(subj)
+            self.labels[str(obj)] = subj
 
     def save_graph(self):
         self.g.serialize(self.path + "data.rdf", format='pretty-xml')
