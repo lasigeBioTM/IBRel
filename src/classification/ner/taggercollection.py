@@ -35,8 +35,8 @@ class TaggerCollection(object):
         else:
             self.types = kwargs.get("subtypes")
         print "training:", self.types
-        self.basemodel = StanfordNERModel(self.basepath, "all")
-        # self.basemodel = CrfSuiteModel(self.basepath, "all")
+        # self.basemodel = StanfordNERModel(self.basepath, "all")
+        self.basemodel = CrfSuiteModel(self.basepath, "all")
 
     def train_types(self):
         """
@@ -46,8 +46,8 @@ class TaggerCollection(object):
         self.basemodel.load_data(self.corpus, feature_extractors.keys())
         for t in self.types:
             typepath = self.basepath + "_" + t
-            model = StanfordNERModel(typepath, etype=t)
-            # model = CrfSuiteModel(typepath, etype=t)
+            # model = StanfordNERModel(typepath, etype=t)
+            model = CrfSuiteModel(typepath, etype=t)
             model.copy_data(self.basemodel, t)
             logging.info("training subtype %s" % t)
             model.train()
@@ -55,8 +55,8 @@ class TaggerCollection(object):
 
     def load_models(self):
         for i, t in enumerate(self.types):
-            model = StanfordNERModel(self.basepath + "_" + t, t, subtypes=self.basemodel.subtypes)
-            # model = CrfSuiteModel(self.basepath + "_" + t, t, subtypes=self.basemodel.subtypes)
+            # model = StanfordNERModel(self.basepath + "_" + t, t, subtypes=self.basemodel.subtypes)
+            model = CrfSuiteModel(self.basepath + "_" + t, t, subtypes=self.basemodel.subtypes)
             model.load_tagger(self.baseport + i)
             self.models[t] = model
 

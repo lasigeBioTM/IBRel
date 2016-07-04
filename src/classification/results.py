@@ -233,9 +233,9 @@ class ResultsNER(object):
                 train_labels.append(True)
             else:
                 train_labels.append(False)
-        print features
-        for i, l in enumerate(train_labels[:10]):
-            print train_data[i], l
+        # print features
+        # for i, l in enumerate(train_labels[:10]):
+        #     print train_data[i], l
         return train_data, train_labels, offsets
 
 

@@ -25,7 +25,7 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
 from sklearn.svm import LinearSVC
 
-import config.seedev_types
+from config.seedev_types import ds_pair_types, all_entity_groups, all_entity_types, pair_types
 from classification.rext.jsrekernel import JSREKernel
 from classification.rext.multir import MultiR
 from classification.rext.rules import RuleClassifier
@@ -90,6 +90,9 @@ class SeeDevCorpus(Corpus):
         logging.info("average time per abstract: %ss" % abs_avg)
 
     def load_annotations(self, ann_dir, etype, pairtype="all"):
+        self.clear_annotations("all")
+        for rtype in all_entity_types:
+            self.clear_annotations(rtype)
         annfiles = [ann_dir + '/' + f for f in os.listdir(ann_dir) if f.endswith('.a1')]
         total = len(annfiles)
         time_per_abs = []
@@ -128,7 +131,8 @@ class SeeDevCorpus(Corpus):
                         eid = sentence.tag_entity(start, end, entity_type, text=etext, original_id=tid, exclude=exclude)
                         if eid is None:
                             print "no eid!", sentence.sid, start, end, exclude, etext, sentence.text
-                            sys.exit()
+                            continue
+                            # sys.exit()
                         originalid_to_eid[did + "." + tid] = eid
                     else:
                         print "{}: could not find sentence for this span: {}-{}|{}".format(did, dstart, dend, etext.encode("utf-8"))
@@ -137,6 +141,7 @@ class SeeDevCorpus(Corpus):
         self.load_relations(ann_dir, originalid_to_eid)
 
     def load_relations(self, ann_dir, originalid_to_eid):
+        print "loading relations..."
         relations_stats = {}
         annfiles = [ann_dir + '/' + f for f in os.listdir(ann_dir) if f.endswith('.a2')]
         total = len(annfiles)
@@ -261,9 +266,9 @@ class SeeDevCorpus(Corpus):
             hastarget = False
             sids.append(sentence.sid)
             for e in sentence.entities.elist["goldstandard"]:
-                if e.type in config.seedev_types.pair_types[pairtype]["source_types"]:
+                if e.type in pair_types[pairtype]["source_types"]:
                     hassource = True
-                if e.type in config.seedev_types.pair_types[pairtype]["target_types"]:
+                if e.type in pair_types[pairtype]["target_types"]:
                     hastarget = True
                 if any([target[1] == pairtype for target in e.targets]):
                     # print pairtype, sentence.text
@@ -395,27 +400,35 @@ class SeeDevCorpus(Corpus):
                         sentence.entities.elist["goldstandard"] += sentence.entities.elist[source]
 
     def find_ds_relations(self):
-        rtypes = config.seedev_types.ds_pair_types
+        rtypes = ds_pair_types
         #del rtypes["Has_Sequence_Identical_To"]
         #del rtypes["Is_Functionally_Equivalent_To"]
         rel_words = get_relwords(rtypes)
+        rtypes_count = {}
         for did in self.documents:
             for sentence in self.documents[did].sentences:
                 sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
                 sentence_words = set([t.text for t in sentence.tokens])
                 # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
                 for rtype in rtypes:
-                    # logging.info(rtype)
-                    if len(sentence_words & rel_words[rtype]) > 1 and len(sentence_entities) < 5:
-                        pairtypes = (config.seedev_types.pair_types[rtype]["source_types"], config.seedev_types.pair_types[rtype]["target_types"])
+                    if rtype not in rtypes_count:
+                        rtypes_count[rtype] = [0, 0]
+                    if len(sentence_words & rel_words[rtype]) > -1 and len(sentence_entities) < 20:
+                        pairtypes = (pair_types[rtype]["source_types"], pair_types[rtype]["target_types"])
                         for pair in itertools.permutations(sentence_entities, 2):
+                            # print pair[0].type in pairtypes[0], pair[1].type in pairtypes[1]
                             if pair[0].type in pairtypes[0] and pair[1].type in pairtypes[1] and pair[0].text != pair[1].text:
 
                                     logging.info(u"found relation {0}: {1.text}.{1.type}=>{2.text}.{2.type} because of {3}".
                                                  format(rtype, pair[0], pair[1], str(sentence_words & rel_words[rtype])))
                                     logging.info("context: {}".format(sentence.text.encode("utf-8")))
-                                    logging.info("")
                                     pair[0].targets.append((pair[1].eid, rtype))
+
+                                    rtypes_count[rtype][0] += 1
+                            else:
+                                rtypes_count[rtype][1] += 1
+        for rtype in rtypes_count:
+            print rtype, (1.0*rtypes_count[rtype][0])/(rtypes_count[rtype][0]+rtypes_count[rtype][1]), rtypes_count[rtype][0], rtypes_count[rtype][1]
 
 
 def get_relwords(rtypes, basedir="seedev_int_words"):

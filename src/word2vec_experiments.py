@@ -9,7 +9,7 @@ import logging
 import xml.etree.ElementTree as ET
 
 from pycorenlp import StanfordCoreNLP
-
+from config.seedev_types import ds_pair_types
 import config.corpus_paths
 from classification.ner.matcher import MatcherModel
 from config import config
@@ -143,8 +143,50 @@ def load_tair_relations():
                     continue
     return relations
 
+def load_gold_relations(reltype):
+    with codecs.open("seedev_relation.txt", 'r', "utf-8") as f:
+        gold_relations = f.readlines()
+    entities = {} # text -> types
+    relations = {} # type#text -> type#text
+    for r in gold_relations:
+        values = r.strip().split("\t")
+        if values[1] == reltype or reltype == "all":
+            type1, entity1 = values[0].split("#")
+            type2, entity2 = values[2].split("#")
+            if entity1 not in entities:
+                entities[entity1] = set()
+            if entity2 not in entities:
+                entities[entity2] = set()
+            entities[entity1].add(type1)
+            entities[entity1].add(type2)
+            if values[0] not in relations:
+                relations[values[0]] = set()
+            relations[values[0]].add((values[2], values[1]))
+    return entities, relations
 
-    # eid = sentence.tag_entity(start, end, entity_type, text=etext, original_id=tid, exclude=exclude)
+def annotate_corpus_relations(reltype, corpuspath="corpora/Thaliana/thaliana-documents_10.pickle"):
+    corpus = pickle.load(open(corpuspath, 'rb'))
+    logging.info("getting relations...")
+    entities, relations = load_gold_relations(reltype)
+    logging.info("finding relations...")
+    # print entities.keys()[:20]
+    for did in corpus.documents:
+        for sentence in corpus.documents[did].sentences:
+            for entity in sentence.entities.elist["goldstandard"]:
+                if entity.text in entities:
+                    for etype in entities[entity.text]:
+                        source = etype + "#" + entity.text
+                        if source in relations:
+                            for target in relations[source]:
+                                target_type, target_text = target[0].split("#")
+                                for entity2 in sentence.entities.elist["goldstandard"]:
+                                    # print entity2.text,"||", target_text, target_type
+                                    if entity2.text == target_text:  # and entity2.type == target_type:
+                                        entity.targets.append((entity2.eid, target[1]))
+                                        print "found relation:", entity.text, target[1], entity2.text
+    print "saving corpus..."
+    corpus.save(corpuspath)
+# eid = sentence.tag_entity(start, end, entity_type, text=etext, original_id=tid, exclude=exclude)
 
 #get_pubmed_abstracts()
 #process_documents()
@@ -154,9 +196,29 @@ def load_tair_relations():
 #write_train_file()
 #get_seedev_docs()
 #train_model()
-
-
-#annotate_corpus_entities("all")
-#annotate_corpus_relations("all")
+def annotate_corpus_entities(reltype, corpuspath="corpora/Thaliana/thaliana-documents_1.pickle"):
+    corpus = pickle.load(open(corpuspath, 'rb'))
+    entities, relations = load_gold_relations(reltype)
+    matcher = MatcherModel("goldstandard")
+    matcher.names = set(entities.keys())
+    corpus, entitiesfound = matcher.test(corpus)
+    print "saving corpus..."
+    corpus.save(corpuspath)
+#for r in ds_pair_types:
+#    annotate_corpus_entities(r)
+# annotate_corpus_relations("all")
 #match_relations("Regulates_Process")
 #print load_tair_relations()
+
+# rtypes = {}
+# corpus = pickle.load(open("data/thaliana-documents_1.pickle", 'rb'))
+# for d, did in enumerate(corpus.documents):
+#     print d
+#     for sentence in corpus.documents[did].sentences:
+#         for entity in sentence.entities.elist["goldstandard"]:
+#             for t in entity.targets:
+#                 if t[1] not in rtypes:
+#                     rtypes[t[1]] = 0
+#                 rtypes[t[1]] += 1
+#
+# print rtypes

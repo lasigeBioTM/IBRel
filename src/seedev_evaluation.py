@@ -8,8 +8,9 @@ import time
 import sys
 from pycorenlp import StanfordCoreNLP
 
-import config.corpus_paths
-import config.seedev_types
+from config.corpus_paths import paths
+
+from config.seedev_types import all_entity_types, all_entity_groups, pair_types
 from classification.ner.taggercollection import TaggerCollection
 from classification.results import ResultsRE, ResultSetNER
 from classification.rext.crfre import CrfSuiteRE
@@ -34,11 +35,11 @@ def write_seedev_results(results, path):
         with open(path + "/" + did + ".a2", 'w') as resfile:
             n = 1
             for pair in results.document_pairs[did].pairs:
-                source_role = config.seedev_types.pair_types[pair.relation]["source_role"]
-                target_role = config.seedev_types.pair_types[pair.relation]["target_role"]
+                source_role = pair_types[pair.relation]["source_role"]
+                target_role = pair_types[pair.relation]["target_role"]
                 if pair.relation == "Exists_In_Genotype" and pair.entities[0].type == "Biological context":
                     source_role = "Element"
-                elif pair.relation == "Is_Localized_In" and pair.entities[0].type in config.seedev_types.all_entity_groups["Dynamic_Process"]:
+                elif pair.relation == "Is_Localized_In" and pair.entities[0].type in all_entity_groups["Dynamic_Process"]:
                     source_role = "Process"
 
                 resfile.write("E{}\t{} {}:{} {}:{}\n".format(str(n), pair.relation, source_role, pair.entities[0].original_id,
@@ -51,7 +52,7 @@ def main():
     parser.add_argument("actions", default="classify",  help="Actions to be performed.")
     parser.add_argument("--goldstd", default="", dest="goldstd", nargs="+",
                         help="Gold standard to be used. Will override corpus, annotations",
-                        choices=config.corpus_paths.paths.keys())
+                        choices=paths.keys())
     parser.add_argument("--submodels", default="", nargs='+', help="sub types of classifiers"),
     parser.add_argument("--models", dest="models", help="model destination path, without extension")
     parser.add_argument("--pairtype", dest="ptype", help="type of pairs to be considered", default="all")
@@ -82,36 +83,36 @@ def main():
             print "load only one corpus each time"
             sys.exit()
         options.goldstd = options.goldstd[0]
-        corpus_format = config.corpus_paths.paths[options.goldstd]["format"]
-        corpus_path = config.corpus_paths.paths[options.goldstd]["text"]
-        corpus_ann = config.corpus_paths.paths[options.goldstd]["annotations"]
+        corpus_format = paths[options.goldstd]["format"]
+        corpus_path = paths[options.goldstd]["text"]
+        corpus_ann = paths[options.goldstd]["annotations"]
 
         corenlp_client = StanfordCoreNLP('http://localhost:9000')
         # corpus = load_corpus(options.goldstd, corpus_path, corpus_format, corenlp_client)
         corpus = SeeDevCorpus(corpus_path)
         corpus.load_corpus(corenlp_client)
-        corpus.save(config.corpus_paths.paths[options.goldstd]["corpus"])
+        corpus.save(paths[options.goldstd]["corpus"])
         if corpus_ann: #add annotation if it is not a test set
             corpus.load_annotations(corpus_ann, "all")
-            corpus.save(config.corpus_paths.paths[options.goldstd]["corpus"])
+            corpus.save(paths[options.goldstd]["corpus"])
 
     elif options.actions == "annotate": # rext-add annotation to corpus
         if len(options.goldstd) > 1:
             print "load only one corpus each time"
             sys.exit()
         options.goldstd = options.goldstd[0]
-        corpus_path = config.corpus_paths.paths[options.goldstd]["corpus"]
-        corpus_ann = config.corpus_paths.paths[options.goldstd]["annotations"]
+        corpus_path = paths[options.goldstd]["corpus"]
+        corpus_ann = paths[options.goldstd]["annotations"]
         logging.info("loading corpus %s" % corpus_path)
         corpus = pickle.load(open(corpus_path, 'rb'))
         logging.debug("loading annotations...")
         # corpus.clear_annotations("all")
         corpus.load_annotations(corpus_ann, "all", options.ptype)
         # corpus.get_invalid_sentences()
-        corpus.save(config.corpus_paths.paths[options.goldstd]["corpus"])
+        corpus.save(paths[options.goldstd]["corpus"])
     else:
         #corpus = SeeDevCorpus("corpus/" + "&".join(options.goldstd))
-        corpus_path = config.corpus_paths.paths[options.goldstd[0]]["corpus"]
+        corpus_path = paths[options.goldstd[0]]["corpus"]
         logging.info("loading corpus %s" % corpus_path)
         basecorpus = pickle.load(open(corpus_path, 'rb'))
         corpus = SeeDevCorpus(corpus_path)
@@ -124,11 +125,11 @@ def main():
             #corpus.save(config.paths[options.goldstd[0]]["corpus"])
         elif options.actions == "train_multiple":  # Train one classifier for each type of entity in this corpus
             # logging.info(corpus.subtypes)
-            models = TaggerCollection(basepath=options.models, corpus=corpus, subtypes=config.seedev_types.all_entity_types)
+            models = TaggerCollection(basepath=options.models, corpus=corpus, subtypes=all_entity_types)
             models.train_types()
         elif options.actions == "train_relations":
             if options.ptype == "all":
-                ptypes = config.seedev_types.pair_types.keys()
+                ptypes = pair_types.keys()
                 # ptypes = config.event_types.keys()
             else:
                 ptypes = [options.ptype]
@@ -146,11 +147,11 @@ def main():
                     model = ScikitRE(corpus, p)
                 elif options.kernel == "crf":
                     model = CrfSuiteRE(corpus, p)
-                model.train()
+                # model.train()
         # testing
         elif options.actions == "test_multiple":
             logging.info("testing with multiple classifiers... {}".format(' '.join(options.submodels)))
-            models = TaggerCollection(basepath=options.models, subtypes=config.seedev_types.all_entity_types)
+            models = TaggerCollection(basepath=options.models, subtypes=all_entity_types)
             models.load_models()
             results = models.test_types(corpus)
             final_results = results.combine_results()
@@ -158,7 +159,7 @@ def main():
             final_results.save(options.output[1] + ".pickle")
         elif options.actions == "test_relations":
             if options.ptype == "all":
-                ptypes = config.seedev_types.pair_types.keys()
+                ptypes = pair_types.keys()
                 # ptypes = config.event_types.keys()
                 all_results = ResultsRE(options.output[1])
                 all_results.corpus = corpus
@@ -185,8 +186,8 @@ def main():
                 # results.save(options.output[1] + "_" + p.lower() + ".pickle")
                 # results.load_corpus(options.goldstd[0])
                 results.path = options.output[1] + "_" + p.lower()
-                goldset = get_gold_ann_set(config.corpus_paths.paths[options.goldstd[0]]["format"], config.corpus_paths.paths[options.goldstd[0]]["annotations"],
-                                       "all", p, config.corpus_paths.paths[options.goldstd[0]]["text"])
+                goldset = get_gold_ann_set(paths[options.goldstd[0]]["format"], paths[options.goldstd[0]]["annotations"],
+                                       "all", p, paths[options.goldstd[0]]["text"])
                 get_relations_results(results, options.models, goldset[1],[], [])
                 if options.ptype == "all":
                     for did in results.document_pairs:
@@ -194,14 +195,14 @@ def main():
                             all_results.document_pairs[did] = Pairs(did=did)
                         all_results.document_pairs[did].pairs += results.document_pairs[did].pairs
             if options.ptype == "all":
-                goldset = get_gold_ann_set(config.corpus_paths.paths[options.goldstd[0]]["format"], config.corpus_paths.paths[options.goldstd[0]]["annotations"],
-                                       "all", "all", config.corpus_paths.paths[options.goldstd[0]]["text"])
+                goldset = get_gold_ann_set(paths[options.goldstd[0]]["format"], paths[options.goldstd[0]]["annotations"],
+                                       "all", "all", paths[options.goldstd[0]]["text"])
                 get_relations_results(all_results, options.models, goldset[1],[], [])
                 write_seedev_results(all_results, options.output[1])
         elif options.actions == "train_sentences": #and evaluate
             if options.ptype == "all":
                 avg = [0,0,0]
-                for p in config.seedev_types.pair_types:
+                for p in pair_types:
                     print p
                     tps, fps, fns = corpus.train_sentence_classifier(p)
                     if tps == 0 and fns == 0:
@@ -222,11 +223,11 @@ def main():
             else:
                 res = corpus.train_sentence_classifier(options.ptype)
                 print res
-            corpus.save(config.corpus_paths.paths[options.goldstd[0]]["corpus"])
+            corpus.save(paths[options.goldstd[0]]["corpus"])
         elif options.actions == "test_sentences": #and evaluate
             if options.ptype == "all":
                 avg = [0,0,0]
-                for p in config.seedev_types.pair_types:
+                for p in pair_types:
                     print p
                     tps, fps, fns = corpus.test_sentence_classifier(p)
                 if tps == 0 and fns == 0:
@@ -252,16 +253,16 @@ def main():
                 results = pickle.load(open(options.output[1] + ".pickle", 'rb'))
                 results.load_corpus(options.goldstd[0])
                 results.path = options.output[1]
-            logging.info("loading gold standard %s" % config.corpus_paths.paths[options.goldstd[0]]["annotations"])
-            for t in config.seedev_types.all_entity_types:
+            logging.info("loading gold standard %s" % paths[options.goldstd[0]]["annotations"])
+            for t in all_entity_types:
                 print t
                 results.path = options.output[1] + "_" + t
-                goldset = get_gold_ann_set(config.corpus_paths.paths[options.goldstd[0]]["format"],
-                                           config.corpus_paths.paths[options.goldstd[0]]["annotations"],
-                                           t, options.ptype, config.corpus_paths.paths[options.goldstd[0]]["text"])
+                goldset = get_gold_ann_set(paths[options.goldstd[0]]["format"],
+                                           paths[options.goldstd[0]]["annotations"],
+                                           t, options.ptype, paths[options.goldstd[0]]["text"])
                 get_results(results, options.models + "_" + t, goldset[0], {}, {})
 
-        corpus.save(config.corpus_paths.paths[options.goldstd[0]]["corpus"])
+        corpus.save(paths[options.goldstd[0]]["corpus"])
 
 
     total_time = time.time() - start_time

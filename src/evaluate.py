@@ -10,12 +10,12 @@ import random
 import sys
 import time
 
-from sklearn import svm
+from sklearn import svm, tree
 from sklearn.dummy import DummyClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.externals import joblib
 from sklearn.linear_model import SGDClassifier
-from sklearn.naive_bayes import MultinomialNB
+from sklearn.naive_bayes import MultinomialNB, GaussianNB
 from sklearn.pipeline import Pipeline
 
 from config.corpus_paths import paths
@@ -121,7 +121,7 @@ def compare_results(offsets, goldoffsets, corpus, getwords=True, evaltype="entit
 
 def get_report(results, corpus, more_info, getwords=True):
     """
-        Get more information from CHEMDNER results.
+        Get more information from results.
         :return: Lines to write to a report file, word that appear in this set
     """
     # TODO: use only offset tuples (did, start, end, text)
@@ -341,17 +341,19 @@ def main():
             base_result.add_results(result)
 
         if options.action == "combine":
-            base_result.combine_results("all", "combined")
+            base_result.combine_results(options.etype, "combined")
             base_result.save(options.models + ".pickle")
         elif options.action == "train_ensemble":
             pipeline = Pipeline(
                 [
-                    ('clf', SGDClassifier(loss='hinge', penalty='l1', alpha=0.0001, n_iter=5, random_state=42)),
+                    #('clf', SGDClassifier(loss='hinge', penalty='l1', alpha=0.0001, n_iter=5, random_state=42)),
                     #('clf', SGDClassifier())
                      #('clf', svm.NuSVC(nu=0.01 ))
-                    #('clf', RandomForestClassifier(class_weight={False:1, True:1}, n_jobs=-1))
+                    # ('clf', RandomForestClassifier(class_weight={False:1, True:1}, n_jobs=-1, criterion="entropy", warm_start=True))
+                    #('clf', tree.DecisionTreeClassifier(criterion="entropy")),
                      #('clf', MultinomialNB())
-                   # ('clf', )
+                    #('clf', GaussianNB())
+                    ('clf', svm.SVC(kernel="rbf", degree=2, C=1))
                     #('clf', DummyClassifier(strategy="constant", constant=True))
                 ])
             print pipeline
