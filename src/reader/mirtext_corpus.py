@@ -15,8 +15,10 @@ from text.sentence import Sentence
 
 type_match = {"MiRNA": "mirna",
               "Gene": "protein",
-              "miRNA-gene regulation": "miRNA-gene",
-              "gene-miRNA regulation": "miRNA-gene"}
+              "unknown miRNA-gene regulation": "miRNA-gene",
+              "direct miRNA-gene regulation": "miRNA-gene",
+              "N/A gene-miRNA regulation": "gene-miRNA"}
+              # "gene-miRNA regulation": ""}
 class MirtexCorpus(Corpus):
     """
     DDI corpus used for NER and RE on the SemEval DDI tasks of 2011 and 2013.
@@ -55,6 +57,9 @@ class MirtexCorpus(Corpus):
         logging.info("average time per abstract: %ss" % abs_avg)
 
     def load_annotations(self, ann_dir, etype, pairtype="all"):
+        self.clear_annotations()
+        self.clear_annotations("protein")
+        self.clear_annotations("mirna")
         tagged = 0
         not_tagged = 0
         pmids = []
@@ -67,7 +72,7 @@ class MirtexCorpus(Corpus):
                 if not l.isspace():
                     v = l.strip().split("\t")
                     did = self.path + '/' + v[0]
-                    if pairtype == "all" or type_match.get(v[-1]) == pairtype:
+                    if pairtype == "all" or type_match.get(" ".join(v[-2:])) == pairtype:
                         if did not in doc_to_relations:
                             doc_to_relations[did] = set()
                         e1 = v[1].split(";")
@@ -114,6 +119,7 @@ class MirtexCorpus(Corpus):
         print "tagged: {} not tagged: {}".format(tagged, not_tagged)
         with open(ann_dir[:-1] + "-pmids.txt", 'w') as pmidsfile:
             pmidsfile.write("\n".join(pmids) + "\n")
+        # self.run_ss_analysis(pairtype)
 
 
     def find_relations(self, pairtype):
@@ -157,8 +163,8 @@ def get_mirtex_gold_ann_set(goldpath, entitytype, pairtype):
             if len(v) < 3:
                 continue
             did = goldpath + '/' + v[0]
-            logging.info("{} {} {}".format(did, pairtype, v[-1]))
-            if pairtype == "all" or type_match.get(v[-1]) == pairtype:
+            # logging.info("{} {} {}".format(did, pairtype, v[-1]))
+            if pairtype == "all" or type_match.get(" ".join(v[-2:])) == pairtype:
                 e1 = v[1].split(";")
                 for mirna in e1:
                     mirna = mirna.replace('"', '')
@@ -170,6 +176,7 @@ def get_mirtex_gold_ann_set(goldpath, entitytype, pairtype):
                         logging.info(gene)
                         norm_gene = get_uniprot_name(gene)
                         gold_relations.add((did, norm_mirna[0], norm_gene[0]))
+                        # gold_relations.add((did, mirna, gene))
     return gold_offsets, gold_relations
 
 

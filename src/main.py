@@ -11,6 +11,7 @@ import time
 from pycorenlp import StanfordCoreNLP
 
 from classification.ner.banner import BANNERModel
+from classification.rext.mirtex_rules import MirtexClassifier
 from config.corpus_paths import paths
 from classification.ner.crfsuitener import CrfSuiteModel
 from classification.ner.matcher import MatcherModel
@@ -40,7 +41,7 @@ from reader.mirna_corpus import MirnaCorpus
 from reader.mirtext_corpus import MirtexCorpus
 from reader.pubmed_corpus import PubmedCorpus
 from reader.tempEval_corpus import TempEvalCorpus
-from reader.transmir_corpus import TransmirCorpus
+from reader.Transmir_corpus import TransmirCorpus
 from text.corpus import Corpus
 
 if config.use_chebi:
@@ -304,7 +305,9 @@ considered when coadministering with megestrol acetate.''',
             elif options.kernel == "svmtk":
                 model = SVMTKernel(corpus, options.ptype, modelname=options.tag)
             elif options.kernel == "rules":
-                model = RuleClassifier(corpus, options.ptype, modelname=options.tag)
+                model = RuleClassifier(corpus, options.ptype)
+            elif options.kernel == "mirtex_rules":
+                model = MirtexClassifier(corpus, options.ptype)
             elif options.kernel == "stanfordre":
                 model = StanfordRE(corpus, options.ptype)
             elif options.kernel == "scikit":
