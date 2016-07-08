@@ -161,12 +161,16 @@ class ProteinEntity(Entity):
     def normalize(self):
         uniprot_values = get_uniprot_name(self.text)
 
+        if uniprot_values[0] != "NA":
+            self.normalized = uniprot_values[0]
+            self.normalized_score = uniprot_values[1]
+            self.normalized_ref = "uniprot"
 
-        self.normalized = uniprot_values[0]
-        self.normalized_score = uniprot_values[1]
-        self.normalized_ref = "uniprot"
-
-        self.go_ids = uniprot_values[2]
+            self.go_ids = uniprot_values[2]
+        else:
+            self.normalized = self.text
+            self.normalized_score = 0
+            self.normalized_ref = "text"
         if len(self.go_ids) > 0:
             self.get_best_go()
         else:
