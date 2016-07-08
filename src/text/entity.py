@@ -119,13 +119,17 @@ class Entities(object):
                     val = e.validate(ths, rules)
                     if not val:
                         continue
-                    eid_offset = Offset(e.dstart, e.dend, text=e.text, sid=e.sid)
-                    exclude = [perfect_overlap]
-                    if "contained_by" in rules:
-                        exclude.append(contained_by)
-                    toadd, v, alt = offsets.add_offset(eid_offset, exclude_if=exclude)
-                    if toadd:
-                        entities[e.text] = []
+                    for new_e in val: # validate should return a list of entities
+                        eid_offset = Offset(new_e.dstart, new_e.dend, text=new_e.text, sid=new_e.sid)
+                        exclude = [perfect_overlap]
+                        if "contained_by" in rules:
+                            exclude.append(contained_by)
+                        toadd, v, overlaping, to_exclude = offsets.add_offset(eid_offset, exclude_this_if=exclude, exclude_others_if=[])
+                        # print toadd, v, overlaping, to_exclude, new_e.normalized
+                        if toadd:
+                            # entities[new_e.text] = []
+                            entities[new_e.normalized] = []
+        # print entities
         return entities
 
 

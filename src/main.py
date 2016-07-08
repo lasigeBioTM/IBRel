@@ -106,7 +106,7 @@ def main():
     parser.add_argument("actions", default="classify",  help="Actions to be performed.",
                       choices=["load_corpus", "annotate", "classify", "write_results", "write_goldstandard",
                                "train", "test", "train_multiple", "test_multiple", "train_matcher", "test_matcher",
-                               "crossvalidation", "train_relations", "test_relations", "load_genia"])
+                               "crossvalidation", "train_relations", "test_relations", "load_genia", "load_biomodel"])
     parser.add_argument("--goldstd", default="", dest="goldstd", nargs="+",
                         help="Gold standard to be used. Will override corpus, annotations",
                         choices=paths.keys())
@@ -172,6 +172,14 @@ considered when coadministering with megestrol acetate.''',
         logging.info("loading corpus %s" % corpus_path)
         corpus = pickle.load(open(corpus_path, 'rb'))
         corpus.load_genia()
+        corpus.save(paths[options.goldstd]["corpus"])
+    elif options.actions == "load_biomodel":
+        options.goldstd = options.goldstd[0]
+        corpus_path = paths[options.goldstd]["corpus"]
+        corpus_ann = paths[options.goldstd]["annotations"]
+        logging.info("loading corpus %s" % corpus_path)
+        corpus = pickle.load(open(corpus_path, 'rb'))
+        corpus.load_biomodel()
         corpus.save(paths[options.goldstd]["corpus"])
     elif options.actions == "annotate": # rext-add annotation to corpus
         if len(options.goldstd) > 1:

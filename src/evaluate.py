@@ -20,6 +20,7 @@ from sklearn.pipeline import Pipeline
 
 from config.corpus_paths import paths
 from config import config
+from reader.Transmir_corpus import get_transmir_gold_ann_set
 from reader.bc2gm_corpus import get_b2gm_gold_ann_set
 from reader.chemdner_corpus import get_chemdner_gold_ann_set, run_chemdner_evaluation
 from reader.genia_corpus import get_genia_gold_ann_set
@@ -54,6 +55,8 @@ def get_gold_ann_set(corpus_type, gold_path, entity_type, pair_type, text_path):
         goldset = get_jnlpba_gold_ann_set(gold_path, entity_type)
     elif corpus_type == "bc2":
         goldset = get_b2gm_gold_ann_set(gold_path, text_path)
+    elif corpus_type == "transmir":
+        goldset = get_transmir_gold_ann_set(gold_path, entity_type)
     return goldset
 
 
@@ -83,6 +86,7 @@ def compare_results(offsets, goldoffsets, corpus, getwords=True, evaltype="entit
     if type(goldoffsets) is set:
         goldoffsets = {s: [] for s in goldoffsets}
     # goldoffsets = set([x[:4] for x in goldoffsets.keys()])
+    # print len(goldoffsets), len(offsets)
     tps = set(offsets.keys()) & set(goldoffsets.keys())
     fps = set(offsets.keys()) - set(goldoffsets.keys())
     fns = set(goldoffsets.keys()) - set(offsets.keys())
@@ -101,7 +105,7 @@ def compare_results(offsets, goldoffsets, corpus, getwords=True, evaltype="entit
         report.append("Common FNs")
         fncounter = collections.Counter(fnwords)
         for w in fncounter.most_common(10):
-            report.append(w[0] + ": " + str(w[1]))
+            report.append(str(w[0]) + ": " + str(w[1]))
         report.append(">\n")
 
     for d in list(alldocs):
@@ -134,6 +138,7 @@ def get_report(results, corpus, more_info, getwords=True):
             did = t[0]
         if t[0] != "" and t[0] not in corpus.documents:
             logging.info("this doc is not in the corpus! %s" % t[0])
+            # logging.info(corpus.documents.keys())
             continue
         start, end = str(t[1]), str(t[2])
         if getwords:
@@ -174,7 +179,7 @@ def get_list_results(results, models, goldset, ths, rules, mode="ner"):
     if goldset:
         #lineset = set([(l[0], l[1].lower(), l[2].lower()) for l in sysresults])
         #goldset = set([(g[0], g[1].lower(), g[2].lower()) for g in goldset])
-        reportlines, tps, fps, fns = compare_results(sysresults, goldset, results.corpus, getwords=False)
+        reportlines, tps, fps, fns = compare_results(sysresults, goldset, results.corpus, getwords=True)
         with codecs.open(results.path + "_report.txt", 'w', "utf-8") as reportfile:
             reportfile.write("TPs: {!s}\nFPs: {!s}\n FNs: {!s}\n".format(len(tps), len(fps), len(fns)))
             if len(tps) == 0:
@@ -191,6 +196,9 @@ def get_list_results(results, models, goldset, ths, rules, mode="ner"):
             print "f-measure: {}".format(fmeasure)
             for line in reportlines:
                 reportfile.write(line + '\n')
+    else:
+
+        print "no gold set"
 
 
 def get_relations_results(results, model, gold_pairs, ths, rules, compare_text=True):
