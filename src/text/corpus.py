@@ -2,13 +2,15 @@ from __future__ import division, absolute_import
 import logging
 import pickle
 import random
+import socket
 import sys
 import os
-
+from subprocess import PIPE, check_output
+from subprocess import Popen
 import pexpect
 
 from postprocessing import ssm
-
+from bllipparser import RerankingParser
 sys.path.append(os.path.abspath(os.path.dirname(__file__) + '../..'))
 
 
@@ -48,14 +50,15 @@ class Corpus(object):
             if mode == "ner":
                 doc_entities = self.documents[did].get_unique_results(source, ths, rules, mode)
                 for e in doc_entities:
-                    allentitites[(self.did, e)] = doc_entities[e]
+                    allentitites[(did, "0", "0", e.lower())] = doc_entities[e]
             elif mode == "re":
                 doc_pairs = {}
                 # logging.info(self.documents[did].pairs.pairs)
                 for p in self.documents[did].pairs.pairs:
                     if source in p.recognized_by:
-                        doc_pairs[(did, p.entities[0].normalized, p.entities[1].normalized)] = [(p.entities[0].text,
-                                                                                                 p.entities[1].text)]
+                        middle_text = self.documents[did].text[p.entities[0].dstart:p.entities[1].dend]
+                        doc_pairs[(did, p.entities[0].text, p.entities[1].text,
+                                   p.entities[0].text + "=>" + p.entities[1].text)] = [middle_text]
                 allentitites.update(doc_pairs)
         return allentitites
 
@@ -213,6 +216,33 @@ class Corpus(object):
 
         c.kill(0)
 
+    def load_biomodel(self):
+        rrp = RerankingParser.fetch_and_load('GENIA+PubMed', verbose=True)
+        for did in self.documents:
+            for sentence in self.documents[did].sentences:
+                sentence_text = [t.text for t in sentence.tokens]
+                #echocall = Popen(["echo", sentence_text] , stdout=PIPE, stderr=PIPE)
+                #nc_params = ["nc", "localhost", "4449"]
+                #echocall.wait()
+                #call = check_output(nc_params , shell=True, stdin=echocall.stdout)
+
+                #res = call.communicate()
+                #res = netcat("localhost", 4449, sentence_text)
+                #print res.strip()
+                #print
+                res = rrp.parse(sentence_text)
+                if len(res) > 0:
+                    print res[0].ptb_parse
+                    print sentence.parsetree
+                    print
+                    #print
+                    sentence.bio_parse = str(res[0].ptb_parse)
+                else:
+                    print sentence_text
+                    print "no parse"
+                    sentence.bio_parse = sentence.parsetree
+                    print
+
     def run_ss_analysis(self, pairtype):
         correct_count = 0  # numver of real miRNA-gene pairs with common gos
         incorrect_count = 0  # number of random miRNA-gene pairs with common go
@@ -289,4 +319,19 @@ class Corpus(object):
         print sum(diff_count) * 1.0 / len(diff_count)
 
 
-
+def netcat(hostname, port, content):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((hostname, port))
+    s.sendall(content)
+    s.shutdown(socket.SHUT_WR)
+    output = ""
+    while 1:
+        data = s.recv(1024)
+        if data == "":
+            break
+        #print "Received:", repr(data)
+        output += data
+    #print "Connection closed."
+    # res = repr(data)
+    s.close()
+    return output
