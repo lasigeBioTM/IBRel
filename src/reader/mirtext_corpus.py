@@ -142,6 +142,7 @@ class MirtexCorpus(Corpus):
                     # print between_text
                     pair[0].targets.append((pair[1].eid, pairtype))
 
+
 def get_mirtex_gold_ann_set(goldpath, entitytype, pairtype):
     logging.info("loading gold standard... {}".format(goldpath))
     annfiles = [goldpath + '/' + f for f in os.listdir(goldpath) if f.endswith('.ann')]
@@ -156,7 +157,7 @@ def get_mirtex_gold_ann_set(goldpath, entitytype, pairtype):
                         if entitytype == type_match[etype]:
                             dstart, dend = int(dstart), int(dend)
                             gold_offsets.add((did, dstart, dend, etext))
-    gold_relations = set()
+    gold_relations = {}
     with open(goldpath + "/" + "annotations.tsv") as afile:
         for l in afile:
             v = l.strip().split("\t")
@@ -173,10 +174,10 @@ def get_mirtex_gold_ann_set(goldpath, entitytype, pairtype):
                     e2 = v[2].split(";")
                     for gene in e2:
                         gene = gene.replace('"', '')
-                        logging.info(gene)
-                        norm_gene = get_uniprot_name(gene)
-                        gold_relations.add((did, norm_mirna[0], norm_gene[0]))
-                        # gold_relations.add((did, mirna, gene))
+                        # logging.info(gene)
+                        # norm_gene = get_uniprot_name(gene)
+                        # gold_relations.add((did, norm_mirna[0], norm_gene[0]))
+                        gold_relations[(did, mirna, gene, mirna + "=>" + gene)] = []
     return gold_offsets, gold_relations
 
 
