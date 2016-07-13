@@ -172,14 +172,16 @@ class Document(object):
             if s.entities:
                 if mode == "ner":
                     sentence_entitites = s.entities.get_unique_entities(source, ths, rules)
+                    for e in sentence_entitites:
+                        sentence_entitites[e].append(s.text[int(sentence_entitites[e][1]):int(sentence_entitites[e][2])])
                     # print sentence_entitites
                 elif mode == "re":
                     sentence_entitites = s.entities.get_unique_relations(source)
-            logging.info("{} has {} unique entities".format(self.did, len(doc_entities)))
             # print doc_entities, sentence_entitites
             doc_entities.update(sentence_entitites)
             # print doc_entities
             # print
+        logging.info("{} has {} unique entities".format(self.did, len(doc_entities)))
         return doc_entities
 
     def write_chemdner_results(self, source, outfile, ths={"chebi":0.0}, rules=[]):
