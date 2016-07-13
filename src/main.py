@@ -12,6 +12,7 @@ from pycorenlp import StanfordCoreNLP
 
 from classification.ner.banner import BANNERModel
 from classification.rext.mirtex_rules import MirtexClassifier
+from classification.rext.multiinstance import MILClassifier
 from config.corpus_paths import paths
 from classification.ner.crfsuitener import CrfSuiteModel
 from classification.ner.matcher import MatcherModel
@@ -241,6 +242,12 @@ considered when coadministering with megestrol acetate.''',
                 model = ScikitRE(corpus, options.ptype)
             elif options.kernel == "crf":
                 model = CrfSuiteRE(corpus, options.ptype)
+            elif options.kernel == "mil":
+                relations = set()
+                with open("corpora/transmir/transmir_relations.txt") as rfile:
+                    for l in rfile:
+                        relations.add(tuple(l.strip().split('\t')))
+                model = MILClassifier(corpus, options.ptype, relations, ner=options.models)
             model.train()
         # testing
         elif options.actions == "test":
@@ -309,9 +316,9 @@ considered when coadministering with megestrol acetate.''',
             final_results.save(options.output[1] + ".pickle")
         elif options.actions == "test_relations":
             if options.kernel == "jsre":
-                model = JSREKernel(corpus, options.ptype, train=False, modelname=options.tag)
+                model = JSREKernel(corpus, options.ptype, train=False, modelname=options.tag, ner=options.models)
             elif options.kernel == "svmtk":
-                model = SVMTKernel(corpus, options.ptype, modelname=options.tag)
+                model = SVMTKernel(corpus, options.ptype, modelname=options.tag, ner=options.models)
             elif options.kernel == "rules":
                 model = RuleClassifier(corpus, options.ptype)
             elif options.kernel == "mirtex_rules":
@@ -322,6 +329,12 @@ considered when coadministering with megestrol acetate.''',
                 model = ScikitRE(corpus, options.ptype)
             elif options.kernel == "crf":
                 model = CrfSuiteRE(corpus, options.ptype, test=True)
+            elif options.kernel == "mil":
+                relations = set()
+                with open("corpora/transmir/transmir_relations.txt") as rfile:
+                    for l in rfile:
+                        relations.add(tuple(l.strip().split('\t')))
+                model = MILClassifier(corpus, options.ptype, relations, test=True, ner=options.models)
             model.load_classifier()
             model.test()
             results = model.get_predictions(corpus)
