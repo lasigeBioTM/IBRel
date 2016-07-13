@@ -121,6 +121,12 @@ paths = {
         'corpus': "data/transmir_v1.2.tsv.pickle",
         'format': "transmir"
     },
+    'transmir_annotated': {
+        'text': "data/transmir_v1.2.tsv",
+        'annotations': "data/transmir_v1.2.tsv",
+        'corpus': "data/transmir_annotated.pickle",
+        'format': "transmir"
+    },
     'pubmed_test': {
         'text': pubmed_test_base + "pmids_test.txt",
         'annotations': "",

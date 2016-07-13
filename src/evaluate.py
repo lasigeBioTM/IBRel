@@ -137,7 +137,7 @@ def get_report(results, corpus, more_info, getwords=True):
         else:
             did = t[0]
         if t[0] != "" and t[0] not in corpus.documents:
-            logging.info("this doc is not in the corpus! %s" % t[0])
+            logging.debug("this doc is not in the corpus! %s" % t[0])
             # logging.info(corpus.documents.keys())
             continue
         start, end = str(t[1]), str(t[2])
@@ -310,6 +310,7 @@ def main():
     parser.add_argument("--entitytype", dest="etype", help="type of entities to be considered", default="all")
     parser.add_argument("--pairtype", dest="ptype", help="type of pairs to be considered", default=None)
     parser.add_argument("--external", action="store_true", default=False, help="Run external evaluation script, depends on corpus type")
+    parser.add_argument("--output", dest="output", help="Final output", default=None)
     options = parser.parse_args()
 
     numeric_level = getattr(logging, options.loglevel.upper(), None)
@@ -334,7 +335,7 @@ def main():
             print results_path
             sys.exit()
 
-    if options.action in ("combine", "train_ensemble", "test_ensemble"):
+    if options.action in ("combine", "train_ensemble", "test_ensemble", "savetocorpus"):
         # merge the results of various results corresponding to different classifiers
         # the entities of each sentence are added according to the classifier of each result
         # every result should correspond to the same gold standard
@@ -349,8 +350,10 @@ def main():
             base_result.add_results(result)
 
         if options.action == "combine":
-            base_result.combine_results(options.etype, "combined")
+            base_result.combine_results(options.etype, options.models)
             base_result.save(options.models + ".pickle")
+        elif options.action == "savetocorpus":
+            base_result.corpus.save(options.output + ".pickle")
         elif options.action == "train_ensemble":
             pipeline = Pipeline(
                 [

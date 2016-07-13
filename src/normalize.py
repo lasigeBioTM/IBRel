@@ -13,6 +13,7 @@ from postprocessing.ssm import get_ssm
 
 
 def normalize_entities(results, path, source):
+    #TODO add validation
     mapped = 0
     not_mapped = 0
     total_score = 0
@@ -177,11 +178,8 @@ def main():
         add_chebi_mappings(results, options.results + ".pickle", options.models)
     # if options.action == "go":
     #    add_go_mappings(results, options.results + ".pickle", options.models)
-    elif options.action == "mirna":
+    elif options.action in ("mirna", "protein", "all"):
         normalize_entities(results, options.results + ".pickle", options.models)
-    elif options.action == "protein":
-        normalize_entities(results, options.results + ".pickle", options.models)
-        pass
     elif options.action == "ssm":
         if options.measure.endswith("go"):
             ontology = "go"

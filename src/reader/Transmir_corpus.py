@@ -7,8 +7,8 @@ from postprocessing import ssm
 from reader.pubmed_corpus import PubmedCorpus
 from mirna_base import MirbaseDB
 from config import config
-from text.mirna_entity import MirnaEntity
-from text.protein_entity import ProteinEntity
+from text.mirna_entity import MirnaEntity, mirna_graph
+from text.protein_entity import ProteinEntity, get_uniprot_name
 
 
 class TransmirCorpus(PubmedCorpus):
@@ -108,8 +108,8 @@ class TransmirCorpus(PubmedCorpus):
                         #print "mirna gos: {}".format(" ".join(mirna.go_ids))
 
 
-        self.normalize_entities()
-        self.run_analysis()
+        # self.normalize_entities()
+        #self.run_analysis()
 
     def run_analysis(self):
         correct_count = 0 # numver of real miRNA-gene pairs with common gos
@@ -156,4 +156,26 @@ class TransmirCorpus(PubmedCorpus):
                         else:
                             incorrect_count += 1
                 print "{}-{} ({} mirnas, {} tfs".format(correct_count, incorrect_count, len(all_mirnas), len(all_tfs))
+
+def get_transmir_gold_ann_set(goldpath, entitytype):
+    logging.info("loading gold standard... {}".format(goldpath))
+    gold_entities = set()
+    gold_relations = {}
+    with open(goldpath, 'r') as goldfile:
+        for l in goldfile:
+            tsv = l.strip().split("\t")
+            if tsv[-1].lower() == "human":
+                # print "gold standard", tsv[8], tsv[0], tsv[3], entitytype
+                pmids = tsv[8].split(";")
+                for did in pmids:
+                    if entitytype == "mirna":
+                        norm_mirna = mirna_graph.map_label(tsv[3])
+                        gold_entities.add(("PMID" + did, "0", "0", norm_mirna[0].lower()))
+                    elif entitytype == "protein":
+                        norm_gene = get_uniprot_name(tsv[0])
+                        gold_entities.add(("PMID" + did, "0", "0", norm_gene[0].lower()))
+                    gold_relations[("PMID" + did, tsv[3], tsv[0], tsv[3] + "=>" + tsv[0])] = []
+    # print gold_entities
+    return gold_entities, gold_relations
+
 

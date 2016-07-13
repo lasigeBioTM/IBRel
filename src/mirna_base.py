@@ -4,6 +4,7 @@ import logging
 import os
 import pickle
 
+import re
 from rdflib import URIRef, BNode, Literal, ConjunctiveGraph, Namespace
 from rdflib.namespace import RDF, RDFS
 from rdflib.plugins.sparql import prepareQuery
@@ -142,7 +143,6 @@ class MirbaseDB(object):
         # pp.pprint(mirna_dic)
         return mirna_dic
 
-
     def map_label(self, label):
         global mirbasedic
         # first check if a chebi mappings dictionary is loaded in memory
@@ -152,6 +152,20 @@ class MirbaseDB(object):
             new_label = label.lower()
             new_label = new_label.replace("microrna", "mir")
             new_label = new_label.replace("mirna", "mir")
+            if "-" not in new_label: #fix cases like miR200c
+                if " " in new_label:
+                    new_label = new_label.replace(" ", "-")
+                else:
+                    x = re.split('(\d+)', new_label)
+                    new_label = x[0] + "-" + "".join(x[1:])
+            else:
+                mirna = new_label.split("-")
+                if len(mirna[1]) > 2:
+                    # print "mapping", mirna[1]
+                    if mirna[1][-3].isdigit() and mirna[1][-2].isalpha() and mirna[1][-1].isdigit():
+                        # print "match!",
+                        new_label = mirna[0] + "-" + mirna[1][:-1] + "-" + mirna[1][-1]
+                        # print new_label
             if not new_label.startswith("hsa-"):
                 new_label = "hsa-" + new_label
             if label[0].isdigit():
@@ -159,7 +173,7 @@ class MirbaseDB(object):
             elif label[0] == "-" and label[1:].isdigit():
                 new_label = "hsa-mir" + label
             result = process.extractOne(new_label, self.choices)
-
+            # print result
             # result = process.extract(label, choices, limit=3)
             if result[1] != 100:
                 #print
@@ -169,14 +183,23 @@ class MirbaseDB(object):
                 # else:
                 new_new_label = new_label + "-1"
                 revised_result = process.extractOne(new_new_label, self.choices)
+                # logging.info(str(revised_result))
                 if revised_result[1] != 100:
                     new_new_label = new_label + "a"
                     revised_result = process.extractOne(new_new_label, self.choices)
+                    # logging.info(str(revised_result))
+                    if revised_result[1] != 100:
+                        new_new_label += "-1"
+                        revised_result2 = process.extractOne(new_new_label, self.choices)
+                        # logging.info(str(revised_result2))
+                        if revised_result2[1] > revised_result[1]:
+                            revised_result = revised_result2
                 if revised_result[1] > result[1]:
                     result = revised_result
                 new_label = new_new_label
                     #print "revised:", new_label.encode("utf-8"), result
             # print "mapped {} to {} to {}".format(label, new_label, result)
+        if result[1] == 100:
             mirbasedic[label] = result
         return result
 

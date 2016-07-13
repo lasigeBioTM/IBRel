@@ -121,14 +121,14 @@ class Entities(object):
                         continue
                     for new_e in val: # validate should return a list of entities
                         eid_offset = Offset(new_e.dstart, new_e.dend, text=new_e.text, sid=new_e.sid)
-                        exclude = [perfect_overlap]
+                        exclude = []
                         if "contained_by" in rules:
                             exclude.append(contained_by)
                         toadd, v, overlaping, to_exclude = offsets.add_offset(eid_offset, exclude_this_if=exclude, exclude_others_if=[])
                         # print toadd, v, overlaping, to_exclude, new_e.normalized
                         if toadd:
                             # entities[new_e.text] = []
-                            entities[new_e.normalized] = []
+                            entities[new_e.normalized] = [new_e.text, str(new_e.start), str(new_e.end)]
         # print entities
         return entities
 
@@ -171,8 +171,6 @@ class Entities(object):
                         rank += 1
         return lines, rank
 
-    def get_results(self, esource):
-        return self.elist.get(esource)
 
     def find_entity(self, start, end):
         """Find entity in this sentence between start and end (relative to document)"""

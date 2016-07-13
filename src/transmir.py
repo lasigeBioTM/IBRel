@@ -1,4 +1,6 @@
 # read transmir database and generate corpus
+from text.mirna_entity import mirna_graph
+from text.protein_entity import get_uniprot_name
 
 db_name = "data/transmir_v1.2.tsv"
 tfs = set()
@@ -11,8 +13,10 @@ with open(db_name, 'r') as dbfile:
     for line in dbfile:
         tsv = line.strip().split("\t")
         if tsv[-1].lower() == "human":
-            tfname = tsv[0]
-            mirname = tsv[3]
+            tfname = get_uniprot_name(tsv[0])
+            mirname = mirna_graph.map_label(tsv[3])
+            tfname = tfname[0]
+            mirname = mirname[0]
             func = tsv[5].split(";")
             disease = tsv[6].split(";")
             active = tsv[7]
@@ -53,3 +57,6 @@ with open("corpora/transmir/transmir_mirnas.txt", 'w') as f:
     f.write('\n'.join(mirnas))
 with open("corpora/transmir/transmir_diseases.txt", 'w') as f:
     f.write('\n'.join(diseases))
+with open("corpora/transmir/transmir_relations.txt", 'w') as f:
+    for e in entries:
+        f.write("{}\t{}\n".format(e[1], e[0]))

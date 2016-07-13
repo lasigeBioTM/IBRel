@@ -116,6 +116,8 @@ class ProteinEntity(Entity):
         :param rules:
         :return: True if entity does not fall into any of the rules, False if it does
         """
+        self.normalize()
+        final_entities = [self]
         if "ssm" in ths and self.ssm_score < ths["ssm"]:
             logging.info("excluded {} because of ssm ({}<{})".format(self.text, str(self.ssm_score), str(ths["ssm"])))
             return False
@@ -145,7 +147,7 @@ class ProteinEntity(Entity):
             if self.normalized_score <= 0:
                 logging.info("excluded {} because of uniprot".format(self.text))
                 return False
-        return True
+        return final_entities
 
     def normalize_entrez(self):
         global ncbigene
