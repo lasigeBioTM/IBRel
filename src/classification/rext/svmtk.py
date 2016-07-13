@@ -19,7 +19,7 @@ from classification.results import ResultsRE
 
 class SVMTKernel(ReModel):
 
-    def __init__(self, corpus, relationtype, modelname="svm_tk_classifier.model"):
+    def __init__(self, corpus, relationtype, modelname="svm_tk_classifier.model", ner="goldstandard"):
         super(SVMTKernel, self).__init__()
         self.modelname = relationtype + "_" + modelname + "_svmtk"
         self.test_svmtk = []
@@ -27,6 +27,7 @@ class SVMTKernel(ReModel):
         # self.lmtzr = WordNetLemmatizer()
         self.stemmer = PorterStemmer()
         self.pair_type = relationtype
+        self.ner_model = ner
         self.generate_data(corpus)
 
 

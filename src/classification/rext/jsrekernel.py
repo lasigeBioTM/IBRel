@@ -16,7 +16,7 @@ from text.pair import Pairs
 
 class JSREKernel(ReModel):
 
-    def __init__(self, corpus, relationtype, modelname="slk_classifier.model", train=False):
+    def __init__(self, corpus, relationtype, modelname="slk_classifier.model", train=False, ner="goldstandard"):
         super(JSREKernel, self).__init__()
         self.modelname = relationtype + "_" + modelname + "_jsre"
         self.pairtype = relationtype
@@ -24,6 +24,7 @@ class JSREKernel(ReModel):
         self.pairs = {}
         self.resultsfile = None
         self.examplesfile = None
+        self.ner_model = ner
         self.generatejSREdata(corpus, train=train, pairtype=relationtype)
 
     def load_classifier(self, outputfile="jsre_results.txt"):
@@ -123,7 +124,7 @@ class JSREKernel(ReModel):
         strue = 0
         sfalse = 0
         skipped = 0
-        for sentence in corpus.get_sentences("goldstandard"):
+        for sentence in corpus.get_sentences(self.ner_model):
         #for did in corpus.documents:
             did = sentence.did
             #doc_entities = corpus.documents[did].get_entities("goldstandard")
@@ -131,7 +132,8 @@ class JSREKernel(ReModel):
             pos_sentences = set()
             sids = []
             # print len(corpus.type_sentences[pairtype])
-            sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
+            sentence_entities = [entity for entity in sentence.entities.elist[self.ner_model]]
+            print sentence.sid, self.ner_model, len(sentence.entities.elist[self.ner_model]), sentence_entities
             # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
             for pair in itertools.permutations(sentence_entities, 2):
                 # print pair[0].type, pair[1].type, pairtypes

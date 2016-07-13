@@ -172,7 +172,8 @@ class Corpus(object):
     def get_sentences(self, hassource=None):
         for did in self.documents:
             for sentence in self.documents[did].sentences:
-                if hassource and hassource in sentence.entities.elist:
+                if hassource and hassource in sentence.entities.elist or\
+                   any([s.startswith(hassource) for s in sentence.entities.elist]):
                     yield sentence
                 elif hassource is None:
                     yield sentence
