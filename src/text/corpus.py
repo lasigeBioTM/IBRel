@@ -57,8 +57,10 @@ class Corpus(object):
                 for p in self.documents[did].pairs.pairs:
                     if source in p.recognized_by:
                         middle_text = self.documents[did].text[p.entities[0].dstart:p.entities[1].dend]
-                        doc_pairs[(did, p.entities[0].text, p.entities[1].text,
-                                   p.entities[0].text + "=>" + p.entities[1].text)] = [middle_text]
+                        doc_pairs[(did, p.entities[0].normalized, p.entities[1].normalized,
+                                   p.entities[0].normalized + "=>" + p.entities[1].normalized)] = [middle_text]
+                        # doc_pairs[("PMID", p.entities[0].normalized, p.entities[1].normalized,
+                        #            p.entities[0].normalized + "=>" + p.entities[1].normalized)] = [middle_text]
                 allentitites.update(doc_pairs)
         return allentitites
 
@@ -172,8 +174,7 @@ class Corpus(object):
     def get_sentences(self, hassource=None):
         for did in self.documents:
             for sentence in self.documents[did].sentences:
-                if hassource and hassource in sentence.entities.elist or\
-                   any([s.startswith(hassource) for s in sentence.entities.elist]):
+                if hassource and hassource in sentence.entities.elist:
                     yield sentence
                 elif hassource is None:
                     yield sentence

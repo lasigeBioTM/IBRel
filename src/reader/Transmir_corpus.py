@@ -167,14 +167,18 @@ def get_transmir_gold_ann_set(goldpath, entitytype):
             if tsv[-1].lower() == "human":
                 # print "gold standard", tsv[8], tsv[0], tsv[3], entitytype
                 pmids = tsv[8].split(";")
+                norm_mirna = mirna_graph.map_label(tsv[3])
+                if norm_mirna < 99:
+                    norm_mirna[0] = tsv[3]
+                norm_gene = get_uniprot_name(tsv[0])
                 for did in pmids:
                     if entitytype == "mirna":
-                        norm_mirna = mirna_graph.map_label(tsv[3])
                         gold_entities.add(("PMID" + did, "0", "0", norm_mirna[0].lower()))
                     elif entitytype == "protein":
-                        norm_gene = get_uniprot_name(tsv[0])
                         gold_entities.add(("PMID" + did, "0", "0", norm_gene[0].lower()))
-                    gold_relations[("PMID" + did, tsv[3], tsv[0], tsv[3] + "=>" + tsv[0])] = []
+                    gold_relations[("PMID" + did, norm_mirna[0], norm_gene[0], norm_mirna[0] + "=>" + norm_gene[0])] = [tsv[3] + "=>" + tsv[0]]
+                    #gold_relations[("PMID", norm_mirna[0], norm_gene[0], norm_mirna[0] + "=>" + norm_gene[0])] = [tsv[3] + "=>" + tsv[0]]
+
     # print gold_entities
     return gold_entities, gold_relations
 

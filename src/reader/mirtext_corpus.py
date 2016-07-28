@@ -114,6 +114,10 @@ class MirtexCorpus(Corpus):
                                     not_tagged += 1
                             else:
                                 print "could not find sentence for this span: {}-{}".format(dstart, dend)
+        logging.info("normalizing entities...")
+        for sentence in self.get_sentences("goldstandard"):
+                for e in sentence.entities.elist["goldstandard"]:
+                    e.normalize()
         self.find_relations(pairtype)
         # self.evaluate_normalization()
         print "tagged: {} not tagged: {}".format(tagged, not_tagged)
@@ -171,13 +175,15 @@ def get_mirtex_gold_ann_set(goldpath, entitytype, pairtype):
                     mirna = mirna.replace('"', '')
                     logging.info(mirna)
                     norm_mirna = mirna_graph.map_label(mirna)
+                    if norm_mirna < 99:
+                        norm_mirna[0] = mirna
                     e2 = v[2].split(";")
                     for gene in e2:
                         gene = gene.replace('"', '')
                         # logging.info(gene)
-                        # norm_gene = get_uniprot_name(gene)
-                        # gold_relations.add((did, norm_mirna[0], norm_gene[0]))
-                        gold_relations[(did, mirna, gene, mirna + "=>" + gene)] = []
+                        norm_gene = get_uniprot_name(gene)
+                        #gold_relations.add((did, norm_mirna[0], norm_gene[0]))
+                        gold_relations[(did, norm_mirna[0], norm_gene[0], norm_mirna[0] + "=>" + norm_gene[0])] = []
     return gold_offsets, gold_relations
 
 

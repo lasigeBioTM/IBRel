@@ -67,12 +67,12 @@ def get_uniprot_name(text):
         c = r.text
         if "\n" not in c:
             logging.info("nothing found on uniprot for {}".format(text))
-            c = "NA\t" * 6
+            c = text + "\t0\t" + "NA\t" * 4
         else:
             c = c.split("\n")[1].strip()
             uniprot[text] = c
     values = c.split("\t")
-    normalized = text
+    normalized = text.strip()
     normalized_score = 0
     go_ids = []
     if len(values) > 3:
@@ -87,7 +87,7 @@ def get_uniprot_name(text):
             # gos = values[5].split(";")
             # print values[6]
             go_ids = [v.strip() for v in values[6].split(";")]
-    logging.info("mapped  {} to {}".format(text, normalized))
+    # logging.info("mapped  {} to {}".format(text, normalized))
     return normalized, normalized_score, go_ids
 
 class ProteinEntity(Entity):
@@ -122,8 +122,8 @@ class ProteinEntity(Entity):
             logging.info("excluded {} because of ssm ({}<{})".format(self.text, str(self.ssm_score), str(ths["ssm"])))
             return False
         if "stopwords" in rules:
-            words = self.text.split(" ")
-            words += self.text.split("-")
+            words = re.split(' |-', self.text)
+            # words += self.text.split("-")
             stop = False
             for s in prot_stopwords:
                 if any([s == w.lower() for w in words]):
@@ -163,21 +163,20 @@ class ProteinEntity(Entity):
     def normalize(self):
         uniprot_values = get_uniprot_name(self.text)
 
-        if uniprot_values[0] != "NA":
-            self.normalized = uniprot_values[0]
-            self.normalized_score = uniprot_values[1]
-            self.normalized_ref = "uniprot"
+        self.normalized = uniprot_values[0]
+        self.normalized_score = uniprot_values[1]
+        self.normalized_ref = "uniprot"
 
-            self.go_ids = uniprot_values[2]
-        else:
-            self.normalized = self.text
-            self.normalized_score = 0
+        self.go_ids = uniprot_values[2]
+        # self.normalized = self.text
+        # self.normalized_score = 0
+        if uniprot_values[1] < 100:
             self.normalized_ref = "text"
-        if len(self.go_ids) > 0:
-            self.get_best_go()
-        else:
-            logging.info("NO GO for {}".format(self.text))
-            self.best_go = ""
+        # if len(self.go_ids) > 0:
+        #     self.get_best_go()
+        # else:
+        #     logging.info("NO GO for {}".format(self.text))
+        #     self.best_go = ""
 
 
     def get_best_go(self):
