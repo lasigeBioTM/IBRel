@@ -76,11 +76,11 @@ class MirnaEntity(Entity):
             if len(x) > 2 and x[-2].isdigit() and x[-1].isdigit() and len(x[-1]) == len(x[-2]):  # mir-221-222 => mir-221, mir-222
                 self.text = x[0] + "-" + x[1] + "/" + x[2]
             elif len(x) == 4 and " " not in self.text:  # mir-15b-16-2
-                print "before lenx==3", self.text
+                # print "before lenx==3", self.text
                 self.text = x[0] + "-" + x[1] + "/" + "-".join(x[2:])
-                print "after lenx==3", self.text
+                # print "after lenx==3", self.text
             elif "-" not in x[0] and "-" in self.text and x[0].lower().startswith("mir") and x[0][-1].isdigit(): #mir302-367
-                    print "mirXXX-XXX", self.text, x
+                    # print "mirXXX-XXX", self.text, x
                     self.text = self.text.replace("-", "/")
             if "/" in self.text:  # mir-192/215 => mir-192 + mir-215 | mir-34a/b/c => mir-34a, mir-34b, mir-34c
                 newtext_separated = self.text.split("/")

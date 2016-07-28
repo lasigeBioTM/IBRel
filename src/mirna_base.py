@@ -150,6 +150,10 @@ class MirbaseDB(object):
             result = mirbasedic[label]
         else:
             new_label = label.lower()
+            if new_label.startswith("h-"):
+                new_label = new_label[2:]
+            elif new_label.startswith("pre-"):
+                new_label = new_label[4:]
             new_label = new_label.replace("microrna", "mir")
             new_label = new_label.replace("mirna", "mir")
             if "-" not in new_label: #fix cases like miR200c
