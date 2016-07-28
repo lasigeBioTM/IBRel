@@ -17,7 +17,17 @@ lll_base = "corpora/LLL/"
 paths = {
 
     'mirna_ds':{
-        'corpus': "corpora/mirna-ds/abstracts.txt_1.pickle",
+        'corpus': "corpora/mirna-ds/abstracts.txt_3.pickle",
+        'format': "mirna",
+        'annotations': ""
+    },
+    'mirna_ds_annotated': {
+        'corpus': "corpora/mirna-ds/abstracts_annotated.pickle",
+        'format': "mirna",
+        'annotations': ""
+    },
+    'mirna_ds_annotated_10k': {
+        'corpus': "corpora/mirna-ds/abstracts_annotated_10k.pickle",
         'format': "mirna",
         'annotations': ""
     },
