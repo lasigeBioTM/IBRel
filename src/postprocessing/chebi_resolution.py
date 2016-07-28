@@ -159,7 +159,7 @@ def find_chebi_term3(term):
     return c
 
 def exit_handler():
-    print 'Saving chebi dictionary...!'
+    logging.info('Saving chebi dictionary...!')
     pickle.dump(chebi, open(chebidic, "wb"))
 
 atexit.register(exit_handler)
