@@ -224,6 +224,7 @@ class Entities(object):
                         #     e.ssm_score_all = {s: 0}
                         combined[next_eid] = e
                         #logging.info("new entity: {0}-{1}".format(s.split("_")[-1], combined[next_eid].text))
+        logging.info("combined {} entities".format(len(combined)))
         self.elist[name] = combined.values()
 
     def get_entity_offsets(self, esource, ths, rules):
