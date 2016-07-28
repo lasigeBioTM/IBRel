@@ -71,7 +71,7 @@ def get_unique_gold_ann_set(goldann):
     return gold, None
 
 
-def compare_results(offsets, goldoffsets, corpus, getwords=True, evaltype="entity"):
+def compare_results(offsets, goldoffsets, corpus, getwords=True, evaltype="entity", entities=[]):
     """
     Compare system results with a gold standard, works for both NER and RE
     :param offsets: system results dictionary, offset tuples (did, start, end, text): more info
@@ -87,6 +87,11 @@ def compare_results(offsets, goldoffsets, corpus, getwords=True, evaltype="entit
         goldoffsets = {s: [] for s in goldoffsets}
     # goldoffsets = set([x[:4] for x in goldoffsets.keys()])
     # print len(goldoffsets), len(offsets)
+    if len(entities) > 0:
+        goldoffsets_keys = goldoffsets.keys()
+        for k in goldoffsets_keys:
+            if k[0] not in entities or k[1] not in entities[k[0]] or k[2] not in entities[k[0]]:
+                del goldoffsets[k]
     tps = set(offsets.keys()) & set(goldoffsets.keys())
     fps = set(offsets.keys()) - set(goldoffsets.keys())
     fns = set(goldoffsets.keys()) - set(offsets.keys())
@@ -105,7 +110,7 @@ def compare_results(offsets, goldoffsets, corpus, getwords=True, evaltype="entit
         report.append("Common FNs")
         fncounter = collections.Counter(fnwords)
         for w in fncounter.most_common(10):
-            report.append(str(w[0]) + ": " + str(w[1]))
+            report.append(w[0] + ": " + str(w[1]))
         report.append(">\n")
 
     for d in list(alldocs):
@@ -140,7 +145,7 @@ def get_report(results, corpus, more_info, getwords=True):
             logging.debug("this doc is not in the corpus! %s" % t[0])
             # logging.info(corpus.documents.keys())
             continue
-        start, end = str(t[1]), str(t[2])
+        start, end = t[1], t[2]
         if getwords:
             # doctext = corpus.documents[x[0]].text
 
@@ -153,7 +158,8 @@ def get_report(results, corpus, more_info, getwords=True):
         if did not in report:
             report[did] = []
         if getwords:
-            line = u"{}\t{}:{}\t{}\t{}".format(did, start, end, tokentext, "\t".join(more_info[t]))
+            # line = u"{}\t{}:{}\t{}\t{}".format(did, start, end, tokentext.encode('utf-8'), "\t".join(more_info[t]))
+            line = u"{}\t{}:{}\t{}".format(did, start, end, tokentext)
         else:
             line = did + '\t' + start + ":" + end
         report[did].append(line)
@@ -171,15 +177,24 @@ def get_list_results(results, models, goldset, ths, rules, mode="ner"):
     :param ths: Validation thresholds
     :param rules: Validation rules
     """
-    print "saving results to {}".format(results.path + ".tsv")
+
+    print "saving results to {}".format(results.path + "_final.tsv")
     sysresults = results.corpus.get_unique_results(models, ths, rules, mode)
     print "{} unique entries".format(len(sysresults))
     with codecs.open(results.path + "_final.tsv", 'w', 'utf-8') as outfile:
         outfile.write('\n'.join(['\t'.join(x) for x in sysresults]))
+    print "getting corpus entities..."
+    entities = {}
+    for did in results.corpus.documents:
+        entities[did] = set()
+        for sentence in results.corpus.documents[did].sentences:
+            for s in sentence.entities.elist:
+                for e in sentence.entities.elist[s]:
+                    entities[did].add(e.normalized)
     if goldset:
         #lineset = set([(l[0], l[1].lower(), l[2].lower()) for l in sysresults])
         #goldset = set([(g[0], g[1].lower(), g[2].lower()) for g in goldset])
-        reportlines, tps, fps, fns = compare_results(sysresults, goldset, results.corpus, getwords=True)
+        reportlines, tps, fps, fns = compare_results(sysresults, goldset, results.corpus, getwords=True, entities=entities)
         with codecs.open(results.path + "_report.txt", 'w', "utf-8") as reportfile:
             reportfile.write("TPs: {!s}\nFPs: {!s}\n FNs: {!s}\n".format(len(tps), len(fps), len(fns)))
             if len(tps) == 0:
@@ -351,6 +366,14 @@ def main():
 
         if options.action == "combine":
             base_result.combine_results(options.etype, options.models)
+            n_sentences, n_docs, n_entities, n_relations = 0, 0, 0, 0
+            for did in base_result.corpus.documents:
+                n_docs += 1
+                for sentence in base_result.corpus.documents[did]:
+                    n_sentences += 1
+                    for e in sentence.entities.elist[options.models]:
+                        n_entities += 1
+            logging.info("Combined {} docs, {} sentences, {} entities".format(n_docs, n_sentences, n_entities))
             base_result.save(options.models + ".pickle")
         elif options.action == "savetocorpus":
             base_result.corpus.save(options.output + ".pickle")
@@ -375,7 +398,19 @@ def main():
             base_result.test_ensemble(pipeline, options.models, options.etype)
             base_result.save("results/" + options.models + ".pickle")
 
-    elif options.action in ("evaluate", "evaluate_list"):
+    elif options.action in ("evaluate", "evaluate_list", "count_entities"):
+        counts = {}
+        if options.action == "count_entities":
+            for did in results_list[0].corpus.documents:
+                for sentence in results_list[0].corpus.documents[did].sentences:
+                    print sentence.entities.elist.keys()
+                    if options.models in sentence.entities.elist:
+                        for e in sentence.entities.elist[options.models]:
+                            if e.type not in counts:
+                                counts[e.type] = 0
+                            counts[e.type] += 1
+            print counts
+            sys.exit()
         if "annotations" in paths[options.goldstd]:
             logging.info("loading gold standard %s" % paths[options.goldstd]["annotations"])
             goldset = get_gold_ann_set(paths[options.goldstd]["format"], paths[options.goldstd]["annotations"],
