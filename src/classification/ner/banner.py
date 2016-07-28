@@ -43,8 +43,7 @@ class BANNERModel(SimpleTaggerModel):
         :return:
         """
         # TODO: check if it already loaded (and then kill that instance)
-        self.params = ["./scripts/banner.sh", "tag", self.BANNER_CONFIG, "temp/banner_input.txt", "temp/banner_output.txt"]
-        logging.info(' '.join(self.params))
+        pass
 
         # out = ner.communicate("Structure-activity relationships have been investigated for inhibition of DNA-dependent protein kinase (DNA-PK) and ATM kinase by a series of pyran-2-ones, pyran-4-ones, thiopyran-4-ones, and pyridin-4-ones.")
         # logging.info(out)
@@ -57,19 +56,31 @@ class BANNERModel(SimpleTaggerModel):
         base_dir = os.getcwd()
         os.chdir(self.BANNER_BASE)
         tagged_sentences = []
-        with codecs.open("temp/banner_input.txt", 'w', 'utf-8') as inputfile:
-            for i, sid in enumerate(self.sids):
-                inputfile.write("{}\t{}\n".format(sid, self.sentences[i]))
+        ichunk = 0
+        chunk_size = 5000
+        for sidsx in chunks(self.sids, chunk_size):
+            with codecs.open("temp/banner_input{}.txt".format(ichunk), 'w', 'utf-8') as inputfile:
+                for i, sid in enumerate(sidsx):
+                    inputfile.write("{}\t{}\n".format(sid, self.sentences[i+(ichunk*chunk_size)]))
+            self.params = ["./scripts/banner.sh", "tag", self.BANNER_CONFIG, "temp/banner_input{}.txt".format(ichunk),
+                           "temp/banner_output{}.txt".format(ichunk)]
+            logging.info(' '.join(self.params))
+            # process.communicate()
+            logging.info("Starting banner tagger ({})".format(ichunk))
+            self.process = Popen(self.params, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+            while True:
+                output = self.process.stdout.readline()
+                if output == '' and self.process.poll() is not None:
+                    break
+                if output:
+                    logging.info(output.strip())
+            ichunk += 1
+        # merge outputs
+        with open("temp/banner_output.txt", 'w') as outfile:
+            for i in range(ichunk):
+                with open("temp/banner_output{}.txt".format(i)) as chunkfile:
+                    outfile.write(chunkfile.read())
 
-        # process.communicate()
-        logging.info("Starting banner tagger")
-        self.process = Popen(self.params, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        while True:
-            output = self.process.stdout.readline()
-            if output == '' and self.process.poll() is not None:
-                break
-            if output:
-                logging.info(output.strip())
         os.chdir(base_dir)
         results = self.process_results(self.BANNER_BASE + "/temp/banner_output.txt", corpus)
         return results
@@ -95,4 +106,7 @@ class BANNERModel(SimpleTaggerModel):
         return results
 
 
-
+def chunks(l, n):
+    """Yield successive n-sized chunks from l."""
+    for i in range(0, len(l), n):
+        yield l[i:i+n]
