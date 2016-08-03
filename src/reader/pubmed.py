@@ -32,13 +32,13 @@ class PubmedDocument(Document):
         response = r.text
 
         # logging.info(response)
-        title, abstract = self.parse_pubmed_xml(response)
+        title, abstract = self.parse_pubmed_xml(response, pmid)
         return title, abstract, str(r.status_code)
 
     
-    def parse_pubmed_xml(self, xml):
+    def parse_pubmed_xml(self, xml, pmid):
         if xml.strip() == '':
-            print "PMID not found"
+            print "PMID not found", pmid
             sys.exit()
         else:
             root = ET.fromstring(xml.encode("utf-8"))
@@ -55,7 +55,7 @@ class PubmedDocument(Document):
                 else:
                     abstext = ""
             else:
-                print "Abstract not found:", title
+                print "Abstract not found:", title, pmid
                 print xml[:50]
                 abstext = ""
                 #print xml
