@@ -14,7 +14,7 @@ from text.pair import Pairs
 
 
 class RuleClassifier(ReModel):
-    def __init__(self, corpus, ptype, rules=["triggers"]):
+    def __init__(self, corpus, ptype, rules=["triggers"], ner="goldstandard"):
         """
         Rule based classifier
         rules: List of rules to use
@@ -25,6 +25,7 @@ class RuleClassifier(ReModel):
         self.pairs = {}
         self.pids = {}
         self.trigger_words = set([])
+        self.ner_model = ner
 
 
     def load_classifier(self):
@@ -40,10 +41,10 @@ class RuleClassifier(ReModel):
         unique_relations = {}
         pairtypes = (config.relation_types[self.ptype]["source_types"], config.relation_types[self.ptype]["target_types"])
         # pairtypes = (config.event_types[pairtype]["source_types"], config.event_types[pairtype]["target_types"])
-        for sentence in self.corpus.get_sentences("goldstandard"):
+        for sentence in self.corpus.get_sentences(self.ner_model):
             #doc_entities = self.corpus.documents[did].get_entities("goldstandard")
             did = sentence.did
-            sentence_entities = [entity for entity in sentence.entities.elist["goldstandard"]]
+            sentence_entities = [entity for entity in sentence.entities.elist[self.ner_model]]
             # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
             # doc_entities += sentence_entities
             for pair in itertools.permutations(sentence_entities, 2):

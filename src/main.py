@@ -320,7 +320,7 @@ considered when coadministering with megestrol acetate.''',
             elif options.kernel == "svmtk":
                 model = SVMTKernel(corpus, options.ptype, modelname=options.tag, ner=options.models)
             elif options.kernel == "rules":
-                model = RuleClassifier(corpus, options.ptype)
+                model = RuleClassifier(corpus, options.ptype, ner=options.models)
             elif options.kernel == "mirtex_rules":
                 model = MirtexClassifier(corpus, options.ptype)
             elif options.kernel == "stanfordre":
