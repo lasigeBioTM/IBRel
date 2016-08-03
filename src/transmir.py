@@ -12,15 +12,15 @@ entries = {} # (tfname, mirname): active
 with open(db_name, 'r') as dbfile:
     for line in dbfile:
         tsv = line.strip().split("\t")
+        tfname = get_uniprot_name(tsv[0])
+        mirname = mirna_graph.map_label(tsv[3])
+        tfname = tfname[0]
+        mirname = mirname[0]
+        func = tsv[5].split(";")
+        disease = tsv[6].split(";")
+        active = tsv[7]
+        pmid = tsv[8].split(";")
         if tsv[-1].lower() == "human":
-            tfname = get_uniprot_name(tsv[0])
-            mirname = mirna_graph.map_label(tsv[3])
-            tfname = tfname[0]
-            mirname = mirname[0]
-            func = tsv[5].split(";")
-            disease = tsv[6].split(";")
-            active = tsv[7]
-            pmid = tsv[8].split(";")
             tfs.add(tfname.replace("-", "")) # uniform TF names
             for f in func:
                 funcs.add(f.strip())
@@ -30,6 +30,8 @@ with open(db_name, 'r') as dbfile:
             for p in pmid:
                 pmids.add(p.strip())
             mirnas[mirname] = (func, [d for d in disease if d != "see HMDD (http://cmbi.bjmu.edu.cn/hmdd)"])
+        else:
+
             entries[(tfname, mirname)] = (active, pmid)
 # print "TF:"
 # print tfs

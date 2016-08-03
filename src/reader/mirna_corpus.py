@@ -10,6 +10,8 @@ from xml.etree import ElementTree as ET
 import progressbar as pb
 
 from postprocessing import ssm
+from text.mirna_entity import mirna_graph
+from text.protein_entity import get_uniprot_name
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__) + '../..'))
 from text.corpus import Corpus
@@ -148,7 +150,7 @@ class MirnaCorpus(Corpus):
         print "tagged: {} not tagged: {}".format(tagged, not_tagged)
         with open(ann_dir + "-pmids.txt", 'w') as pmidsfile:
             pmidsfile.write("\n".join(pmids) + "\n")
-        self.run_ss_analysis()
+        # self.run_ss_analysis()
 
 
 def get_ddi_mirna_gold_ann_set(goldpath, entitytype, pairtype):
@@ -163,6 +165,7 @@ def get_ddi_mirna_gold_ann_set(goldpath, entitytype, pairtype):
     #parse DDI corpus file
     t = time.time()
     # root = ET.fromstring(xml.read())
+    rfile = open("corpora/miRNACorpus/miRNAcorpus_relations.txt", 'w')
     for doc in root.findall("document"):
         did = doc.get('id')
         doctext = ""
@@ -189,10 +192,15 @@ def get_ddi_mirna_gold_ann_set(goldpath, entitytype, pairtype):
                     continue
                 p_true = pair.get("interaction")
                 if p_type == pairtype and p_true == "True":
-                    pair = (did, original_id_to_offset[pair.get("e1")], original_id_to_offset[pair.get("e2")],
+                    gold_pair = (did, original_id_to_offset[pair.get("e1")], original_id_to_offset[pair.get("e2")],
                                     "{}={}>{}".format(original_id_to_text[pair.get("e1")], p_type, original_id_to_text[pair.get("e2")]))
-                    gold_pairs.add(pair)
-
+                    gold_pairs.add(gold_pair)
+                    norm_mirna = mirna_graph.map_label(original_id_to_text[pair.get("e1")])
+                    if norm_mirna < 99:
+                        norm_mirna[0] = original_id_to_text[pair.get("e1")]
+                    norm_gene = get_uniprot_name(original_id_to_text[pair.get("e2")])
+                    rfile.write("{}\t{}\n".format(norm_mirna[0], norm_gene[0]))
             doctext += " " + sentence_text # generate the full text of this document
     # logging.debug(gold_pairs)
+    rfile.close()
     return gold_offsets, gold_pairs

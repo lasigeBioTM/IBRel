@@ -128,23 +128,25 @@ class MirtexCorpus(Corpus):
 
     def find_relations(self, pairtype):
         # automatically find the relations from the gold standard at sentence level
-        for sentence in self.get_sentences(hassource="goldstandard"):
-            did = sentence.did
-            for pair in itertools.combinations(sentence.entities.elist["goldstandard"], 2):
-                # consider that the first entity may appear before or after the second
-                if (pair[0].text, pair[1].text) in self.documents[did].relations or \
-                   (pair[1].text, pair[0].text) in self.documents[did].relations:
-                    if (pair[1].text, pair[0].text) in self.documents[did].relations:
-                        pair = (pair[1], pair[0])
-                    start, end = pair[0].dstart, pair[1].dend
-                    if start > end:
-                        start, end = pair[1].dstart, pair[0].dend
-                    between_text = self.documents[did].text[start:end]
-                    if between_text.count(pair[0].text) > 1 or between_text.count(pair[1].text) > 1:
-                        # print "excluded:", between_text
-                        continue
-                    # print between_text
-                    pair[0].targets.append((pair[1].eid, pairtype))
+        with open("corpora/miRTex/mirtex_relations.txt", 'w') as rfile:
+            for sentence in self.get_sentences(hassource="goldstandard"):
+                did = sentence.did
+                for pair in itertools.combinations(sentence.entities.elist["goldstandard"], 2):
+                    # consider that the first entity may appear before or after the second
+                    if (pair[0].text, pair[1].text) in self.documents[did].relations or \
+                       (pair[1].text, pair[0].text) in self.documents[did].relations:
+                        if (pair[1].text, pair[0].text) in self.documents[did].relations:
+                            pair = (pair[1], pair[0])
+                        start, end = pair[0].dstart, pair[1].dend
+                        if start > end:
+                            start, end = pair[1].dstart, pair[0].dend
+                        between_text = self.documents[did].text[start:end]
+                        if between_text.count(pair[0].text) > 1 or between_text.count(pair[1].text) > 1:
+                            # print "excluded:", between_text
+                            continue
+                        # print between_text
+                        pair[0].targets.append((pair[1].eid, pairtype))
+                        rfile.write("{}\t{}\n".format(pair[0].normalized, pair[1].normalized))
 
 
 def get_mirtex_gold_ann_set(goldpath, entitytype, pairtype):
@@ -173,7 +175,7 @@ def get_mirtex_gold_ann_set(goldpath, entitytype, pairtype):
                 e1 = v[1].split(";")
                 for mirna in e1:
                     mirna = mirna.replace('"', '')
-                    logging.info(mirna)
+                    # logging.info(mirna)
                     norm_mirna = mirna_graph.map_label(mirna)
                     if norm_mirna < 99:
                         norm_mirna[0] = mirna
