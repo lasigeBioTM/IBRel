@@ -369,7 +369,7 @@ def main():
             n_sentences, n_docs, n_entities, n_relations = 0, 0, 0, 0
             for did in base_result.corpus.documents:
                 n_docs += 1
-                for sentence in base_result.corpus.documents[did]:
+                for sentence in base_result.corpus.documents[did].sentences:
                     n_sentences += 1
                     for e in sentence.entities.elist[options.models]:
                         n_entities += 1

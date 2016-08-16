@@ -93,15 +93,19 @@ class BANNERModel(SimpleTaggerModel):
                 sid, genetype, start, end, etext = line.strip().split("\t")
                 sentence = corpus.get_sentence(sid)
                 tokens = sentence.find_tokens_between(int(start), int(end), relativeto="sent")
-                new_entity = create_entity(tokens=tokens,
-                                           sid=sentence.sid, did=sentence.did,
-                                           text=etext, score=1, etype=self.etype)
-                eid = sentence.tag_entity(start=new_entity.tokens[0].start,
-                                          end=new_entity.tokens[-1].end, etype=self.etype,
-                                          entity=new_entity, source=self.path)
-                new_entity.eid = eid
-                results.entities[eid] = new_entity
-                new_entity = None
+                if tokens:
+                    new_entity = create_entity(tokens=tokens,
+                                               sid=sentence.sid, did=sentence.did,
+                                               text=etext, score=1, etype=self.etype)
+                    eid = sentence.tag_entity(start=new_entity.tokens[0].start,
+                                              end=new_entity.tokens[-1].end, etype=self.etype,
+                                              entity=new_entity, source=self.path)
+                    new_entity.eid = eid
+                    results.entities[eid] = new_entity
+                    new_entity = None
+                else:
+                    logging.info("No tokens found: {}-{}".format(start, end))
+                    logging.info(sentence.text)
         logging.info("found {} entities".format(len(results.entities)))
         return results
 
