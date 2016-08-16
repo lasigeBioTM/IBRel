@@ -14,20 +14,24 @@ jnlpba_base = "corpora/JNLPBA/"
 seedev_base = "corpora/SeeDev/"
 bc2gn_base = "corpora/BC2GN/"
 lll_base = "corpora/LLL/"
-paths = {
 
-    'mirna_ds':{
-        'corpus': "corpora/mirna-ds/abstracts.txt_1.pickle",
+paths = {}
+for i in range(1,11):
+    paths["mirna_ds{}".format(i)] = {'corpus': "corpora/mirna-ds/abstracts_11k.txt_{}.pickle".format(i),
+                                    'format': "mirna",
+                                    'annotations': ""}
+    paths["mirna_ds_annotated{}".format(i)] = {'corpus': "data/mirna_ds_annotated_{}.pickle".format(i),
+                                               'format': "mirna",
+                                               'annotations': ""
+                                              }
+paths.update({
+    'mirna_ds': {
+        'corpus': "corpora/mirna-ds/abstracts_11k.txt.pickle",
         'format': "mirna",
         'annotations': ""
     },
     'mirna_ds_annotated': {
-        'corpus': "corpora/mirna-ds/mirna_ds_annotated_1k.pickle",
-        'format': "mirna",
-        'annotations': ""
-    },
-    'mirna_ds_annotated_10k': {
-        'corpus': "corpora/mirna-ds/abstracts_annotated_10k.pickle",
+        'corpus': "corpora/mirna-ds/mirna_ds_annotated.pickle",
         'format': "mirna",
         'annotations': ""
     },
@@ -262,4 +266,4 @@ paths = {
                      'corpus': "data/ddi_trainall.txt.pickle",
                      'format': "ddi",
                      },
-}
+})

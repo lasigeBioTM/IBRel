@@ -107,7 +107,8 @@ def main():
     parser.add_argument("actions", default="classify",  help="Actions to be performed.",
                       choices=["load_corpus", "annotate", "classify", "write_results", "write_goldstandard",
                                "train", "test", "train_multiple", "test_multiple", "train_matcher", "test_matcher",
-                               "crossvalidation", "train_relations", "test_relations", "load_genia", "load_biomodel"])
+                               "crossvalidation", "train_relations", "test_relations", "load_genia", "load_biomodel",
+                               "merge_corpus"])
     parser.add_argument("--goldstd", default="", dest="goldstd", nargs="+",
                         help="Gold standard to be used. Will override corpus, annotations",
                         choices=paths.keys())
@@ -211,7 +212,8 @@ considered when coadministering with megestrol acetate.''',
             #results.get_ner_results(corpus, model)
             results.save(options.output[1] + ".pickle")
             #logging.info("saved gold standard results to " + options.output[1] + ".txt")
-
+        elif options.actions == "merge_corpus":
+            corpus.save(paths[options.output[1]]["corpus"])
         # training
         elif options.actions == "train":
             if options.crf == "stanford":

@@ -27,8 +27,11 @@ class PubmedDocument(Document):
         #conn = httplib.HTTPConnection("eutils.ncbi.nlm.nih.gov")
         #conn.request("GET", '/entrez/eutils/efetch.fcgi?db=pubmed&id={}&retmode=xml&rettype=xml'.format(pmid))
         payload = {"db": "pubmed", "id": pmid, "retmode": "xml", "rettype": "xml"}
-        r = requests.get('http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi', payload)
-        logging.debug("Request Status: " + str(r.status_code))
+        try:
+            r = requests.get('http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi', payload)
+        except requests.exceptions.ConnectionError:
+            r = requests.get('http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi', payload)
+        # logging.debug("Request Status: " + str(r.status_code))
         response = r.text
 
         # logging.info(response)

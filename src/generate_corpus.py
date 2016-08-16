@@ -42,9 +42,9 @@ def get_pubmed_abstracts(terms, corpus_text_path, negative_pmids):
     with codecs.open(corpus_text_path, 'a', 'utf-8') as docfile:
         for i, pmid in enumerate(pmids):
             doc = pubmed.PubmedDocument(pmid)
-            docfile.write(doc.text.replace("\n", " ") + "\n")
+            docfile.write(pmid + "\t" + doc.text.replace("\n", " ") + "\n")
             print "{}/{}".format(i, len(pmids))
-            sleep(0.5)
+            sleep(0.4)
 
 def process_documents(corpus_path):
     corpus = Corpus(corpus_path)
@@ -55,18 +55,21 @@ def process_documents(corpus_path):
     with codecs.open(corpus_path, 'r', 'utf-8') as docfile:
         for l in docfile:
             print lcount
-            if l[:20] in starts:
+            if l[:10] in starts:
+                print "repeated abstract:", l[:10]
                 continue
             lcount += 1
-            starts.add(l[:20])
-
-            newdoc = Document(l.strip(), did="d" + str(lcount))
+            starts.add(l[:10])
+            values = l.strip().split("\t")
+            pmid = values[0]
+            abs_text = " ".join(values[1:])
+            newdoc = Document(abs_text, did="PMID" + pmid)
             newdoc.process_document(corenlp_client)
             #for sentence in newdoc.sentences:
             #    print [t.text for t in sentence.tokens]
             newtext = ""
-            newdoc.did = "d" + str(lcount)
-            corpus.documents["d" + str(lcount)] = newdoc
+            newdoc.did = "PMID" + pmid
+            corpus.documents["PMID" + pmid] = newdoc
             """for s in newdoc.sentences:
                 for t in s.tokens:
                     newtext += t.text + " "
@@ -75,6 +78,7 @@ def process_documents(corpus_path):
             #     break
             if lcount % 1000 == 0:
                 corpus.save("{}_{}.pickle".format(corpus_path, str(lcount/1000)))
+                corpus = Corpus(corpus_path)
     corpus.save("{}_{}.pickle".format(corpus_path, str(lcount / 1000)))
     #with codecs.open("corpora/Thaliana/documents-processed.txt", 'w', 'utf-8') as finalfile:
     #    for l in final_text:
@@ -132,7 +136,7 @@ negative_pmids = open("negative_pmids.txt", 'r').readlines()
 if sys.argv[1] == "download":
     get_pubmed_abstracts(["mirna"], "corpora/mirna-ds/abstracts.txt", negative_pmids)
 elif sys.argv[1] == "process":
-    process_documents("corpora/mirna-ds/abstracts.txt")
+    process_documents("corpora/mirna-ds/abstracts_11k.txt")
 elif sys.argv[1] == "annotate":
     results = pickle.load(open("results/mirna_ds_entities.pickle", 'rb'))
     results.load_corpus("mirna_ds")
