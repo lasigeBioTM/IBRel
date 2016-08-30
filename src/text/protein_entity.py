@@ -55,14 +55,14 @@ def get_uniprot_name(text):
     if text in uniprot:
         c = uniprot[text]
     else:
-        query = {"query": text + ' AND organism:"Homo sapiens (Human) [9606]"',
+        query = {"query": text + ' AND organism:9606',
                  "sort": "score",
                  "columns": "id,entry name,reviewed,protein names,organism,go,go-id",
                  "format": "tab",
                  "limit": "1"}
         headers = {'User-Agent': 'IBEnt (CentOS) alamurias@lasige.di.fc.ul.pt'}
         r = requests.get('http://www.uniprot.org/uniprot/', query, headers=headers)
-        logging.debug("Request Status: " + str(r.status_code))
+        # logging.debug("Request Status: " + str(r.status_code))
 
         c = r.text
         if "\n" not in c:
@@ -87,7 +87,7 @@ def get_uniprot_name(text):
             # gos = values[5].split(";")
             # print values[6]
             go_ids = [v.strip() for v in values[6].split(";")]
-    # logging.info("mapped  {} to {}".format(text, normalized))
+    logging.info("mapped  {} to {}".format(text, normalized))
     return normalized, normalized_score, go_ids
 
 class ProteinEntity(Entity):
@@ -99,7 +99,7 @@ class ProteinEntity(Entity):
         self.sid = sid
         self.go_ids = []
         self.best_go = None
-        self.normalize()
+        # self.normalize()
 
     tf_regex = re.compile(r"\A[A-Z]+\d*\w*\d*\Z")
 

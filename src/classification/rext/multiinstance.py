@@ -6,6 +6,7 @@ import random
 import sys
 from collections import Counter
 
+import gc
 import misvm
 from nltk import Tree
 from sklearn.externals import joblib
@@ -22,7 +23,8 @@ from config import config
 from text.pair import Pairs
 
 class MILClassifier(ReModel):
-    def __init__(self, corpus, pairtype, relations, modelname="mil_classifier.model", test=False, ner="goldstandard"):
+    def __init__(self, corpus, pairtype, relations, modelname="mil_classifier.model", test=False, ner="goldstandard",
+                 generate=True):
         super(MILClassifier, self).__init__()
         self.modelname = modelname
         self.pairtype = pairtype
@@ -36,13 +38,15 @@ class MILClassifier(ReModel):
         self.resultsfile = None
         self.examplesfile = None
         self.ner_model = ner
-        self.vectorizer = CountVectorizer(min_df=2, ngram_range=(1, 2), token_pattern=r'\b\w+\-\w+\b')
+        self.vectorizer = CountVectorizer(min_df=0.1, ngram_range=(1, 1), token_pattern=r'\b\w+\-\w+\b')
+        self.corpus = corpus
 
-        #self.vectorizer = TfidfVectorizer(min_df=10, ngram_range=(1, 3), token_pattern=r'\b\w+\-\w+\b')
+        #self.vectorizer = TfidfVectorizer(min_df=0.2, ngram_range=(1, 1), token_pattern=r'\b\w+\-\w+\b', max_features=)
         #self.classifier = misvm.MISVM(kernel='linear', C=1.0, max_iters=20)
-        self.classifier = misvm.stMIL(kernel='linear', C=3, max_iters=10)
+        self.classifier = misvm.sMIL(kernel='linear', C=1)
         #self.classifier = misvm.MissSVM(kernel='linear', C=100) #, max_iters=20)
-        self.generateMILdata(corpus, test=test, pairtype=pairtype, relations=relations)
+        if generate:
+            self.generateMILdata(corpus, test=test, pairtype=pairtype, relations=relations)
 
     def generateMILdata(self, corpus, test, pairtype, relations):
         pairtypes = (config.relation_types[pairtype]["source_types"], config.relation_types[pairtype]["target_types"])
@@ -64,15 +68,19 @@ class MILClassifier(ReModel):
             sentence_entities = [entity for entity in sentence.entities.elist[self.ner_model]]
             # print self.ner_model, sentence_entities
             for pair in itertools.permutations(sentence_entities, 2):
-                if pair[0].type in pairtypes[0] and pair[1].type in pairtypes[1]:
-                    bag = (sentence.did, pair[0].normalized, pair[1].normalized)
+                if pair[0].type in pairtypes[0] and pair[1].type in pairtypes[1] and pair[0].normalized_score > 0 and pair[1].normalized_score > 0:
+                    if test is False:
+                        bag = (sentence.did, pair[0].normalized, pair[1].normalized)
+                    else:
+                        bag = (pair[0].normalized, pair[1].normalized)
                     if bag not in self.instances:
 
                         self.instances[bag] = []
                         self.labels[bag] = -1  # assume no relation until it's confirmed
                         self.pairs[bag] = []
                     self.pairs[bag].append(pair)
-                    if bag[1:] in relations:
+                    #if bag[1:] in relations:
+                    if (pair[0].normalized, pair[1].normalized) in relations:
                         self.labels[bag] = 1
                         trueddi = 1
                         truepcount += 1
@@ -84,6 +92,24 @@ class MILClassifier(ReModel):
                     self.instances[bag].append(pair_features)
         logging.info("True/total relations:{}/{} ({})".format(truepcount, pcount,
                                                               str(1.0 * truepcount / (pcount + 1))))
+
+    def write_to_file(self, filepath):
+        with codecs.open(filepath, 'a', 'utf-8') as f:
+            for bag in self.instances:
+                f.write('#'.join(bag) + "\t")
+                for i in self.instances[bag]:
+                    f.write(i + "\t")
+                f.write(str(self.labels[bag]) + "\n")
+
+    def load_from_file(self, filepath):
+        with codecs.open(filepath, 'r', 'utf-8') as f:
+            for l in f:
+                values = l.split("\t")
+                bag = tuple(values[0].split("#"))
+                self.instances[bag] = []
+                for i in values[1:-1]:
+                    self.instances[bag].append(i)
+                self.labels[bag] = int(values[-1])
 
     def load_classifier(self):
         self.classifier = joblib.load("{}/{}/{}.pkl".format(self.basedir, self.modelname, self.modelname))
@@ -118,6 +144,7 @@ class MILClassifier(ReModel):
             self.bag_labels.append(self.labels[pair])
             self.bag_pairs.append(pair)
 
+
     def train(self):
         self.generate_vectorizer()
         # self.vectorizer = pickle.load("{}/{}/{}_bow.pkl".format(self.basedir, self.modelname, self.modelname))
@@ -125,11 +152,16 @@ class MILClassifier(ReModel):
         # print self.vectorizer
         # sys.exit()
         logging.info("Training with {} bags".format(str(len(self.labels))))
-        for i, d in enumerate(self.data):
-            if self.bag_labels[i] == 1:
-                print self.bag_pairs[i], len(d), self.bag_labels[i]
+        # for i, d in enumerate(self.data):
+        #     if self.bag_labels[i] == 1:
+        #         print self.bag_pairs[i], len(d), self.bag_labels[i]
+        #         for pair in self.pairs[self.bag_pairs[i]]:
+        #             print self.corpus.get_sentence(pair[0].sid).text
+        #         print
 
+        gc.collect()
         self.classifier.fit(self.data, self.bag_labels)
+        gc.collect()
         if not os.path.exists(self.basedir + self.modelname):
             os.makedirs(self.basedir + self.modelname)
         logging.info("Training complete, saving to {}/{}/{}.pkl".format(self.basedir, self.modelname, self.modelname))
@@ -151,7 +183,8 @@ class MILClassifier(ReModel):
                 bag = self.bag_pairs[i]
                 pairs = self.pairs[bag]
                 for pair in pairs:
-                    did = bag[0]
+                    #did = bag[0]
+                    did = pair[0].did
                     if did not in results.document_pairs:
                         results.document_pairs[did] = Pairs()
                     pair = corpus.documents[did].add_relation(pair[0], pair[1], self.pairtype,

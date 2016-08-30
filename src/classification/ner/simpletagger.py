@@ -29,7 +29,8 @@ feature_extractors = {# "text": lambda x, i: x.tokens[i].text,
                       "lemma": lambda x, i: x.tokens[i].lemma,
                       "prevlemma": lambda x, i: prev_lemma(x,i),
                       "nextlemma": lambda x, i: next_lemma(x,i),
-                      "postag": lambda x, i: x.tokens[i].genia_pos,
+                      #"postag": lambda x, i: x.tokens[i].genia_pos,
+                      "postag": lambda x, i: x.tokens[i].pos,
                       "prevpostag": lambda x, i: prev_pos(x,i),
                       "nextpostag": lambda x, i: next_pos(x,i),
                       "wordclass": lambda x, i: wordclass(x.tokens[i].text),
@@ -144,13 +145,15 @@ def prev_pos(sentence, i):
     if i == 0:
         return "BOS"
     else:
-        return sentence.tokens[i-1].genia_pos
+        # return sentence.tokens[i-1].genia_pos
+        return sentence.tokens[i - 1].pos
 
 def next_pos(sentence, i):
     if i == len(sentence.tokens) - 1:
         return "EOS"
     else:
-        return sentence.tokens[i+1].genia_pos
+        # return sentence.tokens[i+1].genia_pos
+        return sentence.tokens[i + 1].pos
 
 def word_case(word):
     if word.islower():
