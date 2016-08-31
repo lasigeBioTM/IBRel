@@ -19,10 +19,8 @@ with open(config.stoplist, 'r') as stopfile:
         if w not in mirna_stopwords and len(w) > 1:
             mirna_stopwords.add(w)
 mirna_stopwords.discard("let")
-logging.info("Loading miRbase...")
 mirna_graph = MirbaseDB(config.mirbase_path)
 mirna_graph.load_graph()
-logging.info("done.")
 
 class MirnaEntity(Entity):
     def __init__(self, tokens, sid, *args, **kwargs):

@@ -16,7 +16,7 @@ pp = pprint.PrettyPrinter(indent=2)
 MIRBASE = Namespace("http://www.mirbase.org/")
 
 mirbasedic_path = "data/mirbase_dic.pickle"
-
+mirbasegraph_name = "mirbase.rdf"
 if os.path.isfile(mirbasedic_path):
     logging.info("loading mirbase cache...")
     mirbasedic = pickle.load(open(mirbasedic_path, "rb"))
@@ -41,7 +41,7 @@ class MirbaseDB(object):
         self.labels = {}
 
     def create_graph(self):
-        self.g.open(self.path + "data.rdf", create=True)
+        self.g.open(self.path +  mirbasegraph_name, create=True)
         data = self.parse_mirbase(self.path)
         #g = ConjunctiveGraph(store="SPARQLUpdateStore")
         # g.bind()
@@ -209,10 +209,16 @@ class MirbaseDB(object):
 
 
     def load_graph(self):
-        self.g.load(self.path + "data.rdf")
-        # print "Opened graph with {} triples".format(len(self.g))
-        self.get_label_to_acc()
-        self.choices = self.labels.keys()
+
+        if os.path.isfile(self.path + mirbasegraph_name):
+            logging.info("Loading miRbase...")
+            self.g.load(self.path +  mirbasegraph_name)
+            # print "Opened graph with {} triples".format(len(self.g))
+            self.get_label_to_acc()
+            self.choices = self.labels.keys()
+            logging.info("done.")
+        else:
+            logging.info("miRBase graph not found")
 
     def get_label_to_acc(self):
         for subj, pred, obj in self.g.triples((None, RDFS.label, None)):
@@ -221,7 +227,7 @@ class MirbaseDB(object):
             self.labels[str(obj)] = subj
 
     def save_graph(self):
-        self.g.serialize(self.path + "data.rdf", format='pretty-xml')
+        self.g.serialize(self.path +  mirbasegraph_name, format='pretty-xml')
         print 'Triples in graph after add: ', len(self.g)
         self.g.close()
 
