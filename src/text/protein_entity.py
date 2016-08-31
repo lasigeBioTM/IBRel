@@ -10,7 +10,9 @@ import os
 import requests
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__) + '../..'))
-from config.config import go_conn as db
+from config.config import use_go
+if use_go:
+    from config.config import go_conn as db
 from config import config
 from text.entity import Entity
 from text.token2 import Token2
