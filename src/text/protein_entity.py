@@ -161,6 +161,11 @@ class ProteinEntity(Entity):
             logging.debug("Request Status: " + str(r.status_code))
 
     def normalize(self):
+        if self.text.lower() in ("hsa", "mir", "99b", "pre"):
+            self.normalized = self.text
+            self.normalized_score = 0
+            self.normalized_ref = "text"
+            return
         uniprot_values = get_uniprot_name(self.text)
 
         self.normalized = uniprot_values[0]
@@ -172,6 +177,8 @@ class ProteinEntity(Entity):
         # self.normalized_score = 0
         if uniprot_values[1] < 100:
             self.normalized_ref = "text"
+            self.normalized = self.text
+            self.normalized_score = 0
         # if len(self.go_ids) > 0:
         #     self.get_best_go()
         # else:

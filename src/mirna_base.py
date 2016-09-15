@@ -145,6 +145,7 @@ class MirbaseDB(object):
 
     def map_label(self, label):
         global mirbasedic
+        result = ("", 0)
         # first check if a chebi mappings dictionary is loaded in memory
         if label in mirbasedic:
             result = mirbasedic[label]
@@ -179,6 +180,7 @@ class MirbaseDB(object):
             result = process.extractOne(new_label, self.choices)
             # print result
             # result = process.extract(label, choices, limit=3)
+            print result
             if result[1] != 100:
                 #print
                 # print "original:", new_label.encode("utf-8"), result

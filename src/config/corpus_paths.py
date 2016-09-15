@@ -25,6 +25,17 @@ for i in range(1,11):
                                                'annotations': ""
                                               }
 paths.update({
+    'mirna_cf': {
+        'corpus': "corpora/cf_corpus/abstracts.txt.pickle",
+        'format': "mirna",
+        'annotations': ""
+    },
+    'mirna_cf_annotated': {
+        'corpus': "data/mirna_cf_annotated.pickle",
+        'format': "mirna",
+        'annotations': ""
+    },
+
     'mirna_ds': {
         'corpus': "corpora/mirna-ds/abstracts_11k.txt.pickle",
         'format': "mirna",
