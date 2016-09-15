@@ -1,12 +1,13 @@
 import json
 import shutil
-
+import sys
 
 def main():
     with open("settings_base.json", "r") as settings:
         vals = json.load(settings)
-        for k in vals:
-            vals[k] = raw_input("{0}? (current: {1})".format(k, vals[k])) or vals[k]
+        if len(sys.argv) == 1 or sys.argv[1] != "default":
+            for k in vals:
+                vals[k] = raw_input("{0}? (current: {1})".format(k, vals[k])) or vals[k]
     shutil.copy("bin/base.prop", vals["stanford_ner_dir"])
     with open("settings.json", "w") as settings:
         json.dump(vals, settings, sort_keys=True, indent=4)
