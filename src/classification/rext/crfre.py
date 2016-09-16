@@ -12,7 +12,7 @@ from classification.results import ResultsNER, ResultsRE
 from classification.rext.kernelmodels import ReModel
 from config import config
 from text.pair import Pairs
-from word2vec_experiments import load_tair_relations
+# from word2vec_experiments import load_tair_relations
 
 
 class CrfSuiteRE(ReModel):
@@ -26,7 +26,7 @@ class CrfSuiteRE(ReModel):
         self.pairtype = ptype
         self.modelname = ptype + "_" + modelname
         self.gold_relations = set()
-        self.tair_pairs = load_tair_relations()
+        # self.tair_pairs = load_tair_relations()
         #self.vecmodel = word2vec.load("corpora/Thaliana/documents-processed" + '.bin')
         with codecs.open("seedev_relation.txt", 'r', 'utf-8') as relfile:
             for r in relfile:

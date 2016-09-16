@@ -1,3 +1,5 @@
+src/word2vec_experiments.py
+src/fuzzy_test.py
 bin/*.jar
 venv/
 data/
