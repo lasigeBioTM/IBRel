@@ -1,4 +1,5 @@
 import json
+import os
 import shutil
 import sys
 
@@ -11,6 +12,10 @@ def main():
     shutil.copy("bin/base.prop", vals["stanford_ner_dir"])
     with open("settings.json", "w") as settings:
         json.dump(vals, settings, sort_keys=True, indent=4)
+    if not os.path.exists("data"):
+        os.makedirs("data")
+    with open("data/stopwords.txt", 'a') as stopfile:
+        stopfile.write("")
 
 if __name__ == "__main__":
     main()
