@@ -25,8 +25,8 @@ from classification.results import ResultsNER, ResultSetNER
 from classification.rext.jsrekernel import JSREKernel
 #from classification.rext.multir import MultiR
 from classification.rext.rules import RuleClassifier
-from classification.rext.scikitre import ScikitRE
-from classification.rext.stanfordre import StanfordRE
+#from classification.rext.scikitre import ScikitRE
+#from classification.rext.stanfordre import StanfordRE
 from classification.rext.svmtk import SVMTKernel
 from config import config
 from reader.aimed_corpus import AIMedCorpus
@@ -236,12 +236,12 @@ considered when coadministering with megestrol acetate.''',
                 model = JSREKernel(corpus, options.ptype, modelname=options.tag)
             elif options.kernel == "svmtk":
                 model = SVMTKernel(corpus, options.ptype, modelname=options.tag)
-            elif options.kernel == "stanfordre":
-                model = StanfordRE(corpus, options.ptype)
+            #elif options.kernel == "stanfordre":
+            #    model = StanfordRE(corpus, options.ptype)
             #elif options.kernel == "multir":
             #    model = MultiR(corpus, options.ptype)
-            elif options.kernel == "scikit":
-                model = ScikitRE(corpus, options.ptype)
+            #elif options.kernel == "scikit":
+            #    model = ScikitRE(corpus, options.ptype)
             #elif options.kernel == "crf":
             #    model = CrfSuiteRE(corpus, options.ptype)
             elif options.kernel == "mil":
