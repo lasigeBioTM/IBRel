@@ -238,12 +238,12 @@ considered when coadministering with megestrol acetate.''',
                 model = SVMTKernel(corpus, options.ptype, modelname=options.tag)
             elif options.kernel == "stanfordre":
                 model = StanfordRE(corpus, options.ptype)
-            elif options.kernel == "multir":
-                model = MultiR(corpus, options.ptype)
+            #elif options.kernel == "multir":
+            #    model = MultiR(corpus, options.ptype)
             elif options.kernel == "scikit":
                 model = ScikitRE(corpus, options.ptype)
-            elif options.kernel == "crf":
-                model = CrfSuiteRE(corpus, options.ptype)
+            #elif options.kernel == "crf":
+            #    model = CrfSuiteRE(corpus, options.ptype)
             elif options.kernel == "mil":
                 relations = set()
                 with open("corpora/transmir/transmir_relations.txt") as rfile:
