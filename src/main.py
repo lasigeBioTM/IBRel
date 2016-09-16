@@ -21,9 +21,9 @@ from classification.ner.simpletagger import BiasModel, feature_extractors
 from classification.ner.stanfordner import StanfordNERModel
 from classification.ner.taggercollection import TaggerCollection
 from classification.results import ResultsNER, ResultSetNER
-from classification.rext.crfre import CrfSuiteRE
+#from classification.rext.crfre import CrfSuiteRE
 from classification.rext.jsrekernel import JSREKernel
-from classification.rext.multir import MultiR
+#from classification.rext.multir import MultiR
 from classification.rext.rules import RuleClassifier
 from classification.rext.scikitre import ScikitRE
 from classification.rext.stanfordre import StanfordRE
