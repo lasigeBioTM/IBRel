@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 import MySQLdb
 import sys
-from chebi_resolution import find_chebi_term
 import os
 import pickle
 from optparse import OptionParser
 import logging
-from config.config import chebi_conn as db
-from config.config import go_conn as dbwebgo
+from config import config
+if config.use_chebi:
+    from config.config import chebi_conn as db
+if config.use_go:
+    from config.config import go_conn as dbwebgo
 
 measures = ['resnik', 'simui', 'simgic', 'simgic_hindex', 'simui_hindex']
 go_measures = ["resnik_go", "simui_go", "simui_hindex_go", "simgic_hindex_go"]

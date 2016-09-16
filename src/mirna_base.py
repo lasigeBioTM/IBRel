@@ -212,7 +212,7 @@ class MirbaseDB(object):
 
         if os.path.isfile(self.path + mirbasegraph_name):
             logging.info("Loading miRbase...")
-            self.g.load(self.path +  mirbasegraph_name)
+            self.g.load(self.path + mirbasegraph_name)
             # print "Opened graph with {} triples".format(len(self.g))
             self.get_label_to_acc()
             self.choices = self.labels.keys()

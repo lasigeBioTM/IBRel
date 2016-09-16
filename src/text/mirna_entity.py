@@ -5,7 +5,8 @@ import re
 from mirna_base import MirbaseDB, MIRBASE
 from text.entity import Entity
 from config import config
-from config.config import go_conn as db
+if config.use_go:
+    from config.config import go_conn as db
 __author__ = 'Andre'
 
 mirna_stopwords = set(["mediated", "expressing", "deficient", "transfected", "dependent", "family", "specific", "null",
