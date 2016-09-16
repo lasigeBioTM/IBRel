@@ -1,7 +1,7 @@
 import codecs
 import logging
 import math
-import word2vec
+#import word2vec
 import itertools
 import pycrfsuite
 import sys
@@ -27,11 +27,11 @@ class CrfSuiteRE(ReModel):
         self.modelname = ptype + "_" + modelname
         self.gold_relations = set()
         self.tair_pairs = load_tair_relations()
-        self.vecmodel = word2vec.load("corpora/Thaliana/documents-processed" + '.bin')
+        #self.vecmodel = word2vec.load("corpora/Thaliana/documents-processed" + '.bin')
         with codecs.open("seedev_relation.txt", 'r', 'utf-8') as relfile:
             for r in relfile:
                 self.gold_relations.add(r.strip())
-        self.clusters = word2vec.load_clusters("corpora/Thaliana/documents-processed-clusters.txt")
+        #self.clusters = word2vec.load_clusters("corpora/Thaliana/documents-processed-clusters.txt")
         #with codecs.open("corpora/Thaliana/documents-clusters.txt", "r", "utf-8") as clusterfile:
         #    for l in clusterfile:
         #        values = l.strip().split(" ")
@@ -286,6 +286,3 @@ class CrfSuiteRE(ReModel):
                         results.pairs[pid].recognized_by["crf"] = 1
         results.corpus = corpus
         return results
-
-
-   
