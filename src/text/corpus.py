@@ -320,6 +320,13 @@ class Corpus(object):
 
         print sum(diff_count) * 1.0 / len(diff_count)
 
+    def convert_to(self, format, output_path):
+        if format == "brat":
+            self.convert_to_brat(output_path)
+
+    def convert_to_brat(self, output_path):
+        pass
+
 
 def netcat(hostname, port, content):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
