@@ -2,13 +2,11 @@ import argparse
 import logging
 import time
 import cPickle as pickle
-from memory_profiler import profile
 from classification.rext.multiinstance import MILClassifier
 from config.corpus_paths import paths
 from evaluate import get_gold_ann_set, get_list_results, get_relations_results
 from text.corpus import Corpus
 
-# @profile
 def main():
     start_time = time.time()
     parser = argparse.ArgumentParser(description='')
