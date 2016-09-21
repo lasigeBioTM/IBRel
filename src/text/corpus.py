@@ -1,4 +1,6 @@
 from __future__ import division, absolute_import
+
+import codecs
 import logging
 import pickle
 import random
@@ -323,9 +325,18 @@ class Corpus(object):
     def convert_to(self, format, output_path):
         if format == "brat":
             self.convert_to_brat(output_path)
+        if format == "csv":
+            self.convert_to_csv(output_path)
 
     def convert_to_brat(self, output_path):
         pass
+
+    def convert_to_csv(self, output_path, entities=False, relations=False):
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
+        with codecs.open("{}/documents.txt".format(output_path), "w", 'utf-8') as output_file:
+            for did in self.documents:
+                output_file.write(u"{}\t{}\n".format(did, self.documents[did].text))
 
 
 def netcat(hostname, port, content):

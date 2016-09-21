@@ -36,7 +36,7 @@ def main():
         corpus_path = paths[goldstd]["corpus"]
         logging.info("loading corpus %s" % corpus_path)
         corpus = pickle.load(open(corpus_path, 'rb'))
-        corpus.convert_to(options.format, option.path)
+        corpus.convert_to(options.format, options.path)
 
 
     total_time = time.time() - start_time
