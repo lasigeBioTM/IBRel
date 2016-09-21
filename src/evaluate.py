@@ -225,7 +225,7 @@ def get_relations_results(results, model, gold_pairs, ths, rules, compare_text=T
         # npairs += len(results.document_pairs[did].pairs)
         for p in results.document_pairs[did].pairs:
             pcount += 1
-            if p.recognized_by.get(model) == 1:
+            if p.recognized_by.get(model) > 0:
                 val = p.validate()
                 if val:
                     ptrue += 1

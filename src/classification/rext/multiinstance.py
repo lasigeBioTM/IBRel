@@ -7,6 +7,8 @@ import sys
 from collections import Counter
 
 import gc
+
+import math
 import misvm
 from nltk import Tree
 from sklearn.externals import joblib
@@ -38,7 +40,7 @@ class MILClassifier(ReModel):
         self.resultsfile = None
         self.examplesfile = None
         self.ner_model = ner
-        self.vectorizer = CountVectorizer(min_df=0.1, ngram_range=(1, 1), token_pattern=r'\b\w+\-\w+\b')
+        self.vectorizer = CountVectorizer(min_df=0.2, ngram_range=(1, 1), token_pattern=r'\b\w+\-\w+\b')
         self.corpus = corpus
 
         #self.vectorizer = TfidfVectorizer(min_df=0.2, ngram_range=(1, 1), token_pattern=r'\b\w+\-\w+\b', max_features=)
@@ -69,10 +71,12 @@ class MILClassifier(ReModel):
             # print self.ner_model, sentence_entities
             for pair in itertools.permutations(sentence_entities, 2):
                 if pair[0].type in pairtypes[0] and pair[1].type in pairtypes[1] and pair[0].normalized_score > 0 and pair[1].normalized_score > 0:
-                    if test is False:
-                        bag = (sentence.did, pair[0].normalized, pair[1].normalized)
-                    else:
+                    if test:
                         bag = (pair[0].normalized, pair[1].normalized)
+                    else:
+                        bag = (sentence.did, pair[0].normalized, pair[1].normalized)
+                    #bag = (sentence.did, pair[0].normalized, pair[1].normalized)
+                    # print bag
                     if bag not in self.instances:
 
                         self.instances[bag] = []
@@ -92,6 +96,7 @@ class MILClassifier(ReModel):
                     self.instances[bag].append(pair_features)
         logging.info("True/total relations:{}/{} ({})".format(truepcount, pcount,
                                                               str(1.0 * truepcount / (pcount + 1))))
+        print "total bags:", len(self.instances)
 
     def write_to_file(self, filepath):
         with codecs.open(filepath, 'a', 'utf-8') as f:
@@ -180,6 +185,7 @@ class MILClassifier(ReModel):
         results = ResultsRE(self.resultsfile)
         for i, pred in enumerate(self.predicted):
             if pred >= 0:
+                score = 1.0 / (1.0 + math.exp(-pred))
                 bag = self.bag_pairs[i]
                 pairs = self.pairs[bag]
                 for pair in pairs:
@@ -192,7 +198,7 @@ class MILClassifier(ReModel):
                     results.document_pairs[did].add_pair(pair, "mil")
                     pid = did + ".p" + str(len(results.pairs))
                     results.pairs[pid] = pair
-                    results.pairs[pid].recognized_by["mil"] = 1
+                    results.pairs[pid].recognized_by["mil"] = score
         results.corpus = corpus
         return results
 

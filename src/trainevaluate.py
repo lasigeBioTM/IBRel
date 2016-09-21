@@ -2,6 +2,10 @@ import argparse
 import logging
 import time
 import cPickle as pickle
+from collections import OrderedDict
+from terminaltables import AsciiTable, DoubleTable, SingleTable
+from textwrap import wrap
+from memory_profiler import profile
 from classification.rext.multiinstance import MILClassifier
 from config.corpus_paths import paths
 from evaluate import get_gold_ann_set, get_list_results, get_relations_results
@@ -88,13 +92,67 @@ def main():
         results.path = options.results + "-" + options.test[i]
         results.save(options.results + "-" + options.test[i] + ".pickle")
         results.load_corpus(options.test[i])
-        logging.info("loading gold standard %s" % paths[options.test[i]]["annotations"])
-        goldset = get_gold_ann_set(paths[options.test[i]]["format"], paths[options.test[i]]["annotations"],
-                                   options.etype, options.ptype, paths[options.test[i]]["text"])
-        if options.test[i] in ("transmir_annotated", "miRTex_test"):
-            get_list_results(results, options.kernel, goldset[1], {}, options.rules, mode="re")
+        if options.test[i] != "mirna_cf_annotated":
+            logging.info("loading gold standard %s" % paths[options.test[i]]["annotations"])
+            goldset = get_gold_ann_set(paths[options.test[i]]["format"], paths[options.test[i]]["annotations"],
+                                       options.etype, options.ptype, paths[options.test[i]]["text"])
+            if options.test[i] in ("transmir_annotated", "miRTex_test"):
+                get_list_results(results, options.kernel, goldset[1], {}, options.rules, mode="re")
+            else:
+                get_relations_results(results, options.kernel, goldset[1], {}, options.rules)
         else:
-            get_relations_results(results, options.kernel, goldset[1], {}, options.rules)
+            total_entities = 0
+            for sentence in test_corpus.get_sentences(options.models[1]):
+                for e in sentence.entities.elist[options.models[1]]:
+                    if e.normalized_score > 0:
+                        total_entities += 1
+            print "total entities:", total_entities
+            #sysresults = results.corpus.get_unique_results(options.kernel, {}, options.rules, mode="re")
+            sysresults = []
+            for did in results.corpus.documents:
+                for p in results.corpus.documents[did].pairs.pairs:
+                    if options.kernel in p.recognized_by:
+                        sentence = results.corpus.documents[did].get_sentence(p.entities[0].sid)
+                        # print p.entities[0].text, p.entities[1].text
+                        sysresults.append((p.entities[0].sid,
+                                           p.entities[0].normalized,
+                                           p.entities[1].normalized,
+                                           "{}=>{}".format(p.entities[0].normalized,
+                                                           p.entities[1].normalized),
+                                           p.recognized_by[options.kernel],
+                                           sentence.text))
+            rels = {}
+            for x in sysresults:
+                pair = (x[1], x[2])
+                if pair not in rels:
+                    rels[pair] = []
+                #print x[0], x[-1], x[3]
+                stext = x[0] + ": " + x[-1] + " (" + x[3] + ")"
+                # stext = ""
+                add = True
+                for i in rels[pair]:
+                    if i[0].startswith(x[0]):
+                        add = False
+                        break
+                if add:
+                    rels[pair].append((stext, x[4]))
+            # for t in rels.items():
+            #     print t
+            o = OrderedDict(sorted(rels.items(), key=lambda t: t[1][0][1], reverse=True))
+            for x in o:
+                print x, len(o[x])
+                for s in o[x]:
+                    print "\t", s[0].encode("utf-8")
+                print
+            for x in o:
+                conf = round(o[x][0][1], 3)
+                unique_dids = set([sid[0].split(".")[0] for sid in o[x]])
+                # print unique_dids
+                print x[0] + "\t" + x[1] + "\t" + str(len(o[x])) + "\t" + str(len(unique_dids)) + "\t" + str(conf)
+            #max_width = table_instance.column_max_width(2)
+            #for i, line in enumerate(table_instance.table_data):
+            #    wrapped_string = '\n'.join(wrap(line[2], max_width))
+            #    table_instance.table_data[i][2] = wrapped_string
 
     total_time = time.time() - start_time
     print "Total time: %ss" % total_time

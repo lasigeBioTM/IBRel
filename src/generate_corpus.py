@@ -18,8 +18,10 @@ from text.document import Document
 
 
 def get_pubmed_abstracts(terms, corpus_text_path, negative_pmids):
-    mesh = "+".join([t + "[mesh]" for t in terms])
-    query = {"term": "{}+hasabstract[text]".format(mesh),
+    # searchterms = "+".join([t + "[mesh]" for t in terms])
+    searchterms = '(("cystic fibrosis"[MeSH Terms] OR ("cystic"[All Fields] AND "fibrosis"[All Fields]) OR "cystic fibrosis"[All Fields])\
+                   AND ("micrornas"[MeSH Terms] OR "micrornas"[All Fields] OR "mirna"[All Fields])) AND ("2011/09/04"[PDat] : "2016/09/01"[PDat])'
+    query = {"term": "{}+hasabstract[text]".format(searchterms),
              #"mindate": "2006",
              #"retstart": "7407",
              "retmax": "10000",
@@ -133,10 +135,14 @@ def annotate_corpus_relations(corpus, model, corpuspath):
     corpus.save(corpuspath)
 negative_pmids = open("negative_pmids.txt", 'r').readlines()
 
+if len(sys.argv) > 2:
+    corpus_path = sys.argv[2]
+else:
+    corpus_path = "corpora/mirna-ds/abstracts.txt"
 if sys.argv[1] == "download":
-    get_pubmed_abstracts(["mirna"], "corpora/mirna-ds/abstracts.txt", negative_pmids)
+    get_pubmed_abstracts(["mirna"], corpus_path, negative_pmids)
 elif sys.argv[1] == "process":
-    process_documents("corpora/mirna-ds/abstracts_11k.txt")
+    process_documents(corpus_path)
 elif sys.argv[1] == "annotate":
     results = pickle.load(open("results/mirna_ds_entities.pickle", 'rb'))
     results.load_corpus("mirna_ds")
