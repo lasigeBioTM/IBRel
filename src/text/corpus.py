@@ -336,7 +336,7 @@ class Corpus(object):
             os.makedirs(output_path)
         with codecs.open("{}/documents.txt".format(output_path), "w", 'utf-8') as output_file:
             for did in self.documents:
-                output_file.write(u"{}\t{}\n".format(did, self.documents[did].text))
+                output_file.write(u"{}\t{}\n".format(did, self.documents[did].text.replace("\n", " ")))
 
 
 def netcat(hostname, port, content):
