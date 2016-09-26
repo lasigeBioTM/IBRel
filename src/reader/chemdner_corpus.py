@@ -40,15 +40,15 @@ class ChemdnerCorpus(Corpus):
                 if process:
                     newdoc.process_document(corenlpserver, "biomedical")
                 self.documents[newdoc.did] = newdoc
-                n_lines += 1
                 abs_time = time.time() - t
                 time_per_abs.append(abs_time)
-                pbar.update(n_lines+1)
+                pbar.update(n_lines)
+                n_lines += 1
         pbar.finish()
         abs_avg = sum(time_per_abs)*1.0/len(time_per_abs)
         logging.info("average time per abstract: %ss" % abs_avg)
 
-    def load_annotations(self, ann_dir, entitytype="chemical"):
+    def load_annotations(self, ann_dir, entitytype="chemical", pairtype=None):
         # total_lines = sum(1 for line in open(ann_dir))
         # n_lines = 1
         logging.info("loading annotations file...")
