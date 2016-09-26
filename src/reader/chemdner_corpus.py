@@ -66,7 +66,11 @@ class ChemdnerCorpus(Corpus):
                             title_offset = len(self.documents[pmid].title) + 1
                         start, end = start + title_offset, end + title_offset
                         sentence = self.documents[pmid].find_sentence_containing(start, end, chemdner=False)
-                        sentence.tag_entity(start, end, chemt, text=text)
+                        if sentence:
+                            sentence.tag_entity(start, end, chemt, text=text)
+                        else:
+                            print "sentence not found between:", start, end
+                            print "ignored ", text
                 else:
                     logging.info("%s not found!" % pmid)
 
