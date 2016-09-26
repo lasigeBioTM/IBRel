@@ -1,8 +1,8 @@
 #!/bin/sh
-set -x
+set -e
 # Start StanfordCoreNLP server
 cd bin/stanford-corenlp-full-2015-12-09
-java -mx4g -cp "*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port 9000 > corenlp.log &
+java -mx4g -cp "*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port 9000 &
 cd ../..
 #
 python src/main.py load_corpus --goldstd cemp_sample
