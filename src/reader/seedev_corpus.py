@@ -26,12 +26,6 @@ from sklearn.pipeline import Pipeline
 from sklearn.svm import LinearSVC
 
 from config.seedev_types import ds_pair_types, all_entity_groups, all_entity_types, pair_types
-from classification.rext.jsrekernel import JSREKernel
-from classification.rext.multir import MultiR
-from classification.rext.rules import RuleClassifier
-from classification.rext.scikitre import ScikitRE
-from classification.rext.stanfordre import StanfordRE
-from classification.rext.svmtk import SVMTKernel
 from config import config
 from text.corpus import Corpus
 from text.document import Document
