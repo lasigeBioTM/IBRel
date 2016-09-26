@@ -1,4 +1,4 @@
-import codecs
+import io
 import time
 import sys
 import logging
@@ -28,12 +28,13 @@ class ChemdnerCorpus(Corpus):
         pbar = pb.ProgressBar(widgets=widgets, maxval=total_lines).start()
         n_lines = 1
         time_per_abs = []
-        with codecs.open(self.path, 'r', "utf-8") as inputfile:
+        with io.open(self.path, 'r', encoding="utf-8") as inputfile:
             for line in inputfile:
                 t = time.time()
                 # each line is PMID  title   abs
                 tsv = line.split('\t')
-                doctext = tsv[2].strip().replace("<", "(").replace(">", ")")
+                doctext = tsv[1].strip().replace("<", "(").replace(">", ")") + " "
+                doctext += tsv[2].strip().replace("<", "(").replace(">", ")")
                 newdoc = Document(doctext, process=False,
                                   did=tsv[0], title=tsv[1].strip())
                 newdoc.sentence_tokenize("biomedical")
@@ -52,22 +53,27 @@ class ChemdnerCorpus(Corpus):
         # total_lines = sum(1 for line in open(ann_dir))
         # n_lines = 1
         logging.info("loading annotations file...")
-        with codecs.open(ann_dir, 'r', "utf-8") as inputfile:
+        with io.open(ann_dir, 'r', encoding="utf-8") as inputfile:
             for line in inputfile:
                 # logging.info("processing annotation %s/%s" % (n_lines, total_lines))
                 pmid, doct, start, end, text, chemt = line.strip().split('\t')
+                start, end = int(start), int(end)
                 #pmid = "PMID" + pmid
                 if pmid in self.documents:
                     if entitytype == "all" or entitytype == "chemical" or entitytype == chemt:
-                        self.documents[pmid].tag_chemdner_entity(int(start), int(end),
-                                                             chemt, text=text, doct=doct)
+                        title_offset = 0
+                        if doct == "A":
+                            title_offset = len(self.documents[pmid].title) + 1
+                        start, end = start + title_offset, end + title_offset
+                        sentence = self.documents[pmid].find_sentence_containing(start, end, chemdner=False)
+                        sentence.tag_entity(start, end, chemt, text=text)
                 else:
                     logging.info("%s not found!" % pmid)
 
 def write_chemdner_files(results, models, goldset, ths, rules):
     """ results files for CHEMDNER CEMP and CPD tasks"""
     print "saving results to {}".format(results.path + ".tsv")
-    with codecs.open(results.path + ".tsv", 'w', 'utf-8') as outfile:
+    with io.open(results.path + ".tsv", 'w', encoding='utf-8') as outfile:
         cpdlines, max_entities = results.corpus.write_chemdner_results(models, outfile, ths, rules)
     cpdlines = sorted(cpdlines, key=itemgetter(2))
     with open(results.path + "_cpd.tsv", "w") as cpdfile:
@@ -92,19 +98,32 @@ def run_chemdner_evaluation(goldstd, results, format=""):
     return r
 
 
-def get_chemdner_gold_ann_set(goldann="CHEMDNER/CHEMDNER_TEST_ANNOTATION/chemdner_ann_test_13-09-13.txt"):
+def get_chemdner_gold_ann_set(goldann, etype, text_path, doctype):
     """
     Load the CHEMDNER annotations to a set
     :param goldann: Path to CHEMDNER annotation file
     :return: Set of gold standard annotations
     """
-    with codecs.open(goldann, 'r', 'utf-8') as goldfile:
+    with io.open(goldann, 'r', encoding='utf-8') as goldfile:
             gold = goldfile.readlines()
+    # get corpus text to retrieve entity text and title length
+    docs = {}
+    with io.open(text_path, 'r', encoding='utf-8') as textfile:
+        for i in textfile:
+            docid, title, abs = i.strip().split("\t")
+            docs[docid + ".T"] = title
+            docs[docid + ".A"] = abs
     goldlist = []
+    # iterate gold annotations file
     for line in gold:
-        #pmid, T/A, start, end
+        #docID.T/A, start, end, text
         x = line.strip().split('\t')
-        goldlist.append((x[0], x[1] + ":" + x[2] + ":" + x[3], '1'))
+        start, end = int(x[2]), int(x[3])
+        entity_text = docs[x[0] + "." + x[1]][start:end]
+        title_offset = 0
+        if x[1] == "A":
+            title_offset = len(docs[x[0] + ".T"]) + 1
+        goldlist.append((x[0], start + title_offset, end + title_offset, entity_text))
     #print goldlist[0:2]
     goldset = set(goldlist)
     return goldset, None

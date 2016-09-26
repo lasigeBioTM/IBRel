@@ -38,7 +38,7 @@ from classification.results import ResultsNER
 
 def get_gold_ann_set(corpus_type, gold_path, entity_type, pair_type, text_path):
     if corpus_type == "chemdner":
-        goldset = get_chemdner_gold_ann_set(gold_path)
+        goldset = get_chemdner_gold_ann_set(gold_path, entity_type, text_path, corpus_type)
     elif corpus_type == "tempeval":
         goldset = get_thymedata_gold_ann_set(gold_path, entity_type, text_path, corpus_type)
     elif corpus_type == "pubmed":

@@ -246,7 +246,8 @@ class Entities(object):
                         exclude.append(contained_by)
                     toadd, v, overlapped, to_exclude = offsets.add_offset(eid_offset, exclude_this_if=exclude, exclude_others_if=[])
                     if toadd:
-                        extra_info = ['genia_tags:"' + "+".join([t.genia_tag for t in e.tokens]) + '"']
+                        # extra_info = ['genia_tags:"' + "+".join([t.genia_tag for t in e.tokens]) + '"']
+                        extra_info = []
                         extra_info.append('recognized_by:"' + "+".join(e.recognized_by) + '"')
                         spans.append((e.dstart, e.dend, e.text, extra_info))
                         # logging.info("added {}".format(e.text))
