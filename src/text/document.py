@@ -52,9 +52,9 @@ class Document(object):
         :param doctype: Can be used in the future to choose different methods
         """
         # first sentence should be the title if it exists
-        if self.title:
-            sid = self.did + ".s0"
-            self.sentences.append(Sentence(self.title, sid=sid, did=self.did))
+        #if self.title:
+        #    sid = self.did + ".s0"
+        #    self.sentences.append(Sentence(self.title, sid=sid, did=self.did))
         # inputtext = clean_whitespace(self.text)
         inputtext = self.text
         with codecs.open("/tmp/geniainput.txt", 'w', 'utf-8') as geniainput:

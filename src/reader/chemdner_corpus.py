@@ -36,7 +36,7 @@ class ChemdnerCorpus(Corpus):
                 doctext = tsv[1].strip().replace("<", "(").replace(">", ")") + " "
                 doctext += tsv[2].strip().replace("<", "(").replace(">", ")")
                 newdoc = Document(doctext, process=False,
-                                  did=tsv[0], title=tsv[1].strip())
+                                  did=tsv[0], title=tsv[1].strip() + ".")
                 newdoc.sentence_tokenize("biomedical")
                 if process:
                     newdoc.process_document(corenlpserver, "biomedical")
@@ -63,7 +63,7 @@ class ChemdnerCorpus(Corpus):
                     if entitytype == "all" or entitytype == "chemical" or entitytype == chemt:
                         title_offset = 0
                         if doct == "A":
-                            title_offset = len(self.documents[pmid].title) + 1
+                            title_offset = len(self.documents[pmid].title)
                         start, end = start + title_offset, end + title_offset
                         sentence = self.documents[pmid].find_sentence_containing(start, end, chemdner=False)
                         if sentence:
@@ -71,6 +71,9 @@ class ChemdnerCorpus(Corpus):
                         else:
                             print "sentence not found between:", start, end
                             print "ignored ", text
+                            print len(self.documents[pmid].title), self.documents[pmid].title
+                            for s in self.documents[pmid].sentences:
+                                print s.sid, s.tokens[0].dstart, s.tokens[-1].dend, s.text
                 else:
                     logging.info("%s not found!" % pmid)
 
