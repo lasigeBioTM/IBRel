@@ -16,11 +16,14 @@ Framework for identifying biomedical entities
 * requirements.txt - run `pip install -r requirements.txt`
 
 ## Configuration
+A Dockerfile is provided to help with the installation.
+Build and then run with the `-i` flag.
 After setting up the dependencies, you have to run `python src/config/config.py` to set up some values.
 You can use the [CHEMDNER-patents sample data](http://www.biocreative.org/media/store/files/2015/chemdner_patents_sample_v02.tar.zip) to check if the system is working correctly.
+Then run ./benchmarks/check_setup.sh to confirm if everything is set up correctly.
 
 ## Usage
-To run distant supervision multi-instance learning experiments, use src/trainevaluate.py and check mil.sh for example.
+To run distant supervision multi-instance learning experiments, use src/trainevaluate.py and check mil.sh for an example.
 
 You can either run the system in batch or server mode.
 Batch mode expects specific data formats and can be used to train classifiers and evaluate on a test set.
