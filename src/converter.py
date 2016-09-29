@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 import time
 import cPickle as pickle
 from config.corpus_paths import paths
@@ -15,7 +16,7 @@ def main():
     parser.add_argument("--pairtype", dest="ptype", help="type of pairs to be considered", default="all")
     parser.add_argument("--log", action="store", dest="loglevel", default="WARNING", help="Log level")
     parser.add_argument("--results", dest="results", help="Results object pickle.")
-    parser.add_argument("--format", dest="format", help="Output format.")
+    parser.add_argument("--format", dest="format", help="Output format.", default=None)
     parser.add_argument("--path", dest="path", help="Output path.")
     options = parser.parse_args()
 
@@ -38,6 +39,16 @@ def main():
         corpus = pickle.load(open(corpus_path, 'rb'))
         corpus.convert_to(options.format, options.path)
 
+    if options.results:
+        logging.info("loading results %s" % options.results + ".pickle")
+        if os.path.exists(options.results + ".pickle"):
+            results = pickle.load(open(options.results + ".pickle", 'rb'))
+            results.load_corpus(options.corpus[0])
+            results.path = options.results
+            results.convert_to(options.format, options.path, options.etype)
+        else:
+            print "results not found"
+            print options.results
 
     total_time = time.time() - start_time
     print "Total time: %ss" % total_time
