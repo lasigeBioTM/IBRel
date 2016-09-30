@@ -333,7 +333,7 @@ class Corpus(object):
             os.makedirs(output_path)
         for did in self.documents:
             with io.open("{}/{}.txt".format(output_path, did), "w", encoding='utf-8') as output_file:
-                output_file.write(self.documents[did].text)
+                output_file.write(unicode(self.documents[did].text, "utf-8"))
 
     def convert_to_csv(self, output_path, entities=False, relations=False):
         if not os.path.exists(output_path):

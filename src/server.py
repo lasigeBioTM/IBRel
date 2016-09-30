@@ -12,6 +12,7 @@ import codecs
 import cPickle as pickle
 import random
 import string
+import MySQLdb
 
 from text.document import Document
 from text.corpus import Corpus
@@ -26,21 +27,100 @@ from postprocessing.ssm import add_ssm_score
 
 
 
-class IICEServer(object):
+class IBENT(object):
 
-    def __init__(self, basemodel, ensemble_model, submodels):
+    def __init__(self, entities, relations):
         self.corenlp = StanfordCoreNLP(config.corenlp_dir)
-        self.basemodel = basemodel
-        self.ensemble_model = ensemble_model
-        self.subtypes = submodels
-        self.models = TaggerCollection(basepath=self.basemodel)
-        self.models.load_models()
-        self.ensemble = EnsembleNER(self.ensemble_model, None, self.basemodel + "_combined", types=self.subtypes,
-                                   features=[])
-        self.ensemble.load()
+        #self.basemodel = basemodel
+        #self.ensemble_model = ensemble_model
+        #self.subtypes = submodels
+        #self.models = TaggerCollection(basepath=self.basemodel)
+        #self.models.load_models()
+        #self.ensemble = EnsembleNER(self.ensemble_model, None, self.basemodel + "_combined", types=self.subtypes,
+        #                           features=[])
+        #self.ensemble.load()
+        self.db_conn = None
+        self.entity_classifiers = {}
+        for e in entities:
+            self.entity_classifiers[e] = None # one classifier for each type of entity
+
+        self.relation_classifiers = {}
+        for r in relations:
+            self.relation_classifiers[r] = {}
+        self.setup()
+
+    def setup(self):
+        # Connect to DB
+        self.db_conn = MySQLdb.connect(host=config.doc_host,
+                                 user=config.doc_user,
+                                 passwd=config.doc_pw,
+                                 db=config.doc_db)
+        # Connect to CoreNLP
+        #self.corenlp = StanfordCoreNLP(config.corenlp_dir)
+
+        #Load StanfordNER models stored in a specific directory
+        self.load_models()
 
     def hello(self):
-        return "Hello World!"
+        return "OK!"
+
+    def load_models(self):
+        pass
+
+    def get_document(self, doctag):
+        cur = self.db_conn.cursor()
+        query = """SELECT distinct id, doctag, title, doctext
+                       FROM document
+                       WHERE doctag =%s;"""
+        # print "QUERY", query
+        cur.execute(query, (doctag,))
+
+        res = cur.fetchone()
+        if res is not None:
+            return str(res)
+
+    def new_document(self, doctag):
+        data = bottle.request.json
+        text = data["text"]
+        title = data.get("title")
+        format = data["format"]
+        cur = self.db_conn.cursor()
+        query = """INSERT INTO document(doctag, title, doctext) VALUES (%s, %s, %s);"""
+        # print "QUERY", query
+        try:
+            cur.execute(query, (doctag, title, text))
+            self.db_conn.commit()
+            inserted_id = cur.lastrowid
+            self.create_sentences(doctag, text)
+
+            return str(inserted_id)
+        except MySQLdb.MySQLError as e:
+            self.db_conn.rollback()
+            print e
+            return "error adding new document"
+
+    def create_sentences(self, doctag, text):
+        cur = self.db_conn.cursor()
+        newdoc = Document(text, process=False,
+                                  did=doctag)
+        newdoc.sentence_tokenize("biomedical")
+        for sentence in newdoc.sentences:
+            query = """INSERT INTO sentence(senttag, doctag, senttext, sentoffset) VALUES (%s, %s, %s, %s);"""
+            try:
+                cur.execute(query, (sentence.sid, doctag, sentence.text, sentence.offset))
+                self.db_conn.commit()
+                #inserted_id = cur.lastrowid
+
+                #return str(inserted_id)
+            except MySQLdb.MySQLError as e:
+                self.db_conn.rollback()
+                print e
+                #return "error adding new sentence"
+
+    def run_annotator(self, ):
+        data = bottle.request.json
+
+
 
     def process_pubmed(self, pmid):
         title, text = pubmed.get_pubmed_abs(pmid)
@@ -183,40 +263,26 @@ def main():
     logging.basicConfig(level=numeric_level, format=logging_format)
     logging.getLogger().setLevel(numeric_level)
 
-    base_model = "models/chemdner_train"
-    ensemble_model = "models/ensemble_ner/train_on_dev"
-    #submodels = [base_model + "_" + t for t in ChemdnerCorpus.chemdner_types]
-    if base_model.split("/")[-1].startswith("chemdner+ddi"):
-        subtypes = ["drug", "group", "brand", "drug_n"] + ["IDENTIFIER", "MULTIPLE",
-                                                                 "FAMILY", "FORMULA", "SYSTEMATIC",
-                                                                 "ABBREVIATION", "TRIVIAL"] + ["chemdner", "ddi"]
-    elif base_model.split("/")[-1].startswith("ddi"):
-        subtypes = ["drug", "group", "brand", "drug_n", "all"]
-    elif base_model.split("/")[-1].startswith("chemdner"):
-        subtypes = ["IDENTIFIER", "MULTIPLE", "FAMILY", "FORMULA", "SYSTEMATIC", "ABBREVIATION", "TRIVIAL", "all"]
-    submodels = ['_'.join(base_model.split("_")[:]) + "_" + t for t in subtypes[:-1]] #ignore the "all"
     logging.debug("Initializing the server...")
-    server = IICEServer(base_model, ensemble_model, submodels)
+    server = IBENT(entities=[("mirna/mirtex_train_mirna_sner", "stanfordner")], relations=[])
     logging.debug("done.")
-    load_time = time.time() - starttime
-    starttime = time.time()
-    '''if options.test:
-        text = "Primary Leydig cells obtained from bank vole testes and the established tumor Leydig cell line (MA-10) have been used to explore the effects of 4-tert-octylphenol (OP). Leydig cells were treated with two concentrations of OP (10(-4)M, 10(-8)M) alone or concomitantly with anti-estrogen ICI 182,780 (1M). In OP-treated bank vole Leydig cells, inhomogeneous staining of estrogen receptor (ER) within cell nuclei was found, whereas it was of various intensity among MA-10 Leydig cells. The expression of ER mRNA and protein decreased in both primary and immortalized Leydig cells independently of OP dose. ICI partially reversed these effects at mRNA level while at protein level abrogation was found only in vole cells. Dissimilar action of OP on cAMP and androgen production was also observed. This study provides further evidence that OP shows estrogenic properties acting on Leydig cells. However, its effect is diverse depending on the cellular origin. "
-        logging.debug("test with this text: {}".format(text))
-        output = server.process_multiple(text)
-        print output
-        process_time = time.time() - starttime
-        # second document
-        text = "Azole class of compounds are well known for their excellent therapeutic properties. Present paper describes about the synthesis of three series of new 1,2,4-triazole and benzoxazole derivatives containing substituted pyrazole moiety (11a-d, 12a-d and 13a-d). The newly synthesized compounds were characterized by spectral studies and also by C, H, N analyses. All the synthesized compounds were screened for their analgesic activity by the tail flick method. The antimicrobial activity of the new derivatives was also performed by Minimum Inhibitory Concentration (MIC) by the serial dilution method. The results revealed that the compound 11c having 2,5-dichlorothiophene substituent on pyrazole moiety and a triazole ring showed significant analgesic and antimicrobial activity."
-        logging.debug("test with this text: {}".format(text))
-        output = server.process_multiple(text)
-        print output
-        logging.info("loading time: {}; process time: {}".format(load_time, process_time))
-    else:'''
-    bottle.route("/hello")(server.hello)
-    bottle.route("/iice/chemical/entities", method='POST')(server.process_multiple)
+    # Test server
+    bottle.route("/ibent/status")(server.hello)
+
+    # Fetch an existing document
+    bottle.route("/ibent/<doctag>")(server.get_document)
+
+    # Create a new document
+    bottle.route("/ibent/<doctag>", method='POST')(server.new_document)
+
+    # Get new miRNA entity annotations i.e. run a classifier again
+    bottle.route("/ibent/entities/<annotator>", method='POST')(server.run_annotator)
+
+    # Get miRNA entity annotations i.e. fetch from the database
+    bottle.route("/ibent/entities/<annotator>")(server.get_annotations)
+
     #bottle.route("/iice/chemical/<text>/<modeltype>", method='POST')(server.process)
-    bottle.route("/iice/chemical/interactions", method='POST')(server.get_relations)
+    bottle.route("/ibent/interactions", method='POST')(server.get_relations)
     #daemon_run(host='10.10.4.63', port=8080, logfile="server.log", pidfile="server.pid")
     bottle.run(host=config.host_ip, port=8080, DEBUG=True)
 if __name__ == "__main__":

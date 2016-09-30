@@ -17,15 +17,21 @@ def main():
             text = sys.argv[1]
         data = {"text": text, "format": "json"}
         # r = requests.post('http://10.10.4.63:8080/iice/chemical/entities', json=data)
-        r = requests.post('http://127.0.0.1:8080/iice/chemical/entities', json=data)
+        # Submit new document
+        r = requests.post('http://10.10.4.63:8080/ibent/DOC1', json=data)
+        print r.url, ":"
         print r.text
-        print r.url
-        if len(sys.argv) > 2 and sys.argv[2] == "int":
-            data = r.json()
-            headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-            rel = requests.post('http://10.10.4.63:8080/iice/chemical/interactions', json=data)
-            print
-            print rel.json()
+
+        # Fetch document
+        r = requests.get('http://10.10.4.63:8080/ibent/DOC1')
+        print r.url, ":"
+        print r.text
+        # if len(sys.argv) > 2 and sys.argv[2] == "int":
+        #     data = r.json()
+        #     headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+        #     rel = requests.post('http://10.10.4.63:8080/iice/chemical/interactions', json=data)
+        #     print
+        #     print rel.json()
 
 
 if __name__ == "__main__":
