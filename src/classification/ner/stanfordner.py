@@ -91,20 +91,22 @@ class StanfordNERModel(SimpleTaggerModel):
             #text = self.sentences[isent]
             text = " ".join([t.text for t in self.tokens[isent]])
             #logging.info("tagging: {}/{} - {}={}".format(isent, len(self.sids), sid, did))
-            try:
-                out = self.tagger.tag_text(text)
-            except SocketError as e:
-                if e.errno != errno.ECONNRESET:
-                    raise # Not error we are looking for
-                print "socket error with sentence {}".format(text)
-            except:
-                print "other socket error!"
-                out = self.tagger.tag_text(text)
-                #print text, out
-                #out = text
+            out = self.annotate_sentence(text)
             tagged_sentences.append(out)
         results = self.process_results(tagged_sentences, corpus)
         return results
+
+    def annotate_sentence(self, text):
+        try:
+            out = self.tagger.tag_text(text)
+        except SocketError as e:
+            if e.errno != errno.ECONNRESET:
+                raise  # Not error we are looking for
+            print "socket error with sentence {}".format(text)
+        except:
+            print "other socket error!"
+            out = self.tagger.tag_text(text)
+        return out
 
     def kill_process(self):
         self.process.kill()
