@@ -107,7 +107,7 @@ class Document(object):
                 print corenlpres
                 continue
             else:
-                s.process_corenlp_sentence(corenlpres)
+                s.process_corenlp_output(corenlpres)
 
 
     def tag_chemdner_entity(self, start, end, subtype, **kwargs):

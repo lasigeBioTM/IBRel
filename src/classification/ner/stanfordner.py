@@ -43,6 +43,7 @@ class StanfordNERModel(SimpleTaggerModel):
         super(StanfordNERModel, self).__init__(path, etype, **kwargs)
         self.process = None
         self.tagger = None
+        self.port = None
 
     def write_prop(self):
         """
@@ -81,8 +82,8 @@ class StanfordNERModel(SimpleTaggerModel):
         # Popen(["jar", "-uf", self.STANFORD_NER, "{}.ser.gz".format(self.path)]).communicate()
         logging.info("saved model file to {}".format(self.STANFORD_NER))
 
-    def test(self, corpus, port=9181):
-        self.tagger = ner.SocketNER("localhost", port, output_format='inlineXML')
+    def test(self, corpus):
+
         tagged_sentences = []
         logging.info("sending sentences to tagger {}...".format(self.path))
         for isent, sid in enumerate(self.sids):
@@ -97,6 +98,7 @@ class StanfordNERModel(SimpleTaggerModel):
         return results
 
     def annotate_sentence(self, text):
+        self.tagger = ner.SocketNER("localhost", self.port, output_format='inlineXML')
         try:
             out = self.tagger.tag_text(text)
         except SocketError as e:
@@ -114,49 +116,56 @@ class StanfordNERModel(SimpleTaggerModel):
     def process_results(self, sentences, corpus):
         results = ResultsNER(self.path)
         results.corpus = corpus
-        for isent, sentence in enumerate(sentences):
-            results = self.process_sentence(sentence, self.sids[isent], results)
+        for isent, sentence_output in enumerate(sentences):
+            sid = self.sids[isent]
+            did = '.'.join(sid.split('.')[:-1])
+            sentence = results.corpus.documents[did].get_sentence(sid)
+            if sentence is None:
+                print sid
+                print "not found!"
+                print results.corpus.documents['.'.join(sid.split('.')[:-1])]
+                print [s.sid for s in results.corpus.documents['.'.join(sid.split('.')[:-1])].sentences]
+                sys.exit()
+            sentence_results = self.process_sentence(sentence_output, sentence)
+            for eid in sentence_results:
+                results.entities[eid] = sentence_results[eid]
         logging.info("found {} entities".format(len(results.entities)))
         return results
 
-    def process_sentence(self, out, sid, results):
-        sentence = results.corpus.documents['.'.join(sid.split('.')[:-1])].get_sentence(sid)
-        if sentence is None:
-            print sid
-            print "not found!"
-            print results.corpus.documents['.'.join(sid.split('.')[:-1])]
-            print [s.sid for s in results.corpus.documents['.'.join(sid.split('.')[:-1])].sentences]
-            sys.exit()
-        tagged_tokens = self.tag_tokens(out, sentence)
-        sentence.tagged = tagged_tokens
+    def process_sentence(self, out, sentence):
+        sentence_entities = {}
+        did = sentence.did
+        sid = sentence.sid
+        tagged_tokens = self.split_tag_tokens(out, sentence)
         new_entity = None
         for t in tagged_tokens:
             text, tag, token = t
             if tag.startswith("S"):
                 single_entity = create_entity(tokens=[token],
-                                                      sid=sentence.sid, did=sentence.did,
+                                                      sid=sid, did=did,
                                                       text=text, score=1, etype=self.etype)
                 eid = sentence.tag_entity(start=token.start, end=token.end, etype=self.etype,
                                             entity=single_entity, source=self.path)
                 single_entity.eid = eid
-                results.entities[eid] = single_entity # deepcopy
+                #results.entities[eid] = single_entity # deepcopy
+                sentence_entities[eid] = single_entity
                 #logging.info("new single entity: {}".format(single_entity))
             elif tag.startswith("B"):
                 new_entity = create_entity(tokens=[token],
-                                                   sid=sentence.sid, did=sentence.did,
+                                                   sid=sid, did=did,
                                                    text=text, score=1, etype=self.etype)
             elif tag.startswith("I"):
                 if not new_entity:
                     logging.info("starting with inside...")
                     new_entity = create_entity(tokens=[token],
-                                                   sid=sentence.sid, did=sentence.did,
+                                                   sid=sid, did=did,
                                                    text=text, score=1, etype=self.etype)
                 else:
                     new_entity.tokens += [token]
             elif tag.startswith("E"):
                 if not new_entity:
                     new_entity = create_entity(tokens=[token],
-                                               sid=sentence.sid, did=sentence.did,
+                                               sid=sid, did=did,
                                                text=text,
                                                score=1, etype=self.etype)
                     logging.debug("started from a end: {0}".format(new_entity))
@@ -172,12 +181,19 @@ class StanfordNERModel(SimpleTaggerModel):
                                           end=new_entity.tokens[-1].end, etype=self.etype,
                                           entity=new_entity, source=self.path)
                 new_entity.eid = eid
-                results.entities[eid] = new_entity # deepcopy
+                #results.entities[eid] = new_entity # deepcopy
+                sentence_entities[eid] = new_entity
                 new_entity = None
-                logging.debug("completed entity:{}".format(results.entities[eid]))
-        return results
+                logging.debug("completed entity:{}".format(sentence_entities[eid]))
+        return sentence_entities
 
-    def tag_tokens(self, data, sentence):
+    def split_tag_tokens(self, data, sentence):
+        """
+        Separate StanfordNER tagget output into list of tuples (token, tag)
+        :param data: SNER output
+        :param sentence: sentence object
+        :return:
+        """
         tagged = []
         tindex = 0
         words = data.split(" ")
@@ -191,6 +207,7 @@ class StanfordNERModel(SimpleTaggerModel):
             #     print "more than 1 /: {}".format(t)
             # print t, sentence.tokens[tindex].text
             x = t.split("/")
+            print x, tindex, len(sentence.tokens), sentence.tokens[tindex].text
             match = (x[0], x[1], sentence.tokens[tindex])
             tagged.append(match)
             tindex += 1
@@ -203,6 +220,7 @@ class StanfordNERModel(SimpleTaggerModel):
         :return:
         """
         # TODO: check if it already loaded (and then kill that instance)
+        self.port = port
         ner_args = ["java", self.RAM_TEST, "-Dfile.encoding=UTF-8", "-cp", self.STANFORD_NER, "edu.stanford.nlp.ie.NERServer",
                     "-port", str(port), "-loadClassifier", self.path + ".ser.gz",
                     "-tokenizerFactory", "edu.stanford.nlp.process.WhitespaceTokenizer", "-tokenizerOptions",

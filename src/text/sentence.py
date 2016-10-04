@@ -38,8 +38,28 @@ class Sentence(object):
     def tokenize_words(self):
         pass
 
+    def process_sentence(self, corenlpserver, doctype="biomedical"):
+        corenlpres = corenlpserver.annotate(self.text.encode("utf8"), properties={
+            'ssplit.eolonly': True,
+            # 'annotators': 'tokenize,ssplit,pos,ner,lemma',
+            'annotators': 'tokenize,ssplit,pos,parse,ner,lemma,depparse',
+            'outputFormat': 'json',
+        })
+        if isinstance(corenlpres, basestring):
+            print corenlpres
+            corenlpres = corenlpserver.annotate(self.text.encode("utf8"), properties={
+                'ssplit.eolonly': True,
+                # 'annotators': 'tokenize,ssplit,pos,depparse,parse',
+                'annotators': 'tokenize,ssplit,pos,ner,lemma',
+                'outputFormat': 'json',
+            })
+        if isinstance(corenlpres, basestring):
+            print "could not process this sentence:", self.text.encode("utf8")
+            print corenlpres
+        else:
+            self.process_corenlp_output(corenlpres)
 
-    def process_corenlp_sentence(self, corenlpres):
+    def process_corenlp_output(self, corenlpres):
 
         """
         Process the results obtained with CoreNLP for this sentence

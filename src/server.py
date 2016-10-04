@@ -2,6 +2,10 @@ import argparse
 import time
 import json
 
+from classification.ner.crfsuitener import CrfSuiteModel
+from classification.ner.stanfordner import StanfordNERModel
+from text.sentence import Sentence
+
 __author__ = 'Andre'
 import bottle
 from pycorenlp import StanfordCoreNLP
@@ -30,7 +34,8 @@ from postprocessing.ssm import add_ssm_score
 class IBENT(object):
 
     def __init__(self, entities, relations):
-        self.corenlp = StanfordCoreNLP(config.corenlp_dir)
+        self.baseport = 9181
+        self.corenlp = None
         #self.basemodel = basemodel
         #self.ensemble_model = ensemble_model
         #self.subtypes = submodels
@@ -40,13 +45,13 @@ class IBENT(object):
         #                           features=[])
         #self.ensemble.load()
         self.db_conn = None
-        self.entity_classifiers = {}
+        self.entity_annotators = {}
         for e in entities:
-            self.entity_classifiers[e] = None # one classifier for each type of entity
+            self.entity_annotators[e] = None # one classifier for each type of entity
 
-        self.relation_classifiers = {}
+        self.relation_annotators = {}
         for r in relations:
-            self.relation_classifiers[r] = {}
+            self.relation_annotators[r] = {}
         self.setup()
 
     def setup(self):
@@ -56,7 +61,7 @@ class IBENT(object):
                                  passwd=config.doc_pw,
                                  db=config.doc_db)
         # Connect to CoreNLP
-        #self.corenlp = StanfordCoreNLP(config.corenlp_dir)
+        self.corenlp = StanfordCoreNLP('http://localhost:9000')
 
         #Load StanfordNER models stored in a specific directory
         self.load_models()
@@ -65,7 +70,15 @@ class IBENT(object):
         return "OK!"
 
     def load_models(self):
-        pass
+        for i, a in enumerate(self.entity_annotators.keys()):
+            if a[1] == "stanfordner":
+                model = StanfordNERModel("annotators/{}/{}".format(a[2], a[0]), a[2])
+                model.load_tagger(self.baseport + i)
+                self.entity_annotators[a] = model
+            elif a[1] == "crfsuite":
+                model = CrfSuiteModel("annotators/{}/{}".format(a[2], a[0]), a[2])
+                model.load_tagger(self.baseport + i)
+                self.entity_annotators[a] = model
 
     def get_document(self, doctag):
         cur = self.db_conn.cursor()
@@ -117,10 +130,32 @@ class IBENT(object):
                 print e
                 #return "error adding new sentence"
 
-    def run_annotator(self, ):
+    def run_annotator(self, doctag, annotator):
+        sentences = self.get_sentences(doctag)
         data = bottle.request.json
+        for a in self.entity_annotators:
+            if a[0] == annotator:
+                for s in sentences:
+                    sentence = Sentence(s[2], offset=s[3], sid=s[1], did=doctag)
+                    sentence.process_sentence(self.corenlp)
+                    sentence_text = " ".join([t.text for t in sentence.tokens])
+                    sentence_output = self.entity_annotators[a].annotate_sentence(sentence_text)
+                    print sentence_output
+                    sentence_entities = self.entity_annotators[a].process_sentence(sentence_output, sentence)
+                    print sentence_entities
 
 
+    def get_sentences(self, doctag):
+        cur = self.db_conn.cursor()
+        query = """SELECT distinct id, senttag, senttext, sentoffset
+                               FROM sentence
+                               WHERE doctag =%s;"""
+        # print "QUERY", query
+        cur.execute(query, (doctag,))
+        return cur.fetchall()
+
+    def get_annotations(self):
+        pass
 
     def process_pubmed(self, pmid):
         title, text = pubmed.get_pubmed_abs(pmid)
@@ -264,7 +299,7 @@ def main():
     logging.getLogger().setLevel(numeric_level)
 
     logging.debug("Initializing the server...")
-    server = IBENT(entities=[("mirna/mirtex_train_mirna_sner", "stanfordner")], relations=[])
+    server = IBENT(entities=[("mirtex_train_mirna_sner", "stanfordner", "mirna")], relations=[])
     logging.debug("done.")
     # Test server
     bottle.route("/ibent/status")(server.hello)
@@ -276,10 +311,10 @@ def main():
     bottle.route("/ibent/<doctag>", method='POST')(server.new_document)
 
     # Get new miRNA entity annotations i.e. run a classifier again
-    bottle.route("/ibent/entities/<annotator>", method='POST')(server.run_annotator)
+    bottle.route("/ibent/entities/<doctag>/<annotator>")(server.run_annotator)
 
     # Get miRNA entity annotations i.e. fetch from the database
-    bottle.route("/ibent/entities/<annotator>")(server.get_annotations)
+    #bottle.route("/ibent/entities/<doctag>/<annotator>")(server.get_annotations)
 
     #bottle.route("/iice/chemical/<text>/<modeltype>", method='POST')(server.process)
     bottle.route("/ibent/interactions", method='POST')(server.get_relations)
