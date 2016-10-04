@@ -13,17 +13,23 @@ def main():
             text = "Azole class of compounds are well known for their excellent therapeutic properties. Present paper describes about the synthesis of three series of new 1,2,4-triazole and benzoxazole derivatives containing substituted pyrazole moiety (11a-d, 12a-d and 13a-d). The newly synthesized compounds were characterized by spectral studies and also by C, H, N analyses. All the synthesized compounds were screened for their analgesic activity by the tail flick method. The antimicrobial activity of the new derivatives was also performed by Minimum Inhibitory Concentration (MIC) by the serial dilution method. The results revealed that the compound 11c having 2,5-dichlorothiophene substituent on pyrazole moiety and a triazole ring showed significant analgesic and antimicrobial activity."
         elif sys.argv[1] == "3":
             text = "Primary Leydig cells obtained from bank vole testes and the established tumor Leydig cell line (MA-10) have been used to explore the effects of 4-tert-octylphenol (OP)."
+        elif sys.argv[1] == "4":
+            text = "Loss-of-function mutations in progranulin (GRN) cause ubiquitin- and TAR DNA-binding protein 43 (TDP-43)-positive frontotemporal dementia (FTLD-U), a progressive neurodegenerative disease affecting approximately 10% of early-onset dementia patients. Common variation in the miR-659 binding-site of GRN is a major risk factor for TDP43-positive frontotemporal dementia. In support of these findings, the neuropathology of homozygous rs5848 T-allele carriers frequently resembled the pathological FTLD-U subtype of GRN mutation carriers. "
         else:
             text = sys.argv[1]
         data = {"text": text, "format": "json"}
         # r = requests.post('http://10.10.4.63:8080/iice/chemical/entities', json=data)
         # Submit new document
-        r = requests.post('http://10.10.4.63:8080/ibent/DOC1', json=data)
+        r = requests.post('http://10.10.4.63:8080/ibent/DOC{}'.format(sys.argv[1]), json=data)
         print r.url, ":"
         print r.text
 
         # Fetch document
-        r = requests.get('http://10.10.4.63:8080/ibent/DOC1')
+        r = requests.get('http://10.10.4.63:8080/ibent/DOC{}'.format(sys.argv[1]))
+        print r.url, ":"
+        print r.text
+
+        r = requests.get('http://10.10.4.63:8080/ibent/entities/DOC{}/mirtex_train_mirna_sner'.format(sys.argv[1]))
         print r.url, ":"
         print r.text
         # if len(sys.argv) > 2 and sys.argv[2] == "int":
