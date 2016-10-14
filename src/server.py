@@ -1,7 +1,7 @@
 import argparse
 import time
 import json
-
+import ast
 from classification.ner.crfsuitener import CrfSuiteModel
 from classification.ner.stanfordner import StanfordNERModel
 from text.sentence import Sentence
@@ -117,10 +117,11 @@ class IBENT(object):
         newdoc = Document(text, process=False,
                                   did=doctag)
         newdoc.sentence_tokenize("biomedical")
-        for sentence in newdoc.sentences:
-            query = """INSERT INTO sentence(senttag, doctag, senttext, sentoffset) VALUES (%s, %s, %s, %s);"""
+        for i, sentence in enumerate(newdoc.sentences):
+            corenlpres = sentence.process_sentence(self.corenlp)
+            query = """INSERT INTO sentence(senttag, doctag, senttext, sentoffset, corenlp) VALUES (%s, %s, %s, %s, %s);"""
             try:
-                cur.execute(query, (sentence.sid, doctag, sentence.text, sentence.offset))
+                cur.execute(query, (sentence.sid, doctag, sentence.text, sentence.offset, str(corenlpres)))
                 self.db_conn.commit()
                 #inserted_id = cur.lastrowid
 
@@ -137,7 +138,8 @@ class IBENT(object):
             if a[0] == annotator:
                 for s in sentences:
                     sentence = Sentence(s[2], offset=s[3], sid=s[1], did=doctag)
-                    sentence.process_sentence(self.corenlp)
+                    #sentence.process_sentence(self.corenlp)
+                    sentence.process_corenlp_output(ast.literal_eval(s[4]))
                     sentence_text = " ".join([t.text for t in sentence.tokens])
                     sentence_output = self.entity_annotators[a].annotate_sentence(sentence_text)
                     print sentence_output
@@ -147,7 +149,7 @@ class IBENT(object):
 
     def get_sentences(self, doctag):
         cur = self.db_conn.cursor()
-        query = """SELECT distinct id, senttag, senttext, sentoffset
+        query = """SELECT distinct id, senttag, senttext, sentoffset, corenlp
                                FROM sentence
                                WHERE doctag =%s;"""
         # print "QUERY", query
@@ -299,7 +301,8 @@ def main():
     logging.getLogger().setLevel(numeric_level)
 
     logging.debug("Initializing the server...")
-    server = IBENT(entities=[("mirtex_train_mirna_sner", "stanfordner", "mirna")], relations=[])
+    server = IBENT(entities=[("mirtex_train_mirna_sner", "stanfordner", "mirna"),
+                             ("chemdner_train_all", "stanfordner", "chemical")], relations=[])
     logging.debug("done.")
     # Test server
     bottle.route("/ibent/status")(server.hello)

@@ -58,6 +58,7 @@ class Sentence(object):
             print corenlpres
         else:
             self.process_corenlp_output(corenlpres)
+        return corenlpres
 
     def process_corenlp_output(self, corenlpres):
 

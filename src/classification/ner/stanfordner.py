@@ -207,7 +207,7 @@ class StanfordNERModel(SimpleTaggerModel):
             #     print "more than 1 /: {}".format(t)
             # print t, sentence.tokens[tindex].text
             x = t.split("/")
-            print x, tindex, len(sentence.tokens), sentence.tokens[tindex].text
+            # print x, tindex, len(sentence.tokens), sentence.tokens[tindex].text
             match = (x[0], x[1], sentence.tokens[tindex])
             tagged.append(match)
             tindex += 1
