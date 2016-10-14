@@ -219,14 +219,15 @@ class StanfordNERModel(SimpleTaggerModel):
         Start the server process with the classifier
         :return:
         """
-        # TODO: check if it already loaded (and then kill that instance)
+        # check if it already loaded (and then kill that instance)
+        kill_process(port)
         self.port = port
         ner_args = ["java", self.RAM_TEST, "-Dfile.encoding=UTF-8", "-cp", self.STANFORD_NER, "edu.stanford.nlp.ie.NERServer",
                     "-port", str(port), "-loadClassifier", self.path + ".ser.gz",
                     "-tokenizerFactory", "edu.stanford.nlp.process.WhitespaceTokenizer", "-tokenizerOptions",
                     "tokenizeNLs=true"]
         logging.info(' '.join(ner_args))
-        logging.info("Starting the server for {}...".format(self.path))
+        logging.info("Starting the server for {} on {}...".format(self.path, self.port))
         self.process = Popen(ner_args, stdin = PIPE, stdout = PIPE, stderr = PIPE, shell=False)
         while True:
             out = self.process.stderr.readline()
@@ -239,3 +240,21 @@ class StanfordNERModel(SimpleTaggerModel):
         #logging.info(out)
         #print 'Success!!'
         atexit.register(self.kill_process)
+
+
+def kill_process(port):
+    # http://stackoverflow.com/a/14907802
+    popen = Popen(['netstat', '-lpn'],
+                             shell=False,
+                             stdout=PIPE)
+    (data, err) = popen.communicate()
+
+    pattern = "^tcp.*((?:{0})).* (?P<pid>[0-9]*)/.*$"
+    pattern = pattern.format(str(port))
+    prog = re.compile(pattern)
+    for line in data.split('\n'):
+        match = re.match(prog, line)
+        if match:
+            pid = match.group('pid')
+            logging.info("killing process {}".format(pid))
+            Popen(['kill', '-9', pid])
