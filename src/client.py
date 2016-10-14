@@ -19,17 +19,23 @@ def main():
             text = sys.argv[1]
         data = {"text": text, "format": "json"}
         # r = requests.post('http://10.10.4.63:8080/iice/chemical/entities', json=data)
-        # Submit new document
+        print "Submit new document"
         r = requests.post('http://10.10.4.63:8080/ibent/DOC{}'.format(sys.argv[1]), json=data)
         print r.url, ":"
         print r.text
 
-        # Fetch document
+        print "Fetch document"
         r = requests.get('http://10.10.4.63:8080/ibent/DOC{}'.format(sys.argv[1]))
         print r.url, ":"
         print r.text
 
+        print "Annotate miRNA"
         r = requests.get('http://10.10.4.63:8080/ibent/entities/DOC{}/mirtex_train_mirna_sner'.format(sys.argv[1]))
+        print r.url, ":"
+        print r.text
+
+        print "Annotate chemical"
+        r = requests.get('http://10.10.4.63:8080/ibent/entities/DOC{}/chemdner_train_all'.format(sys.argv[1]))
         print r.url, ":"
         print r.text
         # if len(sys.argv) > 2 and sys.argv[2] == "int":
