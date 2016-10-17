@@ -70,7 +70,9 @@ class IBENT(object):
         return "OK!"
 
     def load_models(self):
+        # Run load_tagger method of all models
         for i, a in enumerate(self.entity_annotators.keys()):
+            self.create_annotationset(a[0])
             if a[1] == "stanfordner":
                 model = StanfordNERModel("annotators/{}/{}".format(a[2], a[0]), a[2])
                 model.load_tagger(self.baseport + i)
@@ -79,6 +81,18 @@ class IBENT(object):
                 model = CrfSuiteModel("annotators/{}/{}".format(a[2], a[0]), a[2])
                 model.load_tagger(self.baseport + i)
                 self.entity_annotators[a] = model
+
+    def create_annotationset(self, name):
+        # Create DB entries for each annotations set
+        cur = self.db_conn.cursor()
+        query = """INSERT INTO annotationset(name) VALUES (%s);"""
+        try:
+            cur.execute(query, (name,))
+            self.db_conn.commit()
+        except MySQLdb.MySQLError as e:
+            self.db_conn.rollback()
+            print e
+            print "error adding annotation set"
 
     def get_document(self, doctag):
         cur = self.db_conn.cursor()
@@ -132,9 +146,15 @@ class IBENT(object):
                 #return "error adding new sentence"
 
     def run_annotator(self, doctag, annotator):
+        """
+        Classify a document using an annotator and insert results into the database
+        :param doctag: tag of the document
+        :param annotator: annotator to classify
+        :return:
+        """
         sentences = self.get_sentences(doctag)
         data = bottle.request.json
-        for a in self.entity_annotators:
+        for a in self.entity_annotators:  # a in (annotator_name, annotator_engine, annotator_etype)
             if a[0] == annotator:
                 for s in sentences:
                     sentence = Sentence(s[2], offset=s[3], sid=s[1], did=doctag)
@@ -142,10 +162,33 @@ class IBENT(object):
                     sentence.process_corenlp_output(ast.literal_eval(s[4]))
                     sentence_text = " ".join([t.text for t in sentence.tokens])
                     sentence_output = self.entity_annotators[a].annotate_sentence(sentence_text)
-                    print sentence_output
+                    #print sentence_output
                     sentence_entities = self.entity_annotators[a].process_sentence(sentence_output, sentence)
+                    for e in sentence_entities:
+                        self.add_entity(sentence_entities[e], annotator)
                     print sentence_entities
 
+    def add_entity(self, entity, annotator):
+        #add offetset to database
+        #retrieve offset ID
+        #retrieve annotationset ID
+        #add entity to database
+        cur = self.db_conn.cursor()
+        #query = """addoffset(%s, %s, %s, %s, %s, %s, %s);"""
+        query = """SELECT annotationset.id FROM annotationset WHERE annotationset.name = %s"""
+        cur.execute(query, (annotator,))
+        annotatorid = cur.fetchone()[0]
+        try:
+            cur.callproc("addoffset", (entity.dstart, entity.dend, entity.start, entity.end, entity.did, entity.sid, entity.text, 0))
+            cur.execute('SELECT @_addoffset_7;')
+            offsetid = cur.fetchone()[0]
+            # return str(inserted_id)
+            query = """INSERT INTO entity(offsetid, annotationset, subtype) VALUES (%s, %s, %s);"""
+            cur.execute(query, (offsetid, annotatorid, entity.subtype))
+            self.db_conn.commit()
+        except MySQLdb.MySQLError as e:
+            self.db_conn.rollback()
+            print e
 
     def get_sentences(self, doctag):
         cur = self.db_conn.cursor()
