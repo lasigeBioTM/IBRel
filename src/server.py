@@ -91,10 +91,10 @@ class IBENT(object):
             self.db_conn.commit()
         except MySQLdb.MySQLError as e:
             self.db_conn.rollback()
-            print e
-            print "error adding annotation set"
+            logging.debug(e)
 
     def get_document(self, doctag):
+        # return document entry with doctag
         cur = self.db_conn.cursor()
         query = """SELECT distinct id, doctag, title, doctext
                        FROM document
@@ -107,6 +107,7 @@ class IBENT(object):
             return str(res)
 
     def new_document(self, doctag):
+        # Insert a new document into the database
         data = bottle.request.json
         text = data["text"]
         title = data.get("title")
@@ -123,10 +124,10 @@ class IBENT(object):
             return str(inserted_id)
         except MySQLdb.MySQLError as e:
             self.db_conn.rollback()
-            print e
-            return "error adding new document"
+            logging.debug(e)
 
     def create_sentences(self, doctag, text):
+        # Create sentence entries based on text from document doctag
         cur = self.db_conn.cursor()
         newdoc = Document(text, process=False,
                                   did=doctag)
@@ -142,7 +143,7 @@ class IBENT(object):
                 #return str(inserted_id)
             except MySQLdb.MySQLError as e:
                 self.db_conn.rollback()
-                print e
+                logging.debug(e)
                 #return "error adding new sentence"
 
     def run_annotator(self, doctag, annotator):
@@ -166,7 +167,8 @@ class IBENT(object):
                     sentence_entities = self.entity_annotators[a].process_sentence(sentence_output, sentence)
                     for e in sentence_entities:
                         self.add_entity(sentence_entities[e], annotator)
-                    print sentence_entities
+                        print str(e), sentence_entities[e]
+
 
     def add_entity(self, entity, annotator):
         #add offetset to database
@@ -188,7 +190,7 @@ class IBENT(object):
             self.db_conn.commit()
         except MySQLdb.MySQLError as e:
             self.db_conn.rollback()
-            print e
+            logging.debug(e)
 
     def get_sentences(self, doctag):
         cur = self.db_conn.cursor()
