@@ -1,6 +1,5 @@
 import argparse
 import time
-import json
 import ast
 from classification.ner.crfsuitener import CrfSuiteModel
 from classification.ner.stanfordner import StanfordNERModel
@@ -17,6 +16,7 @@ import cPickle as pickle
 import random
 import string
 import MySQLdb
+import json
 
 from text.document import Document
 from text.corpus import Corpus
@@ -104,7 +104,9 @@ class IBENT(object):
 
         res = cur.fetchone()
         if res is not None:
-            return str(res)
+            return json.dumps({'docID': res[1], 'docTitle': res[2], 'docText': res[3]})
+        else:
+            return json.dumps({'error': 'could not find document {}'.format(doctag)})
 
     def new_document(self, doctag):
         # Insert a new document into the database
@@ -120,11 +122,12 @@ class IBENT(object):
             self.db_conn.commit()
             inserted_id = cur.lastrowid
             self.create_sentences(doctag, text)
-
-            return str(inserted_id)
+            return json.dumps({"message": "added document {}".format(doctag)})
+            #return str(inserted_id)
         except MySQLdb.MySQLError as e:
             self.db_conn.rollback()
             logging.debug(e)
+            return json.dumps({"error": "error adding document"})
 
     def create_sentences(self, doctag, text):
         # Create sentence entries based on text from document doctag
@@ -139,7 +142,6 @@ class IBENT(object):
                 cur.execute(query, (sentence.sid, doctag, sentence.text, sentence.offset, str(corenlpres)))
                 self.db_conn.commit()
                 #inserted_id = cur.lastrowid
-
                 #return str(inserted_id)
             except MySQLdb.MySQLError as e:
                 self.db_conn.rollback()
@@ -155,6 +157,7 @@ class IBENT(object):
         """
         sentences = self.get_sentences(doctag)
         data = bottle.request.json
+        output = {}
         for a in self.entity_annotators:  # a in (annotator_name, annotator_engine, annotator_etype)
             if a[0] == annotator:
                 for s in sentences:
@@ -164,10 +167,13 @@ class IBENT(object):
                     sentence_text = " ".join([t.text for t in sentence.tokens])
                     sentence_output = self.entity_annotators[a].annotate_sentence(sentence_text)
                     #print sentence_output
+
                     sentence_entities = self.entity_annotators[a].process_sentence(sentence_output, sentence)
                     for e in sentence_entities:
                         self.add_entity(sentence_entities[e], annotator)
-                        print str(e), sentence_entities[e]
+                        output[e] = str(sentence_entities[e])
+                        # print output
+        return json.dumps(output)
 
 
     def add_entity(self, entity, annotator):
@@ -185,7 +191,7 @@ class IBENT(object):
             cur.execute('SELECT @_addoffset_7;')
             offsetid = cur.fetchone()[0]
             # return str(inserted_id)
-            query = """INSERT INTO entity(offsetid, annotationset, subtype) VALUES (%s, %s, %s);"""
+            query = """INSERT INTO entity(offsetid, annotationset, etype) VALUES (%s, %s, %s);"""
             cur.execute(query, (offsetid, annotatorid, entity.subtype))
             self.db_conn.commit()
         except MySQLdb.MySQLError as e:
@@ -201,8 +207,19 @@ class IBENT(object):
         cur.execute(query, (doctag,))
         return cur.fetchall()
 
-    def get_annotations(self):
-        pass
+    def get_annotations(self, doctag, annotator):
+        cur = self.db_conn.cursor()
+        query = """SELECT o.offsettext, o.docstart, o.docend, e.etype
+                   FROM entity e, offset o, annotationset a
+                   WHERE doctag = %s AND e.offsetid = o.id AND e.annotationset = a.id AND a.name = %s;"""
+        # print "QUERY", query
+        cur.execute(query, (doctag, annotator))
+        annotations = cur.fetchall()
+        output = {"entities": []}
+        for a in annotations:
+            output["entities"].append({"text": a[0], "start": a[1], "end": a[2], "etype": a[3]})
+        return output
+
 
     def process_pubmed(self, pmid):
         title, text = pubmed.get_pubmed_abs(pmid)
@@ -293,19 +310,6 @@ class IBENT(object):
 
         return data
 
-    def generate_corpus(self, text):
-        """
-        Create a corpus object from the input text.
-        :param text:
-        :return:
-        """
-        test_corpus = Corpus("")
-        newdoc = Document(text, process=False, did="d0", title="Test document")
-        newdoc.sentence_tokenize("biomedical")
-        newdoc.process_document(self.corenlp, "biomedical")
-        test_corpus.documents["d0"] = newdoc
-        return test_corpus
-
     def get_output(self, results, model_name, format="bioc", results_id=None):
         if format == "bioc":
             a = ET.Element('collection')
@@ -359,13 +363,13 @@ def main():
     bottle.route("/ibent/<doctag>", method='POST')(server.new_document)
 
     # Get new miRNA entity annotations i.e. run a classifier again
-    bottle.route("/ibent/entities/<doctag>/<annotator>")(server.run_annotator)
+    bottle.route("/ibent/entities/<doctag>/<annotator>", method='POST')(server.run_annotator)
 
     # Get miRNA entity annotations i.e. fetch from the database
-    #bottle.route("/ibent/entities/<doctag>/<annotator>")(server.get_annotations)
+    bottle.route("/ibent/entities/<doctag>/<annotator>")(server.get_annotations)
 
     #bottle.route("/iice/chemical/<text>/<modeltype>", method='POST')(server.process)
-    bottle.route("/ibent/interactions", method='POST')(server.get_relations)
+    #bottle.route("/ibent/interactions", method='POST')(server.get_relations)
     #daemon_run(host='10.10.4.63', port=8080, logfile="server.log", pidfile="server.pid")
     bottle.run(host=config.host_ip, port=8080, DEBUG=True)
 if __name__ == "__main__":
