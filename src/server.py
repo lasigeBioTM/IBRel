@@ -5,6 +5,7 @@ import ast
 from classification.ner.banner import BANNERModel
 from classification.ner.crfsuitener import CrfSuiteModel
 from classification.ner.stanfordner import StanfordNERModel
+from classification.rext.jsrekernel import JSREKernel
 from text.sentence import Sentence
 
 __author__ = 'Andre'
@@ -87,6 +88,12 @@ class IBENT(object):
                 model = BANNERModel("annotators/{}/{}".format(a[2], a[0]), a[2])
                 # model.load_tagger(self.baseport + i)
                 self.entity_annotators[a] = model
+        for i, a in enumerate(self.relation_annotators.keys()):
+            self.create_annotationset(a[0])
+            if a[1] == "jsre":
+                model = JSREKernel(None, a[2], train=False, modelname="annotators/{}/{}.model".format(a[2], a[0]), ner="all")
+                model.load_classifier()
+                self.relation_annotators[a] = model
 
     def create_annotationset(self, name):
         # Create DB entries for each annotations set
@@ -154,7 +161,7 @@ class IBENT(object):
                 logging.debug(e)
                 #return "error adding new sentence"
 
-    def run_annotator(self, doctag, annotator):
+    def run_entity_annotator(self, doctag, annotator):
         """
         Classify a document using an annotator and insert results into the database
         :param doctag: tag of the document
@@ -181,6 +188,55 @@ class IBENT(object):
                         # print output
         return json.dumps(output)
 
+    def run_relation_annotator(self, doctag, annotator):
+        """
+        Classify a document using an annotator and insert results into the database
+        :param doctag: tag of the document
+        :param annotator: annotator to classify
+        :return:
+        """
+        sentences = self.get_sentences(doctag)
+        data = bottle.request.json
+        output = {}
+        for a in self.relation_annotators:  # a in (annotator_name, annotator_engine, annotator_etype)
+            if a[0] == annotator:
+                for s in sentences:
+                    sentence = Sentence(s[2], offset=s[3], sid=s[1], did=doctag)
+                    #sentence.process_sentence(self.corenlp)
+                    sentence.process_corenlp_output(ast.literal_eval(s[4]))
+                    sentence = self.get_entities(sentence)
+                    #sentence_text = " ".join([t.text for t in sentence.tokens])
+                    sentence_output = self.relation_annotators[a].annotate_sentence(sentence)
+                    # print sentence_output
+                    sentence_relations = self.relation_annotators[a].process_sentence(sentence_output, sentence)
+                    #print sentence_relations
+                    for p in sentence_relations:
+                        self.add_relation(p, annotator)
+                        output[p.pid] = str(p)
+                        # print output
+        return json.dumps(output)
+
+    def add_relation(self, relation, annotator):
+        cur = self.db_conn.cursor()
+        # query = """addoffset(%s, %s, %s, %s, %s, %s, %s);"""
+        query = """SELECT annotationset.id FROM annotationset WHERE annotationset.name = %s"""
+        cur.execute(query, (annotator,))
+        annotatorid = cur.fetchone()[0]
+        print relation.entities[0].dstart, relation.entities[0].dend, relation.entities[1].dstart, relation.entities[1].dend, relation.did, relation.sid
+        try:
+            cur.callproc("addpair", (relation.entities[0].dstart, relation.entities[0].dend,
+                                     relation.entities[1].dstart, relation.entities[1].dend,
+                                     relation.did, relation.sid, 0))
+            cur.execute('SELECT @_addpair_6;')
+            pairid = cur.fetchone()[0]
+            print pairid
+            query = """INSERT INTO relation(entitypair, annotationset, relationtype) VALUES (%s, %s, %s);"""
+            cur.execute(query, (pairid, annotatorid, relation.relation))
+            self.db_conn.commit()
+
+        except MySQLdb.MySQLError as e:
+            self.db_conn.rollback()
+            logging.debug(e)
 
     def add_entity(self, entity, annotator):
         #add offetset to database
@@ -226,6 +282,24 @@ class IBENT(object):
             output["entities"].append({"text": a[0], "start": a[1], "end": a[2], "etype": a[3]})
         return output
 
+    def get_entities(self, sentence, annotator="all"):
+        cur = self.db_conn.cursor()
+        if annotator != "all":
+            query = """SELECT o.offsettext, o.sentstart, o.sentend, e.etype
+                               FROM entity e, offset o, annotationset a
+                               WHERE senttag = %s AND e.offsetid = o.id AND e.annotationset = a.id AND a.name = %s;"""
+            # print "QUERY", query
+            cur.execute(query, (sentence.sid, annotator))
+        else:
+            query = """SELECT o.offsettext, o.sentstart, o.sentend, e.etype
+                                           FROM entity e, offset o
+                                           WHERE o.senttag = %s AND e.offsetid = o.id;"""
+            # print "QUERY", query
+            cur.execute(query, (sentence.sid,))
+        annotations = cur.fetchall()
+        for entity in annotations:
+            sentence.tag_entity(entity[1], entity[2], entity[3], text=entity[0])
+        return sentence
 
     def process_pubmed(self, pmid):
         title, text = pubmed.get_pubmed_abs(pmid)
@@ -358,7 +432,8 @@ def main():
     logging.debug("Initializing the server...")
     server = IBENT(entities=[("mirtex_train_mirna_sner", "stanfordner", "mirna"),
                              ("chemdner_train_all", "stanfordner", "chemical"),
-                             ("banner", "banner", "gene")], relations=[])
+                             ("banner", "banner", "gene")],
+                   relations=[("all_ddi_train_slk", "jsre", "ddi")])
     logging.debug("done.")
     # Test server
     bottle.route("/ibent/status")(server.hello)
@@ -370,10 +445,16 @@ def main():
     bottle.route("/ibent/<doctag>", method='POST')(server.new_document)
 
     # Get new entity annotations i.e. run a classifier again
-    bottle.route("/ibent/entities/<doctag>/<annotator>", method='POST')(server.run_annotator)
+    bottle.route("/ibent/entities/<doctag>/<annotator>", method='POST')(server.run_entity_annotator)
 
     # Get entity annotations i.e. fetch from the database
     bottle.route("/ibent/entities/<doctag>/<annotator>")(server.get_annotations)
+
+    # Get new entity annotations i.e. run a classifier again
+    bottle.route("/ibent/relations/<doctag>/<annotator>", method='POST')(server.run_relation_annotator)
+
+    # Get entity annotations i.e. fetch from the database
+    #bottle.route("/ibent/entities/<doctag>/<annotator>")(server.get_annotations)
 
     #bottle.route("/iice/chemical/<text>/<modeltype>", method='POST')(server.process)
     #bottle.route("/ibent/interactions", method='POST')(server.get_relations)

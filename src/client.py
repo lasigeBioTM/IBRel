@@ -70,7 +70,12 @@ def main():
     # print r.url, ":", timer() - start
     # pp.pprint(r.json())
 
-
+    print bcolors.OKBLUE + "Annotate DDI relations" + bcolors.ENDC
+    start = timer()
+    r = requests.post('http://10.10.4.63:8080/ibent/relations/DOC{}/all_ddi_train_slk'.format(sys.argv[1]))
+    print r.url, ":", timer() - start
+    #pp.pprint(r.json())
+    print r.text
 
     print "Total time:", timer() - start_total
     # if len(sys.argv) > 2 and sys.argv[2] == "int":

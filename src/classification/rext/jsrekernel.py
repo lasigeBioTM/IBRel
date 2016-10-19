@@ -18,22 +18,24 @@ class JSREKernel(ReModel):
 
     def __init__(self, corpus, relationtype, modelname="slk_classifier.model", train=False, ner="goldstandard"):
         super(JSREKernel, self).__init__()
-        self.modelname = relationtype + "_" + modelname + "_jsre"
+        # self.modelname = relationtype + "_" + modelname + "_jsre"
+        self.modelname = modelname
         self.pairtype = relationtype
         self.test_jsre = []
         self.pairs = {}
         self.resultsfile = None
         self.examplesfile = None
         self.ner_model = ner
-        self.generatejSREdata(corpus, train=train, pairtype=relationtype)
+        self.entitytypes = (config.relation_types[self.pairtype]["source_types"], config.relation_types[self.pairtype]["target_types"])
+
 
     def load_classifier(self, outputfile="jsre_results.txt"):
         self.resultsfile = self.temp_dir + self.pairtype + "_" + outputfile
         self.examplesfile = self.temp_dir + self.modelname + ".txt"
         if os.path.isfile(self.temp_dir + self.pairtype + "_" + outputfile):
             os.remove(self.temp_dir + self.pairtype + "_" + outputfile)
-        if not os.path.isfile(self.basedir + self.modelname):
-            print "model", self.basedir + self.modelname, "not found"
+        if not os.path.isfile(self.modelname):
+            print "model", self.modelname, "not found"
             sys.exit()
         if platform.system() == "Windows":
             sep = ";"
@@ -44,11 +46,12 @@ class JSREKernel(ReModel):
         libs = ["libsvm-2.8.jar", "log4j-1.2.8.jar", "commons-digester.jar", "commons-beanutils.jar", "commons-logging.jar", "commons-collections.jar"]
         classpath = 'bin/jsre/jsre-1.1/bin'+ sep + sep.join(["bin/jsre/jsre-1.1/lib/" + l for l in libs])
         self.test_jsre = ['java', '-mx4g', '-classpath', classpath, "org.itc.irst.tcc.sre.Predict",
-                          self.examplesfile, self.basedir + self.modelname,
+                          self.examplesfile, self.modelname,
                           self.resultsfile]
         #print ' '.join(jsrecommand)
 
     def train(self):
+        self.generatejSREdata(self.corpus, train=True, pairtype=self.pairtype)
         if os.path.isfile(self.basedir + self.modelname):
             print "removed old model"
             os.remove(self.basedir + self.modelname)
@@ -83,6 +86,7 @@ class JSREKernel(ReModel):
 
 
     def test(self, outputfile="jsre_results.txt"):
+        self.generatejSREdata(self.corpus, train=False, pairtype=self.pairtype)
         # print " ".join(self.test_jsre)
         jsrecall = Popen(self.test_jsre, stdout=PIPE, stderr=PIPE)
         res = jsrecall.communicate()
@@ -110,15 +114,64 @@ class JSREKernel(ReModel):
         return self.blind_all_entities(tokens_text, sentence.entities.elist["goldstandard"],
                                        [e1id, e2id], pos, lemmas, ner)
 
-    def generatejSREdata(self, corpus, train=False, pairtype="all"):
+    def annotate_sentence(self, sentence):
         if os.path.isfile(self.temp_dir + self.modelname + ".txt"):
             print "removed old data"
             os.remove(self.temp_dir + self.modelname + ".txt")
+        pcount = 0
+        did = sentence.did
         examplelines = []
-        # get all entities of this document
-        # doc_entities = []
-        pairtypes = (config.relation_types[pairtype]["source_types"], config.relation_types[pairtype]["target_types"])
-        # pairtypes = (config.event_types[pairtype]["source_types"], config.event_types[pairtype]["target_types"])
+        if self.ner_model == "all":
+            sentence_entities = []
+            for esource in sentence.entities.elist:
+                sentence_entities += [entity for entity in sentence.entities.elist[esource]]
+        else:
+            sentence_entities = [entity for entity in sentence.entities.elist[self.ner_model]]
+        #print sentence.sid, self.ner_model, len(sentence.entities.elist[self.ner_model]), sentence_entities
+        # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
+        for pair in itertools.permutations(sentence_entities, 2):
+            if pair[0].type in self.entitytypes[0] and pair[1].type in self.entitytypes[1]:  # or\
+                pid = did + ".p" + str(pcount)
+                self.pairs[pid] = pair
+                tokens_text, pos, lemmas, ner = self.get_sentence_instance(sentence, pair[0].eid, pair[1].eid, pair)
+                body = self.generatejSRE_line(tokens_text, pos, lemmas, ner)
+                examplelines.append('0\t' + pid + '.i' + '0\t' + body + '\n')
+                pcount += 1
+        logging.debug("writing {} lines to file...".format(len(examplelines)))
+        with codecs.open(self.temp_dir + self.modelname + ".txt", 'a', "utf-8") as trainfile:
+            for il, l in enumerate(examplelines):
+                trainfile.write(l)
+        jsrecall = Popen(self.test_jsre, stdout=PIPE, stderr=PIPE)
+        res = jsrecall.communicate()
+        if not os.path.isfile(self.resultsfile):
+            print "something went wrong with JSRE!"
+            print res
+        else:
+            with open(self.resultsfile, 'r') as results:
+                return results.read()
+
+    def process_sentence(self, out, sentence):
+        pairs = []
+        with open(self.resultsfile, 'r') as resfile:
+            pred = resfile.readlines()
+        with codecs.open(self.examplesfile, 'r', 'utf-8') as trainfile:
+            original = trainfile.readlines()
+        for i in range(len(pred)):
+            original_tsv = original[i].split('\t')
+            # logging.debug(original_tsv)
+            pid = '.'.join(original_tsv[1].split('.')[:-1])
+
+            p = float(pred[i].strip())
+            if p == 1:
+                pair = sentence.add_relation(self.pairs[pid][0], self.pairs[pid][1], self.pairtype,
+                                                          relation=True)
+                pairs.append(pair)
+        return pairs
+
+    def generatejSREdata(self, corpus, train=False, pairtype="all"):
+        if os.path.isfile(self.temp_dir + self.modelname + ".txt"):
+            # print "removed old data"
+            os.remove(self.temp_dir + self.modelname + ".txt")
         pcount = 0
         truepcount = 0
         strue = 0
@@ -127,7 +180,6 @@ class JSREKernel(ReModel):
         for sentence in corpus.get_sentences(self.ner_model):
         #for did in corpus.documents:
             did = sentence.did
-            #doc_entities = corpus.documents[did].get_entities("goldstandard")
             examplelines = []
             pos_sentences = set()
             sids = []
@@ -136,7 +188,6 @@ class JSREKernel(ReModel):
             print sentence.sid, self.ner_model, len(sentence.entities.elist[self.ner_model]), sentence_entities
             # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
             for pair in itertools.permutations(sentence_entities, 2):
-                # print pair[0].type, pair[1].type, pairtypes
                 sid1 = pair[0].eid.split(".")[-2]
                 sid2 = pair[1].eid.split(".")[-2]
                 # if pairtype in corpus.type_sentences and pair[0].sid not in corpus.type_sentences[pairtype]:
@@ -148,32 +199,15 @@ class JSREKernel(ReModel):
                     continue
                 if pairtype in ("Has_Sequence_Identical_To", "Is_Functionally_Equivalent_To") and pair[0].type != pair[1].type:
                     continue
-                if pair[0].type in pairtypes[0] and pair[1].type in pairtypes[1]: # or\
-                   # pair[1].type in pairtypes[0] and pair[0].type in pairtypes[1]:
+                if pair[0].type in self.entitytypes[0] and pair[1].type in self.entitytypes[1]: # or\
                     # logging.debug(pair)
-                    """if pair[0].type == pairtypes[0]:
-
-                    else:
-                        e1id = pair[1].eid
-                        e2id = pair[0].eid
-                        pair = (pair[1], pair[0])"""
                     # print e1id, e2id
                     e1id = pair[0].eid
                     e2id = pair[1].eid
                     pid = did + ".p" + str(pcount)
                     # self.pairs[pid] = (e1id, e2id)
                     self.pairs[pid] = pair
-                    # sentence1 = corpus.documents[did].get_sentence(pair[0].sid)
-                    #sentence1 = sentence
-                    # logging.info("{}  {}-{} => {}-{}".format(sentence.sid, e1id, pair[0].text, e2id, pair[1].text))
-                    #sentence = corpus.documents[did].get_sentence(did + "." + sid1)
                     tokens_text, pos, lemmas, ner = self.get_sentence_instance(sentence, e1id, e2id, pair)
-                    # print tokens_text, pair[0].text, pair[0].start, pair[1].text, pair[1].start, pair[0].start == pair[1].start
-                    # logging.debug("{} {} {} {}".format(len(pair_text), len(pos), len(lemmas), len(ner)))
-                    #logging.debug("generating jsre lines...")
-                    #for i in range(len(pairinstances)):
-                        #body = generatejSRE_line(pairinstances[i], pos, stems, ner)
-
                     trueddi = 0
                     if (e2id, pairtype) in pair[0].targets:
                     #if any((pair[1].eid, pt) in pair[0].targets for pt in config.event_types[self.pairtype]["subtypes"]):
@@ -187,9 +221,7 @@ class JSREKernel(ReModel):
                         sfalse -= 1
                         skipped += 1
                         continue
-
                     else:
-
                         #pos_sentences.add(pair[0].sid)
                         #pos_sentences.add(pair[1].sid)
                         body = self.generatejSRE_line(tokens_text, pos, lemmas, ner)
@@ -293,15 +325,6 @@ class JSREKernel(ReModel):
             original_tsv = original[i].split('\t')
             # logging.debug(original_tsv)
             pid = '.'.join(original_tsv[1].split('.')[:-1])
-            #if pid not in pairs:
-            #    print "pair not in pairs!"
-            #    print pid
-            #    print pairs
-            #    sys.exit()
-            #confirm that everything makes sense
-            # true = float(original_tsv[0])
-            # if true == 0:
-            #    true = -1
 
             p = float(pred[i].strip())
             if p == 0:
@@ -317,7 +340,7 @@ class JSREKernel(ReModel):
                 # pair = corpus.documents[did].add_relation(self.pairs[pid][0], self.pairs[pid][1], real_pair_type, relation=True)
                 #pair = self.get_pair(pid, corpus)
                 results.pairs[pid] = pair
-                results.document_pairs[did].add_pair(pair, "scikit")
+                results.document_pairs[did].add_pair(pair, "jsre")
                 # logging.debug("{} - {} SLK: {}".format(pair.entities[0], pair.entities[1], p))
                 #if pair not in temppreds:
                 #    temppreds[pair] = []

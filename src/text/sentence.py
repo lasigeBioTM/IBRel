@@ -136,15 +136,15 @@ class Sentence(object):
         return newtoken
 
     def add_relation(self, entity1, entity2, subtype, source="goldstandard", **kwargs):
-        if self.pairs.pairs.get(source):
-            pid = self.sid + ".p" + str(len(self.pairs.pairs[source]))
+        if self.pairs.pairs:
+            pid = self.sid + ".p" + str(len(self.pairs.pairs))
         else:
             pid = self.sid + ".p0"
         if subtype == "tlink":
             p = TLink(entity1, entity2, original_id=kwargs.get("original_id"),
                                      did=self.did, pid=pid, rtype=subtype)
         else:
-            p = Pair((entity1, entity2), subtype)
+            p = Pair((entity1, entity2), subtype, pid=pid, sid=self.sid, did=self.did)
         self.pairs.add_pair(p, source)
         return p
 
