@@ -1,6 +1,8 @@
 import argparse
 import time
 import ast
+
+from classification.ner.banner import BANNERModel
 from classification.ner.crfsuitener import CrfSuiteModel
 from classification.ner.stanfordner import StanfordNERModel
 from text.sentence import Sentence
@@ -80,6 +82,10 @@ class IBENT(object):
             elif a[1] == "crfsuite":
                 model = CrfSuiteModel("annotators/{}/{}".format(a[2], a[0]), a[2])
                 model.load_tagger(self.baseport + i)
+                self.entity_annotators[a] = model
+            elif a[1] == "banner":
+                model = BANNERModel("annotators/{}/{}".format(a[2], a[0]), a[2])
+                # model.load_tagger(self.baseport + i)
                 self.entity_annotators[a] = model
 
     def create_annotationset(self, name):
@@ -192,7 +198,7 @@ class IBENT(object):
             offsetid = cur.fetchone()[0]
             # return str(inserted_id)
             query = """INSERT INTO entity(offsetid, annotationset, etype) VALUES (%s, %s, %s);"""
-            cur.execute(query, (offsetid, annotatorid, entity.subtype))
+            cur.execute(query, (offsetid, annotatorid, entity.type))
             self.db_conn.commit()
         except MySQLdb.MySQLError as e:
             self.db_conn.rollback()
@@ -351,7 +357,8 @@ def main():
 
     logging.debug("Initializing the server...")
     server = IBENT(entities=[("mirtex_train_mirna_sner", "stanfordner", "mirna"),
-                             ("chemdner_train_all", "stanfordner", "chemical")], relations=[])
+                             ("chemdner_train_all", "stanfordner", "chemical"),
+                             ("banner", "banner", "gene")], relations=[])
     logging.debug("done.")
     # Test server
     bottle.route("/ibent/status")(server.hello)
@@ -362,10 +369,10 @@ def main():
     # Create a new document
     bottle.route("/ibent/<doctag>", method='POST')(server.new_document)
 
-    # Get new miRNA entity annotations i.e. run a classifier again
+    # Get new entity annotations i.e. run a classifier again
     bottle.route("/ibent/entities/<doctag>/<annotator>", method='POST')(server.run_annotator)
 
-    # Get miRNA entity annotations i.e. fetch from the database
+    # Get entity annotations i.e. fetch from the database
     bottle.route("/ibent/entities/<doctag>/<annotator>")(server.get_annotations)
 
     #bottle.route("/iice/chemical/<text>/<modeltype>", method='POST')(server.process)

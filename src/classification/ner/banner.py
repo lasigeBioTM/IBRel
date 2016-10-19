@@ -115,6 +115,7 @@ class BANNERModel(SimpleTaggerModel):
         :return:
         """
         # sid, genetype, start, end, etext = line.strip().split("\t")
+        print line
         sid, genetype, start, end, etext = line
         tokens = sentence.find_tokens_between(int(start), int(end), relativeto="sent")
         if tokens:
@@ -139,11 +140,12 @@ class BANNERModel(SimpleTaggerModel):
         :return: List of sentence entities found
         """
         sentence_entities = {}
-        for line in out.split("\n"):
+        for line in out.strip().split("\n"):
             elements = line.strip().split("\t")
-            sentence, new_entity = self.process_entity(elements, sentence)
-            if new_entity:
-                sentence_entities[new_entity.eid] = new_entity
+            if len(elements) == 5:  # sid, genetype, start, end, etext
+                sentence, new_entity = self.process_entity(elements, sentence)
+                if new_entity:
+                    sentence_entities[new_entity.eid] = new_entity
         logging.info("found {} entities".format(len(sentence_entities)))
         return sentence_entities
 

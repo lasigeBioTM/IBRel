@@ -31,9 +31,10 @@ def main():
     else:
         text = sys.argv[1]
     data = {"text": text, "format": "json"}
-    # r = requests.post('http://10.10.4.63:8080/iice/chemical/entities', json=data)
-    print bcolors.OKBLUE + "Submit new document" + bcolors.ENDC
     start_total = timer()
+
+    r = requests.post('http://10.10.4.63:8080/iice/chemical/entities', json=data)
+    print bcolors.OKBLUE + "Submit new document" + bcolors.ENDC
     start = timer()
     r = requests.post('http://10.10.4.63:8080/ibent/DOC{}'.format(sys.argv[1]), json=data)
     print r.url, ":", timer() - start
@@ -62,6 +63,14 @@ def main():
     r = requests.get('http://10.10.4.63:8080/ibent/entities/DOC{}/chemdner_train_all'.format(sys.argv[1]))
     print r.url, ":", timer() - start
     pp.pprint(r.json())
+
+    # print bcolors.OKBLUE + "Annotate gene/proteins" + bcolors.ENDC
+    # start = timer()
+    # r = requests.post('http://10.10.4.63:8080/ibent/entities/DOC{}/banner'.format(sys.argv[1]))
+    # print r.url, ":", timer() - start
+    # pp.pprint(r.json())
+
+
 
     print "Total time:", timer() - start_total
     # if len(sys.argv) > 2 and sys.argv[2] == "int":
