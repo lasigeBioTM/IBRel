@@ -83,9 +83,9 @@ def main():
     for i, test_corpus in enumerate(test_sets):
         logging.info("evaluation {}".format(options.test[i]))
         test_model = MILClassifier(test_corpus, options.ptype, relations, test=True, ner=options.models[i+1])
-        # test_model.load_classifier()
-        test_model.vectorizer = train_model.vectorizer
-        test_model.classifier = train_model.classifier
+        test_model.load_classifier()
+        #test_model.vectorizer = train_model.vectorizer
+        #test_model.classifier = train_model.classifier
 
         test_model.test()
         results = test_model.get_predictions(test_corpus)

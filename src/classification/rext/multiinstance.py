@@ -117,8 +117,12 @@ class MILClassifier(ReModel):
                 self.labels[bag] = int(values[-1])
 
     def load_classifier(self):
-        self.classifier = joblib.load("{}/{}/{}.pkl".format(self.basedir, self.modelname, self.modelname))
-        self.vectorizer = joblib.load("{}/{}/{}_bow.pkl".format(self.basedir, self.modelname, self.modelname))
+        #self.classifier = joblib.load("{}/{}/{}.pkl".format(self.basedir, self.modelname, self.modelname))
+        #self.vectorizer = joblib.load("{}/{}/{}_bow.pkl".format(self.basedir, self.modelname, self.modelname))
+        with open("{}/{}/{}.pkl".format(self.basedir, self.modelname, self.modelname), 'r') as modelfile:
+            self.classifier = pickle.loads(modelfile.read())
+        with open("{}/{}/{}_bow.pkl".format(self.basedir, self.modelname, self.modelname), 'r') as modelfile:
+            self.vectorizer = pickle.loads(modelfile.read())
 
     def generate_vectorizer(self):
         logging.info("Building vocabulary...")
@@ -172,6 +176,12 @@ class MILClassifier(ReModel):
         logging.info("Training complete, saving to {}/{}/{}.pkl".format(self.basedir, self.modelname, self.modelname))
         #joblib.dump(self.classifier, "{}/{}/{}.pkl".format(self.basedir, self.modelname, self.modelname))
         #joblib.dump(self.vectorizer, "{}/{}/{}_bow.pkl".format(self.basedir, self.modelname, self.modelname))
+        s = pickle.dumps(self.classifier)
+        with open("{}/{}/{}.pkl".format(self.basedir, self.modelname, self.modelname), 'w') as modelfile:
+            modelfile.write(s)
+        s = pickle.dumps(self.vectorizer)
+        with open("{}/{}/{}_bow.pkl".format(self.basedir, self.modelname, self.modelname), 'w') as modelfile:
+            modelfile.write(s)
 
     def test(self):
         self.vectorize_text()

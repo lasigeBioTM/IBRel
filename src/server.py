@@ -195,6 +195,7 @@ class IBENT(object):
         :param annotator: annotator to classify
         :return:
         """
+        # TODO: process whole document instead of sentence by sentence
         sentences = self.get_sentences(doctag)
         data = bottle.request.json
         output = {}
@@ -334,61 +335,10 @@ class IBENT(object):
         return output
 
     def clean_up(self):
-
         for m in self.models.models:
             self.models.models[m].reset()
         self.models.basemodel.reset()
 
-    def process(self, text="", modeltype="all"):
-        test_corpus = self.generate_corpus(text)
-        model = SimpleTaggerModel("models/chemdner_train_f13_lbfgs_" + modeltype)
-        model.load_tagger()
-        # load data into the model format
-        model.load_data(test_corpus, feature_extractors.keys())
-        # run the classifier on the data
-        results = model.test(stats=False)
-        #results = ResultsNER("models/chemdner_train_f13_lbfgs_" + modeltype)
-        # process the results
-        #results.get_ner_results(test_corpus, model)
-        output = self.get_output(results, "models/chemdner_train_f13_lbfgs_" + modeltype)
-        return output
-
-    def get_relations(self):
-        """
-        Process the results dictionary, identify relations
-        :return: results dictionary with relations
-        """
-        data = bottle.request.json
-        # logging.debug(str(data))
-        if "corpusfile" in data:
-            corpus = pickle.load(open("temp/{}.pickle".format(data["corpusfile"])))
-            logging.info("loaded corpus {}".format(data["corpusfile"]))
-        else:
-            # create corpus
-            corpus = None
-            pass
-        did = "d0"
-        #for sentence in data["abstract"]["sentences"]:
-        for sentence in corpus.documents["d0"].sentences[1:]:
-            sentence_pairs = []
-            sentence_entities = sentence.entities.elist[self.basemodel + "_combined"]
-            # logging.info("sentence entities:" + str(sentence_entities))
-            sid = sentence.sid
-            for i1, e1 in enumerate(sentence_entities):
-                logging.info("sentence entities:" + str(e1))
-                if i1 < len(sentence_entities)-1:
-                    for i2, e2 in enumerate(sentence_entities[i1+1:]):
-                        logging.info("sentence entities:" + str(e2))
-                        pid = sentence.sid + ".p{}".format(len(sentence_pairs))
-                        newpair = Pair(entities=[e1, e2], sid=sid, pid=pid, did=did)
-                        sentence_pairs.append(newpair)
-                        sentence.pairs.pairs[pid] = newpair
-            logging.info(str(sentence_pairs))
-            if len(sentence_pairs) > 0:
-                corpus.documents[did].get_sentence(sid).test_relations(sentence_pairs, self.basemodel + "_combined")
-
-
-        return data
 
     def get_output(self, results, model_name, format="bioc", results_id=None):
         if format == "bioc":
