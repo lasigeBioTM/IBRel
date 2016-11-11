@@ -195,22 +195,28 @@ class IBENT(object):
         :param annotator: annotator to classify
         :return:
         """
-        # TODO: process whole document instead of sentence by sentence
+        # process whole document instead of sentence by sentence
         sentences = self.get_sentences(doctag)
         data = bottle.request.json
         output = {}
         for a in self.relation_annotators:  # a in (annotator_name, annotator_engine, annotator_etype)
             if a[0] == annotator:
+                input_sentences = []
                 for s in sentences:
                     sentence = Sentence(s[2], offset=s[3], sid=s[1], did=doctag)
-                    #sentence.process_sentence(self.corenlp)
                     sentence.process_corenlp_output(ast.literal_eval(s[4]))
                     sentence = self.get_entities(sentence)
+                    input_sentences.append(sentence)
                     #sentence_text = " ".join([t.text for t in sentence.tokens])
-                    sentence_output = self.relation_annotators[a].annotate_sentence(sentence)
+                    #pred, original = self.relation_annotators[a].annotate_sentence(sentence)
                     # print sentence_output
-                    sentence_relations = self.relation_annotators[a].process_sentence(sentence_output, sentence)
+                    #sentence_relations = self.relation_annotators[a].process_sentence(pred, original, sentence)
                     #print sentence_relations
+                sentence_results = self.relation_annotators[a].annotate_sentences(input_sentences)
+
+                for s in sentences:
+                    pred, original = sentence_results[s[1]]
+                    sentence_relations = self.relation_annotators[a].process_sentence(pred, original, sentence)
                     for p in sentence_relations:
                         self.add_relation(p, annotator)
                         output[p.pid] = str(p)
@@ -223,14 +229,14 @@ class IBENT(object):
         query = """SELECT annotationset.id FROM annotationset WHERE annotationset.name = %s"""
         cur.execute(query, (annotator,))
         annotatorid = cur.fetchone()[0]
-        print relation.entities[0].dstart, relation.entities[0].dend, relation.entities[1].dstart, relation.entities[1].dend, relation.did, relation.sid
+        # print relation.entities[0].dstart, relation.entities[0].dend, relation.entities[1].dstart, relation.entities[1].dend, relation.did, relation.sid
         try:
             cur.callproc("addpair", (relation.entities[0].dstart, relation.entities[0].dend,
                                      relation.entities[1].dstart, relation.entities[1].dend,
                                      relation.did, relation.sid, 0))
             cur.execute('SELECT @_addpair_6;')
             pairid = cur.fetchone()[0]
-            print pairid
+            # print pairid
             query = """INSERT INTO relation(entitypair, annotationset, relationtype) VALUES (%s, %s, %s);"""
             cur.execute(query, (pairid, annotatorid, relation.relation))
             self.db_conn.commit()

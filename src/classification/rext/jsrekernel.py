@@ -115,11 +115,25 @@ class JSREKernel(ReModel):
                                        [e1id, e2id], pos, lemmas, ner)
 
     def annotate_sentence(self, sentence):
+        self.write_sentence_data_to_file(sentence)
+        self.run_jsre()
+        return self.open_results()
+
+    def run_jsre(self):
+        jsrecall = Popen(self.test_jsre, stdout=PIPE, stderr=PIPE)
+        res = jsrecall.communicate()
+        if not os.path.isfile(self.resultsfile):
+            print "something went wrong with JSRE!"
+            print res
+        else:
+            with open(self.resultsfile, 'r') as results:
+                return results.read()
+
+    def write_sentence_data_to_file(self, sentence):
         if os.path.isfile(self.temp_dir + self.modelname + ".txt"):
-            print "removed old data"
+            logging.info("removed old data")
             os.remove(self.temp_dir + self.modelname + ".txt")
         pcount = 0
-        did = sentence.did
         examplelines = []
         if self.ner_model == "all":
             sentence_entities = []
@@ -131,7 +145,7 @@ class JSREKernel(ReModel):
         # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
         for pair in itertools.permutations(sentence_entities, 2):
             if pair[0].type in self.entitytypes[0] and pair[1].type in self.entitytypes[1]:  # or\
-                pid = did + ".p" + str(pcount)
+                pid = sentence.sid + ".p" + str(pcount)
                 self.pairs[pid] = pair
                 tokens_text, pos, lemmas, ner = self.get_sentence_instance(sentence, pair[0].eid, pair[1].eid, pair)
                 body = self.generatejSRE_line(tokens_text, pos, lemmas, ner)
@@ -141,24 +155,50 @@ class JSREKernel(ReModel):
         with codecs.open(self.temp_dir + self.modelname + ".txt", 'a', "utf-8") as trainfile:
             for il, l in enumerate(examplelines):
                 trainfile.write(l)
-        jsrecall = Popen(self.test_jsre, stdout=PIPE, stderr=PIPE)
-        res = jsrecall.communicate()
-        if not os.path.isfile(self.resultsfile):
-            print "something went wrong with JSRE!"
-            print res
-        else:
-            with open(self.resultsfile, 'r') as results:
-                return results.read()
 
-    def process_sentence(self, out, sentence):
-        pairs = []
+    def annotate_sentences(self, sentences):
+        """
+        Process multiple sentences at once
+        :param sentences: List of sentence objects (should be from the same doc
+        :return: Dictionary {sid: (pred, original}
+        """
+        for sentence in sentences:
+            self.write_sentence_data_to_file(sentence)
+        self.run_jsre()
+        results = {}
         with open(self.resultsfile, 'r') as resfile:
             pred = resfile.readlines()
         with codecs.open(self.examplesfile, 'r', 'utf-8') as trainfile:
             original = trainfile.readlines()
+        for sentence in sentences:
+            sentence_pred, sentence_original = [], []
+            for i in range(len(pred)):
+                original_tsv = original[i].split('\t')
+                sid = '.'.join(original_tsv[1].split('.')[:-2])
+                if sid == sentence.sid:
+                    sentence_pred.append(pred[i])
+                    sentence_original.append(original[i])
+            results[sentence.sid] = (sentence_pred, sentence_original)
+        return results
+
+    def open_results(self):
+        with open(self.resultsfile, 'r') as resfile:
+            pred = resfile.readlines()
+        with codecs.open(self.examplesfile, 'r', 'utf-8') as trainfile:
+            original = trainfile.readlines()
+        return pred, original
+
+    def process_sentence(self, pred, original, sentence):
+        """
+        Given the raw output and input of JSRE, return list of relations
+        :param pred: JSRE output string
+        :param original: JSRE input string
+        :param sentence: sentence object
+        :return: list of pairs
+        """
+        pairs = []
         for i in range(len(pred)):
             original_tsv = original[i].split('\t')
-            # logging.debug(original_tsv)
             pid = '.'.join(original_tsv[1].split('.')[:-1])
 
             p = float(pred[i].strip())
@@ -185,7 +225,7 @@ class JSREKernel(ReModel):
             sids = []
             # print len(corpus.type_sentences[pairtype])
             sentence_entities = [entity for entity in sentence.entities.elist[self.ner_model]]
-            print sentence.sid, self.ner_model, len(sentence.entities.elist[self.ner_model]), sentence_entities
+            # print sentence.sid, self.ner_model, len(sentence.entities.elist[self.ner_model]), sentence_entities
             # logging.debug("sentence {} has {} entities ({})".format(sentence.sid, len(sentence_entities), len(sentence.entities.elist["goldstandard"])))
             for pair in itertools.permutations(sentence_entities, 2):
                 sid1 = pair[0].eid.split(".")[-2]
