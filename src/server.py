@@ -207,11 +207,6 @@ class IBENT(object):
                     sentence.process_corenlp_output(ast.literal_eval(s[4]))
                     sentence = self.get_entities(sentence)
                     input_sentences.append(sentence)
-                    #sentence_text = " ".join([t.text for t in sentence.tokens])
-                    #pred, original = self.relation_annotators[a].annotate_sentence(sentence)
-                    # print sentence_output
-                    #sentence_relations = self.relation_annotators[a].process_sentence(pred, original, sentence)
-                    #print sentence_relations
                 sentence_results = self.relation_annotators[a].annotate_sentences(input_sentences)
 
                 for s in sentences:
@@ -220,7 +215,6 @@ class IBENT(object):
                     for p in sentence_relations:
                         self.add_relation(p, annotator)
                         output[p.pid] = str(p)
-                        # print output
         return json.dumps(output)
 
     def add_relation(self, relation, annotator):
@@ -277,6 +271,12 @@ class IBENT(object):
         return cur.fetchall()
 
     def get_annotations(self, doctag, annotator):
+        """
+        Get all annotations of a document
+        :param doctag: Document tag
+        :param annotator: Annotator
+        :return:
+        """
         cur = self.db_conn.cursor()
         query = """SELECT o.offsettext, o.docstart, o.docend, e.etype
                    FROM entity e, offset o, annotationset a
@@ -289,7 +289,37 @@ class IBENT(object):
             output["entities"].append({"text": a[0], "start": a[1], "end": a[2], "etype": a[3]})
         return output
 
+    def get_relations(self, doctag, annotator):
+        """
+        Get all annotations of a document
+        :param doctag: Document tag
+        :param annotator: Annotator
+        :return:
+        """
+        cur = self.db_conn.cursor()
+        query = """SELECT o1.offsettext, o1.docstart, o1.docend, e1.etype, o2.offsettext, o2.docstart, o2.docend, e2.etype, r.relationtype
+                   FROM relation r, entitypair p, offset o1, offset o2, entity e1, entity e2, annotationset a
+                   WHERE o1.doctag = %s AND o2.doctag = %s AND
+                         e1.offsetid = o1.id AND e2.offsetid = o2.id AND
+                         p.entity1 = e1.id AND p.entity2 = e2.id AND
+                         r.entitypair = p.id AND r.annotationset = a.id AND a.name = %s;"""
+        # print "QUERY", query
+        cur.execute(query, (doctag, doctag, annotator))
+        annotations = cur.fetchall()
+        output = {"relations": []}
+        for a in annotations:
+            output["relations"].append({"entity1":{"text": a[0], "start": a[1], "end": a[2], "etype": a[3]},
+                                        "entity2": {"text": a[4], "start": a[5], "end": a[6], "etype": a[7]},
+                                        "relationtype": a[8]})
+        return output
+
     def get_entities(self, sentence, annotator="all"):
+        """
+        Add entities from the database to a sentence object
+        :param sentence: sentence object
+        :param annotator: select entities annotated using a specific annotator
+        :return:
+        """
         cur = self.db_conn.cursor()
         if annotator != "all":
             query = """SELECT o.offsettext, o.sentstart, o.sentend, e.etype
@@ -408,6 +438,9 @@ def main():
 
     # Get new entity annotations i.e. run a classifier again
     bottle.route("/ibent/relations/<doctag>/<annotator>", method='POST')(server.run_relation_annotator)
+
+    # Get new entity annotations i.e. run a classifier again
+    bottle.route("/ibent/relations/<doctag>/<annotator>")(server.get_relations)
 
     # Get entity annotations i.e. fetch from the database
     #bottle.route("/ibent/entities/<doctag>/<annotator>")(server.get_annotations)
