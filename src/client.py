@@ -28,17 +28,20 @@ def main():
         text = "Primary Leydig cells obtained from bank vole testes and the established tumor Leydig cell line (MA-10) have been used to explore the effects of 4-tert-octylphenol (OP)."
     elif sys.argv[1] == "4":
         text = "Loss-of-function mutations in progranulin (GRN) cause ubiquitin- and TAR DNA-binding protein 43 (TDP-43)-positive frontotemporal dementia (FTLD-U), a progressive neurodegenerative disease affecting approximately 10% of early-onset dementia patients. Common variation in the miR-659 binding-site of GRN is a major risk factor for TDP43-positive frontotemporal dementia. In support of these findings, the neuropathology of homozygous rs5848 T-allele carriers frequently resembled the pathological FTLD-U subtype of GRN mutation carriers. "
+    elif sys.argv[1] == "5":
+        text = "Co-suppression of miR-221/222 cluster suppresses human glioma cell growth by targeting p27kip1 in vitro and in vivo."
     else:
         text = sys.argv[1]
     data = {"text": text, "format": "json"}
     start_total = timer()
 
-    r = requests.post('http://10.10.4.63:8080/iice/chemical/entities', json=data)
-    # print bcolors.OKBLUE + "Submit new document" + bcolors.ENDC
-    # start = timer()
-    # r = requests.post('http://10.10.4.63:8080/ibent/DOC{}'.format(sys.argv[1]), json=data)
-    # print r.url, ":", timer() - start
-    # pp.pprint(r.json())
+    #r = requests.post('http://10.10.4.63:8080/iice/chemical/entities', json=data)
+
+    print bcolors.OKBLUE + "Submit new document" + bcolors.ENDC
+    start = timer()
+    r = requests.post('http://10.10.4.63:8080/ibent/DOC{}'.format(sys.argv[1]), json=data)
+    print r.url, ":", timer() - start
+    pp.pprint(r.json())
 
     print bcolors.OKBLUE + "Fetch document" + bcolors.ENDC
     start = timer()
@@ -46,17 +49,17 @@ def main():
     print r.url, ":", timer() - start
     pp.pprint(r.json())
 
-    # print bcolors.OKBLUE + "Annotate miRNA" + bcolors.ENDC
-    # start = timer()
-    # r = requests.post('http://10.10.4.63:8080/ibent/entities/DOC{}/mirtex_train_mirna_sner'.format(sys.argv[1]))
-    # print r.url, ":", timer() - start
-    # pp.pprint(r.json())
+    print bcolors.OKBLUE + "Annotate miRNA" + bcolors.ENDC
+    start = timer()
+    r = requests.post('http://10.10.4.63:8080/ibent/entities/DOC{}/mirtex_train_mirna_sner'.format(sys.argv[1]))
+    print r.url, ":", timer() - start
+    pp.pprint(r.json())
 
-    # print bcolors.OKBLUE + "Annotate chemical" + bcolors.ENDC
-    # start = timer()
-    # r = requests.post('http://10.10.4.63:8080/ibent/entities/DOC{}/chemdner_train_all'.format(sys.argv[1]))
-    # print r.url, ":", timer() - start
-    # pp.pprint(r.json())
+    print bcolors.OKBLUE + "Annotate chemical" + bcolors.ENDC
+    start = timer()
+    r = requests.post('http://10.10.4.63:8080/ibent/entities/DOC{}/chemdner_train_all'.format(sys.argv[1]))
+    print r.url, ":", timer() - start
+    pp.pprint(r.json())
 
     print bcolors.OKBLUE + "Get chemicals" + bcolors.ENDC
     start = timer()
@@ -64,22 +67,29 @@ def main():
     print r.url, ":", timer() - start
     pp.pprint(r.json())
 
-    # print bcolors.OKBLUE + "Annotate gene/proteins" + bcolors.ENDC
-    # start = timer()
-    # r = requests.post('http://10.10.4.63:8080/ibent/entities/DOC{}/banner'.format(sys.argv[1]))
-    # print r.url, ":", timer() - start
-    # pp.pprint(r.json())
+    print bcolors.OKBLUE + "Annotate gene/proteins" + bcolors.ENDC
+    start = timer()
+    r = requests.post('http://10.10.4.63:8080/ibent/entities/DOC{}/genia_sample_gene'.format(sys.argv[1]))
+    print r.url, ":", timer() - start
+    pp.pprint(r.json())
 
-    # print bcolors.OKBLUE + "Annotate DDI relations" + bcolors.ENDC
-    # start = timer()
-    # r = requests.post('http://10.10.4.63:8080/ibent/relations/DOC{}/all_ddi_train_slk'.format(sys.argv[1]))
-    # print r.url, ":", timer() - start
-    # #pp.pprint(r.json())
-    # print r.text
+    print bcolors.OKBLUE + "Annotate DDI relations" + bcolors.ENDC
+    start = timer()
+    r = requests.post('http://10.10.4.63:8080/ibent/relations/DOC{}/all_ddi_train_slk'.format(sys.argv[1]))
+    print r.url, ":", timer() - start
+    #pp.pprint(r.json())
+    print r.text
 
     print bcolors.OKBLUE + "Get DDI relations" + bcolors.ENDC
     start = timer()
     r = requests.get('http://10.10.4.63:8080/ibent/relations/DOC{}/all_ddi_train_slk'.format(sys.argv[1]))
+    print r.url, ":", timer() - start
+    pp.pprint(r.json())
+    print r.text
+
+    print bcolors.OKBLUE + "Get miRNA-gene relations" + bcolors.ENDC
+    start = timer()
+    r = requests.post('http://10.10.4.63:8080/ibent/relations/DOC{}/mil_classifier4k'.format(sys.argv[1]))
     print r.url, ":", timer() - start
     pp.pprint(r.json())
     #print r.text

@@ -6,6 +6,7 @@ from classification.ner.banner import BANNERModel
 from classification.ner.crfsuitener import CrfSuiteModel
 from classification.ner.stanfordner import StanfordNERModel
 from classification.rext.jsrekernel import JSREKernel
+from classification.rext.multiinstance import MILClassifier
 from text.sentence import Sentence
 
 __author__ = 'Andre'
@@ -92,6 +93,13 @@ class IBENT(object):
             self.create_annotationset(a[0])
             if a[1] == "jsre":
                 model = JSREKernel(None, a[2], train=False, modelname="annotators/{}/{}.model".format(a[2], a[0]), ner="all")
+                model.load_classifier()
+                self.relation_annotators[a] = model
+            elif a[1] == "smil":
+                model = MILClassifier(None, a[2], relations=[], modelname="{}.model".format(a[0]),
+                                      ner="all", generate=False, test=True)
+                model.basedir = "annotators/{}".format(a[2])
+                model.load_kb("corpora/transmir/transmir_relations.txt")
                 model.load_classifier()
                 self.relation_annotators[a] = model
 
@@ -183,6 +191,7 @@ class IBENT(object):
 
                     sentence_entities = self.entity_annotators[a].process_sentence(sentence_output, sentence)
                     for e in sentence_entities:
+                        sentence_entities[e].normalize()
                         self.add_entity(sentence_entities[e], annotator)
                         output[e] = str(sentence_entities[e])
                         # print output
@@ -209,9 +218,12 @@ class IBENT(object):
                     input_sentences.append(sentence)
                 sentence_results = self.relation_annotators[a].annotate_sentences(input_sentences)
 
-                for s in sentences:
-                    pred, original = sentence_results[s[1]]
-                    sentence_relations = self.relation_annotators[a].process_sentence(pred, original, sentence)
+                for sentence in input_sentences:
+                    if a[1] == "jsre":
+                        pred, original = sentence_results[s[1]]
+                        sentence_relations = self.relation_annotators[a].process_sentence(pred, original, sentence)
+                    elif a[1] == "smil":
+                        sentence_relations = self.relation_annotators[a].process_sentence(sentence)
                     for p in sentence_relations:
                         self.add_relation(p, annotator)
                         output[p.pid] = str(p)
@@ -254,8 +266,8 @@ class IBENT(object):
             cur.execute('SELECT @_addoffset_7;')
             offsetid = cur.fetchone()[0]
             # return str(inserted_id)
-            query = """INSERT INTO entity(offsetid, annotationset, etype) VALUES (%s, %s, %s);"""
-            cur.execute(query, (offsetid, annotatorid, entity.type))
+            query = """INSERT INTO entity(offsetid, annotationset, etype, norm_label, norm_score) VALUES (%s, %s, %s, %s, %s);"""
+            cur.execute(query, (offsetid, annotatorid, entity.type, entity.normalized, entity.normalized_score))
             self.db_conn.commit()
         except MySQLdb.MySQLError as e:
             self.db_conn.rollback()
@@ -418,8 +430,10 @@ def main():
     logging.debug("Initializing the server...")
     server = IBENT(entities=[("mirtex_train_mirna_sner", "stanfordner", "mirna"),
                              ("chemdner_train_all", "stanfordner", "chemical"),
-                             ("banner", "banner", "gene")],
-                   relations=[("all_ddi_train_slk", "jsre", "ddi")])
+                             ("banner", "banner", "gene"),
+                             ("genia_sample_gene", "stanfordner", "gene")],
+                   relations=[("all_ddi_train_slk", "jsre", "ddi"),
+                              ("mil_classifier4k", "smil", "mirna-gene")])
     logging.debug("done.")
     # Test server
     bottle.route("/ibent/status")(server.hello)

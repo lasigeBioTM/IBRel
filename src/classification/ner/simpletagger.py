@@ -411,7 +411,7 @@ def create_entity(tokens, sid, did, text, score, etype, **kwargs):
     elif etype == "mirna":
         e = MirnaEntity(tokens, sid, text=text, did=did, score=score,
                         eid=kwargs.get("eid"), subtype=kwargs.get("subtype"), nextword=kwargs.get("nextword"))
-    elif etype == "protein":
+    elif etype == "protein" or etype == "gene":
         e = ProteinEntity(tokens, sid, text=text, did=did,score=score,
                           eid=kwargs.get("eid"), subtype=kwargs.get("subtype"), nextword=kwargs.get("nextword"))
     elif etype == "dna":
