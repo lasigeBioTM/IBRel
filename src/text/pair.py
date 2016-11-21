@@ -15,6 +15,9 @@ class Pair(object):
         self.recognized_by = {}
         self.score = 0
 
+    def __str__(self):
+        output = "{0.text}={1}>{2.text} ({0.dstart}:{0.dend}=>{2.dstart}:{2.dend})".format(self.entities[0], self.relation, self.entities[1])
+        return output
 
     def get_dic(self):
         dic = {}
