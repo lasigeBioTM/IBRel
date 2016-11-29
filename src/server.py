@@ -122,10 +122,16 @@ class IBENT(object):
                        WHERE doctag =%s;"""
         # print "QUERY", query
         cur.execute(query, (doctag,))
-
         res = cur.fetchone()
         if res is not None:
-            return json.dumps({'docID': res[1], 'docTitle': res[2], 'docText': res[3]})
+            result = {'docID': res[1], 'title': res[2], 'docText': res[3], 'abstract':{'sentences':[]}}
+            sentences = self.get_sentences(doctag)
+            for s in sentences:
+                sentence = Sentence(s[2], offset=s[3], sid=s[1], did=doctag)
+                sentence.process_corenlp_output(ast.literal_eval(s[4]))
+                sentence = self.get_entities(sentence)
+                result['abstract']['sentences'].append(sentence.get_dic("all"))
+            return json.dumps(result)
         else:
             return json.dumps({'error': 'could not find document {}'.format(doctag)})
 

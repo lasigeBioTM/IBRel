@@ -6,6 +6,7 @@ from xml.etree import ElementTree as ET
 import re
 import pprint
 from classification.ner.stanfordner import stanford_coding
+from text.offset import Offsets, Offset
 from text.protein_entity import ProteinEntity
 
 from token2 import Token2
@@ -238,6 +239,8 @@ class Sentence(object):
                 entity = create_entity(tlist, self.sid, did=self.did, text=newtext, score=kwargs.get("score"),
                                        etype=etype, eid=eid, subtype=kwargs.get("subtype"),
                                        original_id=kwargs.get("original_id"), nextword=nextword)
+
+                entity.normalize()
             self.entities.add_entity(entity, source)
             self.label_tokens(tlist, source, etype)
             #logging.debug("added {} to {}, now with {} entities".format(newtext, self.sid,
@@ -293,6 +296,18 @@ class Sentence(object):
             dic["entities"] = sorted(dic["entities"], key=lambda k: k['offset'])
             for ei, e in enumerate(dic["entities"]):
                 e["eid"] = self.sid + ".e{}".format(ei)
+        elif source == "all":
+            offsets = Offsets()
+            for esource in self.entities.elist:
+                for entity in self.entities.elist[esource]:
+                    toadd, v, overlapping, to_exclude = offsets.add_offset(Offset(entity.start, entity.end),
+                                                                           exclude_this_if=[1, -1, 2, -3],
+                                                                           exclude_others_if=[2])
+                    if toadd:
+                        dic["entities"].append(entity.get_dic())
+                dic["entities"] = sorted(dic["entities"], key=lambda k: k['offset'])
+                for ei, e in enumerate(dic["entities"]):
+                    e["eid"] = self.sid + ".e{}".format(ei)
         dic["pairs"] = self.pairs.get_dic()
         return dic
 

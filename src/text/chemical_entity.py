@@ -1,5 +1,7 @@
 import logging
 import re
+
+from postprocessing.chebi_resolution import find_chebi_term3
 from text.entity import Entity
 from config import config
 
@@ -176,6 +178,14 @@ class ChemicalEntity(Entity):
         self.chebi_score = 0
         self.chebi_name = None
         self.sid = sid
+        self.ssm_score = 0
+        self.ssm_best_ID = None
+
+    def normalize(self):
+        chebi_info = find_chebi_term3(self.text.encode("utf-8"))
+        self.chebi_id = chebi_info[0]
+        self.chebi_name = chebi_info[1]
+        self.chebi_score = chebi_info[2]
 
     def get_dic(self):
         dic = super(ChemicalEntity, self).get_dic()
