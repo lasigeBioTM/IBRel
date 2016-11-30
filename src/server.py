@@ -60,10 +60,7 @@ class IBENT(object):
 
     def setup(self):
         # Connect to DB
-        self.db_conn = MySQLdb.connect(host=config.doc_host,
-                                 user=config.doc_user,
-                                 passwd=config.doc_pw,
-                                 db=config.doc_db)
+        self.connect_to_db()
         # Connect to CoreNLP
         self.corenlp = StanfordCoreNLP('http://localhost:9000')
 
@@ -71,7 +68,15 @@ class IBENT(object):
         self.load_models()
 
     def hello(self):
+        self.connect_to_db()
         return "OK!"
+
+    def connect_to_db(self):
+        self.db_conn = MySQLdb.connect(host=config.doc_host,
+                                       user=config.doc_user,
+                                       passwd=config.doc_pw,
+                                       db=config.doc_db,
+                                       use_unicode=True)
 
     def load_models(self):
         # Run load_tagger method of all models
@@ -131,7 +136,8 @@ class IBENT(object):
                 sentence.process_corenlp_output(ast.literal_eval(s[4]))
                 sentence = self.get_entities(sentence)
                 result['abstract']['sentences'].append(sentence.get_dic("all"))
-            return json.dumps(result)
+            output = json.dumps(result)
+            return output
         else:
             return json.dumps({'error': 'could not find document {}'.format(doctag)})
 
@@ -139,13 +145,13 @@ class IBENT(object):
         # Insert a new document into the database
         data = bottle.request.json
         text = data["text"]
-        title = data.get("title")
+        title = data.get("title", "")
         format = data["format"]
         cur = self.db_conn.cursor()
         query = """INSERT INTO document(doctag, title, doctext) VALUES (%s, %s, %s);"""
         # print "QUERY", query
         try:
-            cur.execute(query, (doctag, title, text))
+            cur.execute(query, (doctag, title.encode("utf8"), text.encode("utf8")))
             self.db_conn.commit()
             inserted_id = cur.lastrowid
             self.create_sentences(doctag, text)
@@ -166,7 +172,8 @@ class IBENT(object):
             corenlpres = sentence.process_sentence(self.corenlp)
             query = """INSERT INTO sentence(senttag, doctag, senttext, sentoffset, corenlp) VALUES (%s, %s, %s, %s, %s);"""
             try:
-                cur.execute(query, (sentence.sid, doctag, sentence.text, sentence.offset, str(corenlpres)))
+                cur.execute(query, (sentence.sid, doctag, sentence.text.encode("utf8"), sentence.offset,
+                                    str(corenlpres).encode("utf8")))
                 self.db_conn.commit()
                 #inserted_id = cur.lastrowid
                 #return str(inserted_id)
