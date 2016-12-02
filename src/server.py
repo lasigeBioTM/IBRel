@@ -1,6 +1,13 @@
 import argparse
 import time
-import json
+import ast
+
+from classification.ner.banner import BANNERModel
+from classification.ner.crfsuitener import CrfSuiteModel
+from classification.ner.stanfordner import StanfordNERModel
+from classification.rext.jsrekernel import JSREKernel
+from classification.rext.multiinstance import MILClassifier
+from text.sentence import Sentence
 
 __author__ = 'Andre'
 import bottle
@@ -12,6 +19,8 @@ import codecs
 import cPickle as pickle
 import random
 import string
+import MySQLdb
+import json
 
 from text.document import Document
 from text.corpus import Corpus
@@ -26,21 +35,333 @@ from postprocessing.ssm import add_ssm_score
 
 
 
-class IICEServer(object):
+class IBENT(object):
 
-    def __init__(self, basemodel, ensemble_model, submodels):
-        self.corenlp = StanfordCoreNLP(config.corenlp_dir)
-        self.basemodel = basemodel
-        self.ensemble_model = ensemble_model
-        self.subtypes = submodels
-        self.models = TaggerCollection(basepath=self.basemodel)
-        self.models.load_models()
-        self.ensemble = EnsembleNER(self.ensemble_model, None, self.basemodel + "_combined", types=self.subtypes,
-                                   features=[])
-        self.ensemble.load()
+    def __init__(self, entities, relations):
+        self.baseport = 9181
+        self.corenlp = None
+        #self.basemodel = basemodel
+        #self.ensemble_model = ensemble_model
+        #self.subtypes = submodels
+        #self.models = TaggerCollection(basepath=self.basemodel)
+        #self.models.load_models()
+        #self.ensemble = EnsembleNER(self.ensemble_model, None, self.basemodel + "_combined", types=self.subtypes,
+        #                           features=[])
+        #self.ensemble.load()
+        self.db_conn = None
+        self.entity_annotators = {}
+        for e in entities:
+            self.entity_annotators[e] = None # one classifier for each type of entity
+
+        self.relation_annotators = {}
+        for r in relations:
+            self.relation_annotators[r] = {}
+        self.setup()
+
+    def setup(self):
+        # Connect to DB
+        self.connect_to_db()
+        # Connect to CoreNLP
+        self.corenlp = StanfordCoreNLP('http://localhost:9000')
+
+        #Load StanfordNER models stored in a specific directory
+        self.load_models()
 
     def hello(self):
-        return "Hello World!"
+        self.connect_to_db()
+        return "OK!"
+
+    def connect_to_db(self):
+        self.db_conn = MySQLdb.connect(host=config.doc_host,
+                                       user=config.doc_user,
+                                       passwd=config.doc_pw,
+                                       db=config.doc_db,
+                                       use_unicode=True)
+
+    def load_models(self):
+        # Run load_tagger method of all models
+        for i, a in enumerate(self.entity_annotators.keys()):
+            self.create_annotationset(a[0])
+            if a[1] == "stanfordner":
+                model = StanfordNERModel("annotators/{}/{}".format(a[2], a[0]), a[2])
+                model.load_tagger(self.baseport + i)
+                self.entity_annotators[a] = model
+            elif a[1] == "crfsuite":
+                model = CrfSuiteModel("annotators/{}/{}".format(a[2], a[0]), a[2])
+                model.load_tagger(self.baseport + i)
+                self.entity_annotators[a] = model
+            elif a[1] == "banner":
+                model = BANNERModel("annotators/{}/{}".format(a[2], a[0]), a[2])
+                # model.load_tagger(self.baseport + i)
+                self.entity_annotators[a] = model
+        for i, a in enumerate(self.relation_annotators.keys()):
+            self.create_annotationset(a[0])
+            if a[1] == "jsre":
+                model = JSREKernel(None, a[2], train=False, modelname="annotators/{}/{}.model".format(a[2], a[0]), ner="all")
+                model.load_classifier()
+                self.relation_annotators[a] = model
+            elif a[1] == "smil":
+                model = MILClassifier(None, a[2], relations=[], modelname="{}.model".format(a[0]),
+                                      ner="all", generate=False, test=True)
+                model.basedir = "annotators/{}".format(a[2])
+                model.load_kb("corpora/transmir/transmir_relations.txt")
+                model.load_classifier()
+                self.relation_annotators[a] = model
+
+    def create_annotationset(self, name):
+        # Create DB entries for each annotations set
+        cur = self.db_conn.cursor()
+        query = """INSERT INTO annotationset(name) VALUES (%s);"""
+        try:
+            cur.execute(query, (name,))
+            self.db_conn.commit()
+        except MySQLdb.MySQLError as e:
+            self.db_conn.rollback()
+            logging.debug(e)
+
+    def get_document(self, doctag):
+        # return document entry with doctag
+        cur = self.db_conn.cursor()
+        query = """SELECT distinct id, doctag, title, doctext
+                       FROM document
+                       WHERE doctag =%s;"""
+        # print "QUERY", query
+        cur.execute(query, (doctag,))
+        res = cur.fetchone()
+        if res is not None:
+            result = {'docID': res[1], 'title': res[2], 'docText': res[3], 'abstract':{'sentences':[]}}
+            sentences = self.get_sentences(doctag)
+            for s in sentences:
+                sentence = Sentence(s[2], offset=s[3], sid=s[1], did=doctag)
+                sentence.process_corenlp_output(ast.literal_eval(s[4]))
+                sentence = self.get_entities(sentence)
+                result['abstract']['sentences'].append(sentence.get_dic("all"))
+            output = json.dumps(result)
+            return output
+        else:
+            return json.dumps({'error': 'could not find document {}'.format(doctag)})
+
+    def new_document(self, doctag):
+        # Insert a new document into the database
+        data = bottle.request.json
+        text = data["text"]
+        title = data.get("title", "")
+        format = data["format"]
+        cur = self.db_conn.cursor()
+        query = """INSERT INTO document(doctag, title, doctext) VALUES (%s, %s, %s);"""
+        # print "QUERY", query
+        try:
+            cur.execute(query, (doctag, title.encode("utf8"), text.encode("utf8")))
+            self.db_conn.commit()
+            inserted_id = cur.lastrowid
+            self.create_sentences(doctag, text)
+            return json.dumps({"message": "added document {}".format(doctag)})
+            #return str(inserted_id)
+        except MySQLdb.MySQLError as e:
+            self.db_conn.rollback()
+            logging.debug(e)
+            return json.dumps({"error": "error adding document"})
+
+    def create_sentences(self, doctag, text):
+        # Create sentence entries based on text from document doctag
+        cur = self.db_conn.cursor()
+        newdoc = Document(text, process=False,
+                                  did=doctag)
+        newdoc.sentence_tokenize("biomedical")
+        for i, sentence in enumerate(newdoc.sentences):
+            corenlpres = sentence.process_sentence(self.corenlp)
+            query = """INSERT INTO sentence(senttag, doctag, senttext, sentoffset, corenlp) VALUES (%s, %s, %s, %s, %s);"""
+            try:
+                cur.execute(query, (sentence.sid, doctag, sentence.text.encode("utf8"), sentence.offset,
+                                    str(corenlpres).encode("utf8")))
+                self.db_conn.commit()
+                #inserted_id = cur.lastrowid
+                #return str(inserted_id)
+            except MySQLdb.MySQLError as e:
+                self.db_conn.rollback()
+                logging.debug(e)
+                #return "error adding new sentence"
+
+    def run_entity_annotator(self, doctag, annotator):
+        """
+        Classify a document using an annotator and insert results into the database
+        :param doctag: tag of the document
+        :param annotator: annotator to classify
+        :return:
+        """
+        sentences = self.get_sentences(doctag)
+        data = bottle.request.json
+        output = {}
+        for a in self.entity_annotators:  # a in (annotator_name, annotator_engine, annotator_etype)
+            if a[0] == annotator:
+                for s in sentences:
+                    sentence = Sentence(s[2], offset=s[3], sid=s[1], did=doctag)
+                    #sentence.process_sentence(self.corenlp)
+                    sentence.process_corenlp_output(ast.literal_eval(s[4]))
+                    sentence_text = " ".join([t.text for t in sentence.tokens])
+                    sentence_output = self.entity_annotators[a].annotate_sentence(sentence_text)
+                    #print sentence_output
+
+                    sentence_entities = self.entity_annotators[a].process_sentence(sentence_output, sentence)
+                    for e in sentence_entities:
+                        sentence_entities[e].normalize()
+                        self.add_entity(sentence_entities[e], annotator)
+                        output[e] = str(sentence_entities[e])
+                        # print output
+        return json.dumps(output)
+
+    def run_relation_annotator(self, doctag, annotator):
+        """
+        Classify a document using an annotator and insert results into the database
+        :param doctag: tag of the document
+        :param annotator: annotator to classify
+        :return:
+        """
+        # process whole document instead of sentence by sentence
+        sentences = self.get_sentences(doctag)
+        data = bottle.request.json
+        output = {}
+        for a in self.relation_annotators:  # a in (annotator_name, annotator_engine, annotator_etype)
+            if a[0] == annotator:
+                input_sentences = []
+                for s in sentences:
+                    sentence = Sentence(s[2], offset=s[3], sid=s[1], did=doctag)
+                    sentence.process_corenlp_output(ast.literal_eval(s[4]))
+                    sentence = self.get_entities(sentence)
+                    input_sentences.append(sentence)
+                sentence_results = self.relation_annotators[a].annotate_sentences(input_sentences)
+
+                for sentence in input_sentences:
+                    if a[1] == "jsre":
+                        pred, original = sentence_results[s[1]]
+                        sentence_relations = self.relation_annotators[a].process_sentence(pred, original, sentence)
+                    elif a[1] == "smil":
+                        sentence_relations = self.relation_annotators[a].process_sentence(sentence)
+                    for p in sentence_relations:
+                        self.add_relation(p, annotator)
+                        output[p.pid] = str(p)
+        return json.dumps(output)
+
+    def add_relation(self, relation, annotator):
+        cur = self.db_conn.cursor()
+        # query = """addoffset(%s, %s, %s, %s, %s, %s, %s);"""
+        query = """SELECT annotationset.id FROM annotationset WHERE annotationset.name = %s"""
+        cur.execute(query, (annotator,))
+        annotatorid = cur.fetchone()[0]
+        # print relation.entities[0].dstart, relation.entities[0].dend, relation.entities[1].dstart, relation.entities[1].dend, relation.did, relation.sid
+        try:
+            cur.callproc("addpair", (relation.entities[0].dstart, relation.entities[0].dend,
+                                     relation.entities[1].dstart, relation.entities[1].dend,
+                                     relation.did, relation.sid, 0))
+            cur.execute('SELECT @_addpair_6;')
+            pairid = cur.fetchone()[0]
+            # print pairid
+            query = """INSERT INTO relation(entitypair, annotationset, relationtype) VALUES (%s, %s, %s);"""
+            cur.execute(query, (pairid, annotatorid, relation.relation))
+            self.db_conn.commit()
+
+        except MySQLdb.MySQLError as e:
+            self.db_conn.rollback()
+            logging.debug(e)
+
+    def add_entity(self, entity, annotator):
+        #add offetset to database
+        #retrieve offset ID
+        #retrieve annotationset ID
+        #add entity to database
+        cur = self.db_conn.cursor()
+        #query = """addoffset(%s, %s, %s, %s, %s, %s, %s);"""
+        query = """SELECT annotationset.id FROM annotationset WHERE annotationset.name = %s"""
+        cur.execute(query, (annotator,))
+        annotatorid = cur.fetchone()[0]
+        try:
+            cur.callproc("addoffset", (entity.dstart, entity.dend, entity.start, entity.end, entity.did, entity.sid, entity.text, 0))
+            cur.execute('SELECT @_addoffset_7;')
+            offsetid = cur.fetchone()[0]
+            # return str(inserted_id)
+            query = """INSERT INTO entity(offsetid, annotationset, etype, norm_label, norm_score) VALUES (%s, %s, %s, %s, %s);"""
+            cur.execute(query, (offsetid, annotatorid, entity.type, entity.normalized, entity.normalized_score))
+            self.db_conn.commit()
+        except MySQLdb.MySQLError as e:
+            self.db_conn.rollback()
+            logging.debug(e)
+
+    def get_sentences(self, doctag):
+        cur = self.db_conn.cursor()
+        query = """SELECT distinct id, senttag, senttext, sentoffset, corenlp
+                               FROM sentence
+                               WHERE doctag =%s;"""
+        # print "QUERY", query
+        cur.execute(query, (doctag,))
+        return cur.fetchall()
+
+    def get_annotations(self, doctag, annotator):
+        """
+        Get all annotations of a document
+        :param doctag: Document tag
+        :param annotator: Annotator
+        :return:
+        """
+        cur = self.db_conn.cursor()
+        query = """SELECT o.offsettext, o.docstart, o.docend, e.etype
+                   FROM entity e, offset o, annotationset a
+                   WHERE doctag = %s AND e.offsetid = o.id AND e.annotationset = a.id AND a.name = %s;"""
+        # print "QUERY", query
+        cur.execute(query, (doctag, annotator))
+        annotations = cur.fetchall()
+        output = {"entities": []}
+        for a in annotations:
+            output["entities"].append({"text": a[0], "start": a[1], "end": a[2], "etype": a[3]})
+        return output
+
+    def get_relations(self, doctag, annotator):
+        """
+        Get all annotations of a document
+        :param doctag: Document tag
+        :param annotator: Annotator
+        :return:
+        """
+        cur = self.db_conn.cursor()
+        query = """SELECT o1.offsettext, o1.docstart, o1.docend, e1.etype, o2.offsettext, o2.docstart, o2.docend, e2.etype, r.relationtype
+                   FROM relation r, entitypair p, offset o1, offset o2, entity e1, entity e2, annotationset a
+                   WHERE o1.doctag = %s AND o2.doctag = %s AND
+                         e1.offsetid = o1.id AND e2.offsetid = o2.id AND
+                         p.entity1 = e1.id AND p.entity2 = e2.id AND
+                         r.entitypair = p.id AND r.annotationset = a.id AND a.name = %s;"""
+        # print "QUERY", query
+        cur.execute(query, (doctag, doctag, annotator))
+        annotations = cur.fetchall()
+        output = {"relations": []}
+        for a in annotations:
+            output["relations"].append({"entity1":{"text": a[0], "start": a[1], "end": a[2], "etype": a[3]},
+                                        "entity2": {"text": a[4], "start": a[5], "end": a[6], "etype": a[7]},
+                                        "relationtype": a[8]})
+        return output
+
+    def get_entities(self, sentence, annotator="all"):
+        """
+        Add entities from the database to a sentence object
+        :param sentence: sentence object
+        :param annotator: select entities annotated using a specific annotator
+        :return:
+        """
+        cur = self.db_conn.cursor()
+        if annotator != "all":
+            query = """SELECT o.offsettext, o.sentstart, o.sentend, e.etype
+                               FROM entity e, offset o, annotationset a
+                               WHERE senttag = %s AND e.offsetid = o.id AND e.annotationset = a.id AND a.name = %s;"""
+            # print "QUERY", query
+            cur.execute(query, (sentence.sid, annotator))
+        else:
+            query = """SELECT o.offsettext, o.sentstart, o.sentend, e.etype
+                                           FROM entity e, offset o
+                                           WHERE o.senttag = %s AND e.offsetid = o.id;"""
+            # print "QUERY", query
+            cur.execute(query, (sentence.sid,))
+        annotations = cur.fetchall()
+        for entity in annotations:
+            sentence.tag_entity(entity[1], entity[2], entity[3], text=entity[0])
+        return sentence
 
     def process_pubmed(self, pmid):
         title, text = pubmed.get_pubmed_abs(pmid)
@@ -75,74 +396,10 @@ class IICEServer(object):
         return output
 
     def clean_up(self):
-
         for m in self.models.models:
             self.models.models[m].reset()
         self.models.basemodel.reset()
 
-    def process(self, text="", modeltype="all"):
-        test_corpus = self.generate_corpus(text)
-        model = SimpleTaggerModel("models/chemdner_train_f13_lbfgs_" + modeltype)
-        model.load_tagger()
-        # load data into the model format
-        model.load_data(test_corpus, feature_extractors.keys())
-        # run the classifier on the data
-        results = model.test(stats=False)
-        #results = ResultsNER("models/chemdner_train_f13_lbfgs_" + modeltype)
-        # process the results
-        #results.get_ner_results(test_corpus, model)
-        output = self.get_output(results, "models/chemdner_train_f13_lbfgs_" + modeltype)
-        return output
-
-    def get_relations(self):
-        """
-        Process the results dictionary, identify relations
-        :return: results dictionary with relations
-        """
-        data = bottle.request.json
-        # logging.debug(str(data))
-        if "corpusfile" in data:
-            corpus = pickle.load(open("temp/{}.pickle".format(data["corpusfile"])))
-            logging.info("loaded corpus {}".format(data["corpusfile"]))
-        else:
-            # create corpus
-            corpus = None
-            pass
-        did = "d0"
-        #for sentence in data["abstract"]["sentences"]:
-        for sentence in corpus.documents["d0"].sentences[1:]:
-            sentence_pairs = []
-            sentence_entities = sentence.entities.elist[self.basemodel + "_combined"]
-            # logging.info("sentence entities:" + str(sentence_entities))
-            sid = sentence.sid
-            for i1, e1 in enumerate(sentence_entities):
-                logging.info("sentence entities:" + str(e1))
-                if i1 < len(sentence_entities)-1:
-                    for i2, e2 in enumerate(sentence_entities[i1+1:]):
-                        logging.info("sentence entities:" + str(e2))
-                        pid = sentence.sid + ".p{}".format(len(sentence_pairs))
-                        newpair = Pair(entities=[e1, e2], sid=sid, pid=pid, did=did)
-                        sentence_pairs.append(newpair)
-                        sentence.pairs.pairs[pid] = newpair
-            logging.info(str(sentence_pairs))
-            if len(sentence_pairs) > 0:
-                corpus.documents[did].get_sentence(sid).test_relations(sentence_pairs, self.basemodel + "_combined")
-
-
-        return data
-
-    def generate_corpus(self, text):
-        """
-        Create a corpus object from the input text.
-        :param text:
-        :return:
-        """
-        test_corpus = Corpus("")
-        newdoc = Document(text, process=False, did="d0", title="Test document")
-        newdoc.sentence_tokenize("biomedical")
-        newdoc.process_document(self.corenlp, "biomedical")
-        test_corpus.documents["d0"] = newdoc
-        return test_corpus
 
     def get_output(self, results, model_name, format="bioc", results_id=None):
         if format == "bioc":
@@ -183,40 +440,40 @@ def main():
     logging.basicConfig(level=numeric_level, format=logging_format)
     logging.getLogger().setLevel(numeric_level)
 
-    base_model = "models/chemdner_train"
-    ensemble_model = "models/ensemble_ner/train_on_dev"
-    #submodels = [base_model + "_" + t for t in ChemdnerCorpus.chemdner_types]
-    if base_model.split("/")[-1].startswith("chemdner+ddi"):
-        subtypes = ["drug", "group", "brand", "drug_n"] + ["IDENTIFIER", "MULTIPLE",
-                                                                 "FAMILY", "FORMULA", "SYSTEMATIC",
-                                                                 "ABBREVIATION", "TRIVIAL"] + ["chemdner", "ddi"]
-    elif base_model.split("/")[-1].startswith("ddi"):
-        subtypes = ["drug", "group", "brand", "drug_n", "all"]
-    elif base_model.split("/")[-1].startswith("chemdner"):
-        subtypes = ["IDENTIFIER", "MULTIPLE", "FAMILY", "FORMULA", "SYSTEMATIC", "ABBREVIATION", "TRIVIAL", "all"]
-    submodels = ['_'.join(base_model.split("_")[:]) + "_" + t for t in subtypes[:-1]] #ignore the "all"
     logging.debug("Initializing the server...")
-    server = IICEServer(base_model, ensemble_model, submodels)
+    server = IBENT(entities=[("mirtex_train_mirna_sner", "stanfordner", "mirna"),
+                             ("chemdner_train_all", "stanfordner", "chemical"),
+                             ("banner", "banner", "gene"),
+                             ("genia_sample_gene", "stanfordner", "gene")],
+                   relations=[("all_ddi_train_slk", "jsre", "ddi"),
+                              ("mil_classifier4k", "smil", "mirna-gene")])
     logging.debug("done.")
-    load_time = time.time() - starttime
-    starttime = time.time()
-    '''if options.test:
-        text = "Primary Leydig cells obtained from bank vole testes and the established tumor Leydig cell line (MA-10) have been used to explore the effects of 4-tert-octylphenol (OP). Leydig cells were treated with two concentrations of OP (10(-4)M, 10(-8)M) alone or concomitantly with anti-estrogen ICI 182,780 (1M). In OP-treated bank vole Leydig cells, inhomogeneous staining of estrogen receptor (ER) within cell nuclei was found, whereas it was of various intensity among MA-10 Leydig cells. The expression of ER mRNA and protein decreased in both primary and immortalized Leydig cells independently of OP dose. ICI partially reversed these effects at mRNA level while at protein level abrogation was found only in vole cells. Dissimilar action of OP on cAMP and androgen production was also observed. This study provides further evidence that OP shows estrogenic properties acting on Leydig cells. However, its effect is diverse depending on the cellular origin. "
-        logging.debug("test with this text: {}".format(text))
-        output = server.process_multiple(text)
-        print output
-        process_time = time.time() - starttime
-        # second document
-        text = "Azole class of compounds are well known for their excellent therapeutic properties. Present paper describes about the synthesis of three series of new 1,2,4-triazole and benzoxazole derivatives containing substituted pyrazole moiety (11a-d, 12a-d and 13a-d). The newly synthesized compounds were characterized by spectral studies and also by C, H, N analyses. All the synthesized compounds were screened for their analgesic activity by the tail flick method. The antimicrobial activity of the new derivatives was also performed by Minimum Inhibitory Concentration (MIC) by the serial dilution method. The results revealed that the compound 11c having 2,5-dichlorothiophene substituent on pyrazole moiety and a triazole ring showed significant analgesic and antimicrobial activity."
-        logging.debug("test with this text: {}".format(text))
-        output = server.process_multiple(text)
-        print output
-        logging.info("loading time: {}; process time: {}".format(load_time, process_time))
-    else:'''
-    bottle.route("/hello")(server.hello)
-    bottle.route("/iice/chemical/entities", method='POST')(server.process_multiple)
+    # Test server
+    bottle.route("/ibent/status")(server.hello)
+
+    # Fetch an existing document
+    bottle.route("/ibent/<doctag>")(server.get_document)
+
+    # Create a new document
+    bottle.route("/ibent/<doctag>", method='POST')(server.new_document)
+
+    # Get new entity annotations i.e. run a classifier again
+    bottle.route("/ibent/entities/<doctag>/<annotator>", method='POST')(server.run_entity_annotator)
+
+    # Get entity annotations i.e. fetch from the database
+    bottle.route("/ibent/entities/<doctag>/<annotator>")(server.get_annotations)
+
+    # Get new entity annotations i.e. run a classifier again
+    bottle.route("/ibent/relations/<doctag>/<annotator>", method='POST')(server.run_relation_annotator)
+
+    # Get new entity annotations i.e. run a classifier again
+    bottle.route("/ibent/relations/<doctag>/<annotator>")(server.get_relations)
+
+    # Get entity annotations i.e. fetch from the database
+    #bottle.route("/ibent/entities/<doctag>/<annotator>")(server.get_annotations)
+
     #bottle.route("/iice/chemical/<text>/<modeltype>", method='POST')(server.process)
-    bottle.route("/iice/chemical/interactions", method='POST')(server.get_relations)
+    #bottle.route("/ibent/interactions", method='POST')(server.get_relations)
     #daemon_run(host='10.10.4.63', port=8080, logfile="server.log", pidfile="server.pid")
     bottle.run(host=config.host_ip, port=8080, DEBUG=True)
 if __name__ == "__main__":

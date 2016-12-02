@@ -34,6 +34,10 @@ with open("settings.json") as settings:
         go_user = vals["go_user"]
         go_pw = vals["go_pw"]
         go_db = vals["go_db"]
+    doc_host = vals["doc_host"]
+    doc_user = vals["doc_user"]
+    doc_pw = vals["doc_pw"]
+    doc_db = vals["doc_db"]
     host_ip = vals["host_ip"]
     geniass_path = vals["geniass_path"]
     florchebi_path = vals["florchebi_path"]
@@ -57,10 +61,21 @@ if use_go:
                               passwd=go_pw,
                               db=go_db)
 
-relation_types = {"miRNA-gene":
-        {"source_role": "agent",
-         "source_types": ("mirna"),
-         "target_role": "target",
-         "target_types": ("protein"),
-         "event": "interaction",
-         "keywords": ["bind", "ligand", "interact"]},}
+relation_types = {"mirna-gene": {"source_role": "agent",
+                                 "source_types": ("mirna"),
+                                 "target_role": "target",
+                                 "target_types": ("protein"),
+                                 "event": "interaction",
+                                 "keywords": ["bind", "ligand", "interact"]},
+                    "miRNA-gene": {"source_role": "agent",
+                                 "source_types": ("mirna"),
+                                 "target_role": "target",
+                                 "target_types": ("protein"),
+                                 "event": "interaction",
+                                 "keywords": ["bind", "ligand", "interact"]},
+                  "ddi": {"source_role": "agent",
+                                 "source_types": ("chemical"),
+                                 "target_role": "target",
+                                 "target_types": ("chemical"),
+                                 "event": "interaction",
+                                 "keywords": []}}

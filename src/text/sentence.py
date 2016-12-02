@@ -6,6 +6,7 @@ from xml.etree import ElementTree as ET
 import re
 import pprint
 from classification.ner.stanfordner import stanford_coding
+from text.offset import Offsets, Offset
 from text.protein_entity import ProteinEntity
 
 from token2 import Token2
@@ -38,8 +39,29 @@ class Sentence(object):
     def tokenize_words(self):
         pass
 
+    def process_sentence(self, corenlpserver, doctype="biomedical"):
+        corenlpres = corenlpserver.annotate(self.text.encode("utf8"), properties={
+            'ssplit.eolonly': True,
+            # 'annotators': 'tokenize,ssplit,pos,ner,lemma',
+            'annotators': 'tokenize,ssplit,pos,parse,ner,lemma,depparse',
+            'outputFormat': 'json',
+        })
+        if isinstance(corenlpres, basestring):
+            print corenlpres
+            corenlpres = corenlpserver.annotate(self.text.encode("utf8"), properties={
+                'ssplit.eolonly': True,
+                # 'annotators': 'tokenize,ssplit,pos,depparse,parse',
+                'annotators': 'tokenize,ssplit,pos,ner,lemma',
+                'outputFormat': 'json',
+            })
+        if isinstance(corenlpres, basestring):
+            print "could not process this sentence:", self.text.encode("utf8")
+            print corenlpres
+        else:
+            self.process_corenlp_output(corenlpres)
+        return corenlpres
 
-    def process_corenlp_sentence(self, corenlpres):
+    def process_corenlp_output(self, corenlpres):
 
         """
         Process the results obtained with CoreNLP for this sentence
@@ -115,15 +137,15 @@ class Sentence(object):
         return newtoken
 
     def add_relation(self, entity1, entity2, subtype, source="goldstandard", **kwargs):
-        if self.pairs.pairs.get(source):
-            pid = self.sid + ".p" + str(len(self.pairs.pairs[source]))
+        if self.pairs.pairs:
+            pid = self.sid + ".p" + str(len(self.pairs.pairs))
         else:
             pid = self.sid + ".p0"
         if subtype == "tlink":
             p = TLink(entity1, entity2, original_id=kwargs.get("original_id"),
                                      did=self.did, pid=pid, rtype=subtype)
         else:
-            p = Pair((entity1, entity2), subtype)
+            p = Pair((entity1, entity2), subtype, pid=pid, sid=self.sid, did=self.did)
         self.pairs.add_pair(p, source)
         return p
 
@@ -217,6 +239,8 @@ class Sentence(object):
                 entity = create_entity(tlist, self.sid, did=self.did, text=newtext, score=kwargs.get("score"),
                                        etype=etype, eid=eid, subtype=kwargs.get("subtype"),
                                        original_id=kwargs.get("original_id"), nextword=nextword)
+
+                entity.normalize()
             self.entities.add_entity(entity, source)
             self.label_tokens(tlist, source, etype)
             #logging.debug("added {} to {}, now with {} entities".format(newtext, self.sid,
@@ -272,6 +296,18 @@ class Sentence(object):
             dic["entities"] = sorted(dic["entities"], key=lambda k: k['offset'])
             for ei, e in enumerate(dic["entities"]):
                 e["eid"] = self.sid + ".e{}".format(ei)
+        elif source == "all":
+            offsets = Offsets()
+            for esource in self.entities.elist:
+                for entity in self.entities.elist[esource]:
+                    toadd, v, overlapping, to_exclude = offsets.add_offset(Offset(entity.start, entity.end),
+                                                                           exclude_this_if=[1, -1, 2, -3],
+                                                                           exclude_others_if=[2])
+                    if toadd:
+                        dic["entities"].append(entity.get_dic())
+                dic["entities"] = sorted(dic["entities"], key=lambda k: k['offset'])
+                for ei, e in enumerate(dic["entities"]):
+                    e["eid"] = self.sid + ".e{}".format(ei)
         dic["pairs"] = self.pairs.get_dic()
         return dic
 

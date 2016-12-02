@@ -28,6 +28,7 @@ def clean_whitespace(text):
         replacedtext = replacedtext.replace(code, " ")
     return replacedtext
 
+sources = ("PubMed", "PMC")
 
 class Document(object):
     """A document is constituted by one or more sentences. It should have an ID and
@@ -40,6 +41,7 @@ class Document(object):
         self.did = kwargs.get("did", "d0")
         self.invalid_sids = []
         self.title_sids = []
+        self.source = kwargs.get("source")
         self.pairs = Pairs()
         if ssplit:
             self.sentence_tokenize(doctype)
@@ -107,7 +109,7 @@ class Document(object):
                 print corenlpres
                 continue
             else:
-                s.process_corenlp_sentence(corenlpres)
+                s.process_corenlp_output(corenlpres)
 
 
     def tag_chemdner_entity(self, start, end, subtype, **kwargs):

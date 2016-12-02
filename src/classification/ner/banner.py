@@ -85,27 +85,87 @@ class BANNERModel(SimpleTaggerModel):
         results = self.process_results(self.BANNER_BASE + "/temp/banner_output.txt", corpus)
         return results
 
+    def annotate_sentence(self, text):
+        """
+        Annotate a single sentence using BANNER
+        :param text: sentence text
+        :return: BANNER output
+        """
+        base_dir = os.getcwd()
+        os.chdir(self.BANNER_BASE)
+        with codecs.open("temp/banner_input.txt", 'w', 'utf-8') as inputfile:
+            inputfile.write("{}\t{}\n".format("0", text))
+        self.params = ["./scripts/banner.sh", "tag", self.BANNER_CONFIG, "temp/banner_input.txt",
+                       "temp/banner_output.txt"]
+        logging.info("Starting banner tagger")
+        self.process = Popen(self.params, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        while True:
+            output = self.process.stdout.readline()
+            if output == '' and self.process.poll() is not None:
+                break
+        os.chdir(base_dir)
+        with open(self.BANNER_BASE + "/temp/banner_output.txt") as outfile:
+            return outfile.read()
+
+    def process_entity(self, line, sentence):
+        """
+        Process one line of BANNER output
+        :param line: list of elements of the line to be processed
+        :param sentence: Sentence object associated with line
+        :return:
+        """
+        # sid, genetype, start, end, etext = line.strip().split("\t")
+        print line
+        sid, genetype, start, end, etext = line
+        tokens = sentence.find_tokens_between(int(start), int(end), relativeto="sent")
+        if tokens:
+            new_entity = create_entity(tokens=tokens,
+                                       sid=sentence.sid, did=sentence.did,
+                                       text=etext, score=1, etype=self.etype)
+            eid = sentence.tag_entity(start=new_entity.tokens[0].start,
+                                      end=new_entity.tokens[-1].end, etype=self.etype,
+                                      entity=new_entity, source=self.path)
+            new_entity.eid = eid
+            return sentence, new_entity
+        else:
+            logging.info("No tokens found: {}-{}".format(start, end))
+            logging.info(sentence.text)
+            return sentence, None
+
+    def process_sentence(self, out, sentence):
+        """
+        Process BANNER results associated with just one sentence
+        :param out: BANNER results
+        :param sentence: Sentence object
+        :return: List of sentence entities found
+        """
+        sentence_entities = {}
+        for line in out.strip().split("\n"):
+            elements = line.strip().split("\t")
+            if len(elements) == 5:  # sid, genetype, start, end, etext
+                sentence, new_entity = self.process_entity(elements, sentence)
+                if new_entity:
+                    sentence_entities[new_entity.eid] = new_entity
+        logging.info("found {} entities".format(len(sentence_entities)))
+        return sentence_entities
+
     def process_results(self, outputfile, corpus):
+        """
+        Process BANNER results associated with multiple sentences
+        :param outputfile: Path to BANNER output
+        :param corpus: Corpus object containing the sentences
+        :return: Results object
+        """
         results = ResultsNER(self.path)
         results.corpus = corpus
         with codecs.open(outputfile, 'r', 'utf-8') as ofile:
             for line in ofile:
-                sid, genetype, start, end, etext = line.strip().split("\t")
-                sentence = corpus.get_sentence(sid)
-                tokens = sentence.find_tokens_between(int(start), int(end), relativeto="sent")
-                if tokens:
-                    new_entity = create_entity(tokens=tokens,
-                                               sid=sentence.sid, did=sentence.did,
-                                               text=etext, score=1, etype=self.etype)
-                    eid = sentence.tag_entity(start=new_entity.tokens[0].start,
-                                              end=new_entity.tokens[-1].end, etype=self.etype,
-                                              entity=new_entity, source=self.path)
-                    new_entity.eid = eid
-                    results.entities[eid] = new_entity
+                elements = line.strip().split("\t")
+                sentence = corpus.get_sentence(elements[0])
+                sentence, new_entity = self.process_entity(elements, sentence)
+                if new_entity:
+                    results.entities[new_entity.eid] = new_entity
                     new_entity = None
-                else:
-                    logging.info("No tokens found: {}-{}".format(start, end))
-                    logging.info(sentence.text)
         logging.info("found {} entities".format(len(results.entities)))
         return results
 

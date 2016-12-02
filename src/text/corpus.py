@@ -1,6 +1,6 @@
 from __future__ import division, absolute_import
 
-import codecs
+import io
 import logging
 import pickle
 import random
@@ -329,12 +329,16 @@ class Corpus(object):
             self.convert_to_csv(output_path)
 
     def convert_to_brat(self, output_path):
-        pass
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
+        for did in self.documents:
+            with io.open("{}/{}.txt".format(output_path, did), "w", encoding='utf-8') as output_file:
+                output_file.write(unicode(self.documents[did].text, "utf-8"))
 
     def convert_to_csv(self, output_path, entities=False, relations=False):
         if not os.path.exists(output_path):
             os.makedirs(output_path)
-        with codecs.open("{}/documents.txt".format(output_path), "w", 'utf-8') as output_file:
+        with io.open("{}/documents.txt".format(output_path), "w", encoding='utf-8') as output_file:
             for did in self.documents:
                 output_file.write(u"{}\t{}\n".format(did, self.documents[did].text.replace("\n", " ")))
 

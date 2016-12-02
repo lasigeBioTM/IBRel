@@ -3,9 +3,6 @@ import logging
 import time
 import cPickle as pickle
 from collections import OrderedDict
-from terminaltables import AsciiTable, DoubleTable, SingleTable
-from textwrap import wrap
-from memory_profiler import profile
 from classification.rext.multiinstance import MILClassifier
 from config.corpus_paths import paths
 from evaluate import get_gold_ann_set, get_list_results, get_relations_results
@@ -19,7 +16,8 @@ def main():
     parser.add_argument("--test", nargs="+",
                         help="Gold standards to be used for testing")
     parser.add_argument("--tag", dest="tag", default="0", help="Tag to identify the experiment")
-    parser.add_argument("--models", dest="models", help="model destination path, without extension", nargs="+")
+    parser.add_argument("--emodels", dest="emodels", help="model destination path, without extension", nargs="+")
+    parser.add_argument("--rmodels", dest="rmodels", help="model destination path, without extension")
     parser.add_argument("--entitytype", dest="etype", help="type of entities to be considered", default="all")
     parser.add_argument("--pairtype", dest="ptype", help="type of pairs to be considered", default="all")
     parser.add_argument("--crf", dest="crf", help="CRF implementation", default="stanford",
@@ -28,6 +26,7 @@ def main():
     parser.add_argument("--rules", default=[], nargs='+', help="aditional post processing rules")
     parser.add_argument("--kernel", action="store", dest="kernel", default="svmtk", help="Kernel for relation extraction")
     parser.add_argument("--results", dest="results", help="Results object pickle.")
+
     options = parser.parse_args()
 
     # set logger
@@ -54,20 +53,25 @@ def main():
         corpus_path = paths[goldstd]["corpus"]
         logging.info("loading corpus %s" % corpus_path)
         train_corpus = pickle.load(open(corpus_path, 'rb'))
-        for sentence in train_corpus.get_sentences(options.models[0]):
-            for e in sentence.entities.elist[options.models[0]]:
+        for sentence in train_corpus.get_sentences(options.emodels[0]):
+            for e in sentence.entities.elist[options.emodels[0]]:
                 if e.normalized_score > 0:
                     total_entities += 1
         # with open("mirna_ds-pmids.txt", 'w') as pmidfile:
         #     for did in train_corpus.documents:
         #         pmidfile.write(did + "\n")
-        train_model = MILClassifier(train_corpus, options.ptype, relations, ner=options.models[0])
+        train_model = MILClassifier(train_corpus, options.ptype, relations, ner=options.emodels[0])
+        train_model.load_kb("corpora/transmir/transmir_relations.txt")
+        train_model.generateMILdata(test=False)
         train_model.write_to_file("temp/mil.train")
         train_model = None
         train_corpus = None
     print "total entities:", total_entities
-    train_model = MILClassifier(None, options.ptype, relations, ner=options.models[0], generate=False)
+    train_model = MILClassifier(None, options.ptype, relations, ner=options.emodels[0], generate=False,
+                                modelname=options.rmodels)
+    train_model.load_kb("corpora/transmir/transmir_relations.txt")
     train_model.load_from_file("temp/mil.train")
+    #train_model.generateMILdata(test=False)
     train_model.train()
 
 
@@ -82,10 +86,13 @@ def main():
 
     for i, test_corpus in enumerate(test_sets):
         logging.info("evaluation {}".format(options.test[i]))
-        test_model = MILClassifier(test_corpus, options.ptype, relations, test=True, ner=options.models[i+1])
-        # test_model.load_classifier()
-        test_model.vectorizer = train_model.vectorizer
-        test_model.classifier = train_model.classifier
+        test_model = MILClassifier(test_corpus, options.ptype, relations, test=True, ner=options.emodels[i+1],
+                                   modelname=options.rmodels)
+        test_model.load_kb("corpora/transmir/transmir_relations.txt")
+        test_model.generateMILdata(test=False)
+        test_model.load_classifier()
+        #test_model.vectorizer = train_model.vectorizer
+        #test_model.classifier = train_model.classifier
 
         test_model.test()
         results = test_model.get_predictions(test_corpus)
@@ -102,8 +109,8 @@ def main():
                 get_relations_results(results, options.kernel, goldset[1], {}, options.rules)
         else:
             total_entities = 0
-            for sentence in test_corpus.get_sentences(options.models[1]):
-                for e in sentence.entities.elist[options.models[1]]:
+            for sentence in test_corpus.get_sentences(options.emodels[1]):
+                for e in sentence.entities.elist[options.emodels[1]]:
                     if e.normalized_score > 0:
                         total_entities += 1
             print "total entities:", total_entities

@@ -1,3 +1,4 @@
+import io
 import logging
 import pickle
 import os
@@ -57,6 +58,31 @@ class ResultsRE(object):
                 #    print entity.chebi_score,
 
         self.corpus = corpus
+
+    def convert_to(self, output_format, output_path, eset):
+        if output_format == "brat":
+            self.convert_to_brat(output_path, eset)
+
+    def convert_to_brat(self, output_path, eset):
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
+        for did in self.corpus.documents:
+            eid_map = {}
+            with io.open("{}/{}.ann".format(output_path, did), "w", encoding='utf-8') as output_file:
+                ecount = 1
+                for sentence in self.corpus.documents[did].sentences:
+                    if eset in sentence.entities.elist:
+                        print "writing...", eset
+                        for entity in sentence.entities.elist[eset]:
+                            eid_map[entity.eid] = "T{0}".format(ecount)
+                            output_file.write(u"T{0}\t{1.type} {1.dstart} {1.dend}\t{1.text}\n".format(ecount, entity))
+                            ecount += 1
+                rcount = 1
+                for p in self.document_pairs[did].pairs:
+                    output_file.write(u"R{0}\tmiRNA-regulation Arg1:{1} Arg2:{2}\n".format(rcount,
+                                                                                           eid_map[p.entities[0].eid],
+                                                                                           eid_map[p.entities[1].eid]))
+                    rcount += 1
 
 class ResultsNER(object):
     """Store a set of entities related to a corpus or input text """
@@ -238,6 +264,22 @@ class ResultsNER(object):
         #     print train_data[i], l
         return train_data, train_labels, offsets
 
+    def convert_to(self, output_format, output_path, eset):
+        if output_format == "brat":
+            self.convert_to_brat(output_path, eset)
+
+    def convert_to_brat(self, output_path, eset):
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
+        for did in self.corpus.documents:
+            with io.open("{}/{}.ann".format(output_path, did), "w", encoding='utf-8') as output_file:
+                ecount = 0
+                for sentence in self.corpus.documents[did].sentences:
+                    if eset in sentence.entities.elist:
+                        print "writing...", eset
+                        for entity in sentence.entities.elist[eset]:
+                            output_file.write(u"T{0}\t{1.type} {1.dstart} {1.dend}\t{1.text}\n".format(ecount, entity))
+                            ecount += 1
 
 class ResultSetNER(object):
     """
