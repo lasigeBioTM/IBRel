@@ -61,13 +61,17 @@ def main():
         #     for did in train_corpus.documents:
         #         pmidfile.write(did + "\n")
         train_model = MILClassifier(train_corpus, options.ptype, relations, ner=options.emodels[0])
+        train_model.load_kb("corpora/transmir/transmir_relations.txt")
+        train_model.generateMILdata(test=False)
         train_model.write_to_file("temp/mil.train")
         train_model = None
         train_corpus = None
     print "total entities:", total_entities
     train_model = MILClassifier(None, options.ptype, relations, ner=options.emodels[0], generate=False,
                                 modelname=options.rmodels)
+    train_model.load_kb("corpora/transmir/transmir_relations.txt")
     train_model.load_from_file("temp/mil.train")
+    #train_model.generateMILdata(test=False)
     train_model.train()
 
 
@@ -84,6 +88,8 @@ def main():
         logging.info("evaluation {}".format(options.test[i]))
         test_model = MILClassifier(test_corpus, options.ptype, relations, test=True, ner=options.emodels[i+1],
                                    modelname=options.rmodels)
+        test_model.load_kb("corpora/transmir/transmir_relations.txt")
+        test_model.generateMILdata(test=False)
         test_model.load_classifier()
         #test_model.vectorizer = train_model.vectorizer
         #test_model.classifier = train_model.classifier

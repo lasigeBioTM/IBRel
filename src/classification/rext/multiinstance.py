@@ -47,10 +47,10 @@ class MILClassifier(ReModel):
         #self.classifier = misvm.MISVM(kernel='linear', C=1.0, max_iters=20)
         self.classifier = misvm.sMIL(kernel='linear', C=1)
         #self.classifier = misvm.MissSVM(kernel='linear', C=100) #, max_iters=20)
-        if generate:
-            self.generateMILdata(corpus, test=test, pairtype=pairtype, relations=relations)
+        #if generate:
+        #    self.generateMILdata(test=test, pairtype=pairtype, relations=relations)
 
-    def generateMILdata(self, corpus, test, pairtype, relations):
+    def generateMILdata(self, test):
         """
         Generate data for self.instances, self.labels, self.pairs dictionaries bag->data
         :param corpus: Corpus object
@@ -59,7 +59,7 @@ class MILClassifier(ReModel):
         :param relations: list of relations
         :return:
         """
-        pairtypes = (config.relation_types[pairtype]["source_types"], config.relation_types[pairtype]["target_types"])
+        # pairtypes = (config.relation_types[pairtype]["source_types"], config.relation_types[pairtype]["target_types"])
         # pairtypes = (config.event_types[pairtype]["source_types"], config.event_types[pairtype]["target_types"])
         pcount = 0
         truepcount = 0
@@ -67,7 +67,7 @@ class MILClassifier(ReModel):
         sfalse = 0
         skipped = 0
         #for sentence in corpus.get_sentences(self.ner_model):
-        for sentence in corpus.get_sentences(self.ner_model):
+        for sentence in self.corpus.get_sentences(self.ner_model):
             # for did in corpus.documents:
             #did = sentence.did
             # doc_entities = corpus.documents[did].get_entities("goldstandard")
@@ -75,7 +75,7 @@ class MILClassifier(ReModel):
             # print len(corpus.type_sentences[pairtype])
             # sentence_models = set([m for m in sentence.entities.elist])
             # print self.ner_model, sentence_models
-            self.generate_sentence_data(sentence)
+            self.generate_sentence_data(sentence, test=test)
         logging.info("True/total relations:{}/{} ({})".format(truepcount, pcount,
                                                               str(1.0 * truepcount / (pcount + 1))))
         # print "total bags:", len(self.instances)
@@ -176,7 +176,7 @@ class MILClassifier(ReModel):
         # print self.data
         self.predicted = self.classifier.predict(self.data)
         #self.predicted = [1]*len(self.data)
-        # print Counter([round(x, 1) for x in self.predicted])
+        print Counter([round(x, 1) for x in self.predicted])
 
     def annotate_sentences(self, sentences):
         """
@@ -193,12 +193,15 @@ class MILClassifier(ReModel):
         pairtypes = (config.relation_types[self.pairtype]["source_types"], config.relation_types[self.pairtype]["target_types"])
         sentence_entities = []
         if self.ner_model == "all":
+            offsets = set()
             for elist in sentence.entities.elist:
                 for entity in sentence.entities.elist[elist]:
-                    sentence_entities.append(entity)
+                    offset = (entity.dstart, entity.dend)
+                    if offset not in offsets:
+                        sentence_entities.append(entity)
+                        offsets.add(offset)
         else:
             sentence_entities = [entity for entity in sentence.entities.elist[self.ner_model]]
-        # print sentence.sid, sentence_entities
         # print self.ner_model, sentence_entities
         for pair in itertools.permutations(sentence_entities, 2):
 
@@ -210,7 +213,7 @@ class MILClassifier(ReModel):
                 # bag = (sentence.did, pair[0].normalized, pair[1].normalized)
                 # print bag
                 if bag not in self.instances:
-                    print "creating bag", bag
+                    # print "creating bag", bag
                     self.instances[bag] = []
                     self.labels[bag] = -1  # assume no relation until it's confirmed
                     self.pairs[bag] = []

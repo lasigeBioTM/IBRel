@@ -37,55 +37,55 @@ def main():
 
     #r = requests.post('http://10.10.4.63:8080/iice/chemical/entities', json=data)
 
-    print bcolors.OKBLUE + "Submit new document" + bcolors.ENDC
-    start = timer()
-    r = requests.post('http://10.10.4.63:8080/ibent/DOC{}'.format(sys.argv[1]), json=data)
-    print r.url, ":", timer() - start
-    pp.pprint(r.json())
+    # print bcolors.OKBLUE + "Submit new document" + bcolors.ENDC
+    # start = timer()
+    # r = requests.post('http://10.10.4.63:8080/ibent/DOC{}'.format(sys.argv[1]), json=data)
+    # print r.url, ":", timer() - start
+    # pp.pprint(r.json())
 
-    print bcolors.OKBLUE + "Fetch document" + bcolors.ENDC
-    start = timer()
-    r = requests.get('http://10.10.4.63:8080/ibent/DOC{}'.format(sys.argv[1]))
-    print r.url, ":", timer() - start
-    pp.pprint(r.json())
-
-    print bcolors.OKBLUE + "Annotate miRNA" + bcolors.ENDC
-    start = timer()
-    r = requests.post('http://10.10.4.63:8080/ibent/entities/DOC{}/mirtex_train_mirna_sner'.format(sys.argv[1]))
-    print r.url, ":", timer() - start
-    pp.pprint(r.json())
-
-    print bcolors.OKBLUE + "Annotate chemical" + bcolors.ENDC
-    start = timer()
-    r = requests.post('http://10.10.4.63:8080/ibent/entities/DOC{}/chemdner_train_all'.format(sys.argv[1]))
-    print r.url, ":", timer() - start
-    pp.pprint(r.json())
-
-    print bcolors.OKBLUE + "Get chemicals" + bcolors.ENDC
-    start = timer()
-    r = requests.get('http://10.10.4.63:8080/ibent/entities/DOC{}/chemdner_train_all'.format(sys.argv[1]))
-    print r.url, ":", timer() - start
-    pp.pprint(r.json())
-
-    print bcolors.OKBLUE + "Annotate gene/proteins" + bcolors.ENDC
-    start = timer()
-    r = requests.post('http://10.10.4.63:8080/ibent/entities/DOC{}/genia_sample_gene'.format(sys.argv[1]))
-    print r.url, ":", timer() - start
-    pp.pprint(r.json())
-
-    print bcolors.OKBLUE + "Annotate DDI relations" + bcolors.ENDC
-    start = timer()
-    r = requests.post('http://10.10.4.63:8080/ibent/relations/DOC{}/all_ddi_train_slk'.format(sys.argv[1]))
-    print r.url, ":", timer() - start
-    #pp.pprint(r.json())
-    print r.text
-
-    print bcolors.OKBLUE + "Get DDI relations" + bcolors.ENDC
-    start = timer()
-    r = requests.get('http://10.10.4.63:8080/ibent/relations/DOC{}/all_ddi_train_slk'.format(sys.argv[1]))
-    print r.url, ":", timer() - start
-    pp.pprint(r.json())
-    print r.text
+    # print bcolors.OKBLUE + "Fetch document" + bcolors.ENDC
+    # start = timer()
+    # r = requests.get('http://10.10.4.63:8080/ibent/DOC{}'.format(sys.argv[1]))
+    # print r.url, ":", timer() - start
+    # pp.pprint(r.json())
+    #
+    # print bcolors.OKBLUE + "Annotate miRNA" + bcolors.ENDC
+    # start = timer()
+    # r = requests.post('http://10.10.4.63:8080/ibent/entities/DOC{}/mirtex_train_mirna_sner'.format(sys.argv[1]))
+    # print r.url, ":", timer() - start
+    # pp.pprint(r.json())
+    #
+    # print bcolors.OKBLUE + "Annotate chemical" + bcolors.ENDC
+    # start = timer()
+    # r = requests.post('http://10.10.4.63:8080/ibent/entities/DOC{}/chemdner_train_all'.format(sys.argv[1]))
+    # print r.url, ":", timer() - start
+    # pp.pprint(r.json())
+    #
+    # print bcolors.OKBLUE + "Get chemicals" + bcolors.ENDC
+    # start = timer()
+    # r = requests.get('http://10.10.4.63:8080/ibent/entities/DOC{}/chemdner_train_all'.format(sys.argv[1]))
+    # print r.url, ":", timer() - start
+    # pp.pprint(r.json())
+    #
+    # print bcolors.OKBLUE + "Annotate gene/proteins" + bcolors.ENDC
+    # start = timer()
+    # r = requests.post('http://10.10.4.63:8080/ibent/entities/DOC{}/genia_sample_gene'.format(sys.argv[1]))
+    # print r.url, ":", timer() - start
+    # pp.pprint(r.json())
+    #
+    # print bcolors.OKBLUE + "Annotate DDI relations" + bcolors.ENDC
+    # start = timer()
+    # r = requests.post('http://10.10.4.63:8080/ibent/relations/DOC{}/all_ddi_train_slk'.format(sys.argv[1]))
+    # print r.url, ":", timer() - start
+    # #pp.pprint(r.json())
+    # print r.text
+    #
+    # print bcolors.OKBLUE + "Get DDI relations" + bcolors.ENDC
+    # start = timer()
+    # r = requests.get('http://10.10.4.63:8080/ibent/relations/DOC{}/all_ddi_train_slk'.format(sys.argv[1]))
+    # print r.url, ":", timer() - start
+    # pp.pprint(r.json())
+    # print r.text
 
     print bcolors.OKBLUE + "Get miRNA-gene relations" + bcolors.ENDC
     start = timer()
