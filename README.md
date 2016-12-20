@@ -34,7 +34,7 @@ For example, to train a classifier models/class1.ser.gz from the data on corpus1
     
 To test with this classifier on corpus2 and save the results to data/results1.pickle:
 
-    python src/main.py load_corpus --goldstd corpus1
+    python src/main.py load_corpus --goldstd corpus2
     python src/main.py test --goldstd corpus2 -o pickle data/results1 --models models/class1
     
 To evaluate the results on the corpus2 gold standard:
