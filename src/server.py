@@ -69,6 +69,7 @@ class IBENT(object):
 
     def hello(self):
         self.connect_to_db()
+        self.load_models()
         return "OK!"
 
     def connect_to_db(self):
