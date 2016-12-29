@@ -148,7 +148,7 @@ class Document(object):
         else:
             pid = self.did + ".p0"
         between_text = self.text[entity1.dend:entity2.start]
-        logging.info("adding {}:{}=>{}".format(pid, entity1.text.encode("utf8"), entity2.text.encode("utf8")))
+        logging.debug("adding {}:{}=>{}".format(pid, entity1.text.encode("utf8"), entity2.text.encode("utf8")))
         # print between_text
         if subtype == "tlink":
             pair = TLink(entity1, entity2, relation=relation, original_id=kwargs.get("original_id"),
@@ -261,7 +261,7 @@ class Document(object):
                 return s
         for s in self.sentences:
             logging.debug("{} {} {} {} {}".format(s.tokens[0].dstart <= start, s.tokens[-1].dend >= end,
-                                                s.tokens[0].dstart, s.tokens[-1].dend, s.text))
+                                                s.tokens[0].dstart, s.tokens[-1].dend, s.text.encode("utf8")))
         return None
 
     def get_entity_offsets(self, esource, ths, rules):
