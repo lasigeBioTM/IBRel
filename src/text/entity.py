@@ -35,7 +35,7 @@ class Entity(object):
 
 
     def __str__(self):
-        output = "{}, s-offset: {}:{}, d-offset: {}:{}, tokens: {}, type: {}".format(self.text, self.start, self.end,
+        output = "{}, s-offset: {}:{}, d-offset: {}:{}, tokens: {}, type: {}".format(self.text.encode("utf8"), self.start, self.end,
                                                                                      self.dstart, self.dend,
                                                                                      ' '.join([t.text for t in self.tokens]),
                                                                                      self.type)

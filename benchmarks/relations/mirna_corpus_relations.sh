@@ -5,7 +5,7 @@ LOGLEVEL=${1:-WARNING}
 # python src/main.py load_corpus --goldstd miRNACorpus_train --log $LOGLEVEL --entitytype all
 # python src/main.py load_corpus --goldstd miRNACorpus_test --log $LOGLEVEL --entitytype all
 
-# python src/main.py annotate --goldstd miRNACorpus_train --log $LOGLEVEL --entitytype all
+# python src/main.py annotate --goldstd miRNACorpus_train --log $LO GLEVEL --entitytype all
 # python src/main.py annotate --goldstd miRNACorpus_test --log $LOGLEVEL --entitytype all
 
 python src/main.py train_relations --goldstd miRNACorpus_train --log $LOGLEVEL --models goldstandard  --pairtype miRNA-gene --kernel jsre --tag mirnatrain

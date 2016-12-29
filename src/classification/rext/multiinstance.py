@@ -206,11 +206,11 @@ class MILClassifier(ReModel):
         for pair in itertools.permutations(sentence_entities, 2):
 
             if pair[0].type in pairtypes[0] and pair[1].type in pairtypes[1]: # and pair[0].normalized_score > 0 and pair[1].normalized_score > 0:
-                if test:
-                    bag = (pair[0].normalized, pair[1].normalized)
-                else:
-                    bag = (sentence.did, pair[0].normalized, pair[1].normalized)
-                # bag = (sentence.did, pair[0].normalized, pair[1].normalized)
+                #if test:
+                #    bag = (sentence.did, pair[0].normalized, pair[1].normalized)
+                #else:
+                #    bag = (pair[0].normalized, pair[1].normalized)
+                bag = (pair[0].normalized, pair[1].normalized)
                 # print bag
                 if bag not in self.instances:
                     # print "creating bag", bag
@@ -230,6 +230,8 @@ class MILClassifier(ReModel):
                 #    sfalse += 1
                 #pcount += 1
                 pair_features = self.get_pair_features(sentence, pair)
+                if sentence.text.startswith("These abnormalities reflect"):
+                    print bag, pair_features.encode("utf8")
                 self.instances[bag].append(pair_features)
 
     def process_sentence(self, sentence):
@@ -296,23 +298,27 @@ class MILClassifier(ReModel):
         before_features = []
         middle_features = []
         end_features = []
-        for t in sentence.tokens[start1-3:start1]:
+        feature_window = 5
+        for i, t in enumerate(sentence.tokens[max(start1-feature_window, 0):start1]):
             if t.order in sentence_entities_tokens:
-                before_features.append("before-entity")
+                before_features.append(str(i) + "-before-entity")
             else:
-                before_features.append("before-" + t.text)
+                before_features.append(str(i) + "-before-" + t.lemma + "-" + t.pos + "-" + t.tag)
+                #before_features.append("before-" + t.pos)
 
-        for t in sentence.tokens[end1+1:start2]:
+        for i, t in enumerate(sentence.tokens[end1:max(end1+feature_window, start2)]):
             if t.order in sentence_entities_tokens:
-                middle_features.append("middle-entity")
+                middle_features.append(str(i) + "-middle-entity")
             else:
-                middle_features.append("middle-" + t.text)
+                middle_features.append(str(i) + "-middle-" + t.lemma  + "-" + t.pos + "-" + t.tag)
+                #middle_features.append("middle-" + t.pos)
 
-        for t in sentence.tokens[end2:end2+3]:
+        for i, t in enumerate(sentence.tokens[end2:end2+feature_window]):
             if t.order in sentence_entities_tokens:
-                end_features.append("end-entity")
+                end_features.append(str(i) + "-end-entity")
             else:
-                end_features.append("end-" + t.text)
+                end_features.append(str(i) + "-end-" + t.lemma  + "-" + t.pos + "-" + t.tag)
+                #end_features.append("end-" + t.pos)
         features = before_features + middle_features + end_features + [order]
         # try:
         #     tree = Tree.fromstring(sentence.parsetree)

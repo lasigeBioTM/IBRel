@@ -18,16 +18,16 @@ type_match = {"MiRNA": "mirna",
               "Gene": "protein",
               "unknown miRNA-gene regulation": "miRNA-gene",
               "direct miRNA-gene regulation": "miRNA-gene",
-              "N/A gene-miRNA regulation": "gene-miRNA"}
+              "N/A gene-miRNA regulation": "gene-miRNA",
+              "RADLEX": "radlex"}
               # "gene-miRNA regulation": ""}
-class MirtexCorpus(Corpus):
+class BratCorpus(Corpus):
     """
-    DDI corpus used for NER and RE on the SemEval DDI tasks of 2011 and 2013.
+    BRAT corpus format used for NER and RE tasks.
     self.path is the base directory of the files of this corpus.
-    Each file is a document, DDI XML format, sentences already separated.
     """
     def __init__(self, corpusdir, **kwargs):
-        super(MirtexCorpus, self).__init__(corpusdir, **kwargs)
+        super(BratCorpus, self).__init__(corpusdir, **kwargs)
         self.subtypes = []
 
     def load_corpus(self, corenlpserver, process=True):
@@ -40,7 +40,7 @@ class MirtexCorpus(Corpus):
         for current, f in enumerate(trainfiles):
             #logging.debug('%s:%s/%s', f, current + 1, total)
             print '{}:{}/{}'.format(f, current + 1, total)
-            did = f.split(".")[0]
+            did = f.split(".")[0].split("/")[-1]
             t = time.time()
             with io.open(f, 'r', encoding='utf8') as txt:
                 doctext = txt.read()
@@ -68,20 +68,6 @@ class MirtexCorpus(Corpus):
         total = len(annfiles)
         time_per_abs = []
         doc_to_relations = {}
-        with open(ann_dir + "/" + "annotations.tsv") as afile:
-            for l in afile:
-                if not l.isspace():
-                    v = l.strip().split("\t")
-                    did = self.path + '/' + v[0]
-                    if pairtype == "all" or type_match.get(" ".join(v[-2:])) == pairtype:
-                        if did not in doc_to_relations:
-                            doc_to_relations[did] = set()
-                        e1 = v[1].split(";")
-                        for source in e1:
-                            e2 = v[2].split(";")
-                            for target in e2:
-                                doc_to_relations[did].add((source.strip().replace('"', ''),
-                                                            target.strip().replace('"', '')))
         # print doc_to_relations
         # print self.documents.keys()
         # print doc_to_relations.keys()
@@ -93,9 +79,9 @@ class MirtexCorpus(Corpus):
                 # print did, self.documents[did].relations
         for current, f in enumerate(annfiles):
             logging.debug('%s:%s/%s', f, current + 1, total)
-            did = f.split(".")[0]
+            did = f.split(".")[0].split("/")[-1]
             pmids.append(did.split("/")[-1])
-            with open(f, 'r') as txt:
+            with io.open(f, 'r', encoding="utf8") as txt:
                 for line in txt:
                     # print line
                     if line.startswith("T"):
@@ -103,6 +89,7 @@ class MirtexCorpus(Corpus):
                         entity_type, dstart, dend = ann.split(" ")
                         if etype == "all" or (etype != "all" and etype == type_match[entity_type]):
                             dstart, dend = int(dstart), int(dend)
+                            # print self.documents.keys()
                             sentence = self.documents[did].find_sentence_containing(dstart, dend, chemdner=False)
                             if sentence is not None:
                                 # e[0] and e[1] are relative to the document, so subtract sentence offset
@@ -150,12 +137,12 @@ class MirtexCorpus(Corpus):
                         rfile.write("{}\t{}\n".format(pair[0].normalized, pair[1].normalized))
 
 
-def get_mirtex_gold_ann_set(goldpath, entitytype, pairtype):
+def get_brat_gold_ann_set(goldpath, entitytype, pairtype):
     logging.info("loading gold standard... {}".format(goldpath))
     annfiles = [goldpath + '/' + f for f in os.listdir(goldpath) if f.endswith('.ann')]
     gold_offsets = set()
     for current, f in enumerate(annfiles):
-            did = f.split(".")[0]
+            did = f.split(".")[0].split("/")[-1]
             with open(f, 'r') as txt:
                 for line in txt:
                     if line.startswith("T"):
@@ -165,28 +152,6 @@ def get_mirtex_gold_ann_set(goldpath, entitytype, pairtype):
                             dstart, dend = int(dstart), int(dend)
                             gold_offsets.add((did, dstart, dend, etext))
     gold_relations = {}
-    with open(goldpath + "/" + "annotations.tsv") as afile:
-        for l in afile:
-            v = l.strip().split("\t")
-            if len(v) < 3:
-                continue
-            did = goldpath + '/' + v[0]
-            # logging.info("{} {} {}".format(did, pairtype, v[-1]))
-            if pairtype == "all" or type_match.get(" ".join(v[-2:])) == pairtype:
-                e1 = v[1].split(";")
-                for mirna in e1:
-                    mirna = mirna.replace('"', '')
-                    # logging.info(mirna)
-                    norm_mirna = mirna_graph.map_label(mirna)
-                    if norm_mirna < 99:
-                        norm_mirna[0] = mirna
-                    e2 = v[2].split(";")
-                    for gene in e2:
-                        gene = gene.replace('"', '')
-                        # logging.info(gene)
-                        norm_gene = get_uniprot_name(gene)
-                        #gold_relations.add((did, norm_mirna[0], norm_gene[0]))
-                        gold_relations[(did, norm_mirna[0], norm_gene[0], norm_mirna[0] + "=>" + norm_gene[0])] = []
     return gold_offsets, gold_relations
 
 
