@@ -2,12 +2,12 @@
 set -x
 LOGLEVEL=${1:-WARNING}
 
-# python src/main.py load_corpus --goldstd jnlpba_train --log $LOGLEVEL --entitytype protein
-# python src/main.py load_corpus --goldstd jnlpba_test --log $LOGLEVEL --entitytype protein
+#python src/main.py load_corpus --goldstd jnlpba_train --log $LOGLEVEL --entitytype protein
+#python src/main.py load_corpus --goldstd jnlpba_test --log $LOGLEVEL --entitytype protein
 # python src/main.py annotate --goldstd jnlpba_train --log $LOGLEVEL --entitytype protein
-# python src/main.py train --goldstd jnlpba_train --log $LOGLEVEL --entitytype protein --models models/jnlpba_train_protein_crfsuite --crf crfsuite
-# python src/main.py test --goldstd jnlpba_test --log $LOGLEVEL --entitytype protein --models models/jnlpba_train_protein_crfsuite -o pickle results/jnlpbatrain_on_jnlpbatest_protein_crfsuite --crf crfsuite
- #python src/evaluate.py evaluate jnlpba_test --results results/jnlpbatrain_on_jnlpbatest_protein_crfsuite --models models/jnlpba_train_protein_crfsuite --entitytype protein
+#python src/main.py train --goldstd jnlpba_train --log $LOGLEVEL --entitytype protein --models models/jnlpba_train_protein_crfsuite --crf crfsuite
+#python src/main.py test --goldstd jnlpba_test --log $LOGLEVEL --entitytype protein --models models/jnlpba_train_protein_crfsuite -o pickle results/jnlpbatrain_on_jnlpbatest_protein_crfsuite --crf crfsuite
+#python src/evaluate.py evaluate jnlpba_test --results results/jnlpbatrain_on_jnlpbatest_protein_crfsuite --models models/jnlpba_train_protein_crfsuite --entitytype protein
 #
 python src/main.py train --goldstd jnlpba_train --log $LOGLEVEL --entitytype protein --models models/jnlpba_train_protein_sner
 python src/main.py test --goldstd jnlpba_test --log $LOGLEVEL --entitytype protein --models models/jnlpba_train_protein_sner -o pickle results/jnlpbatrain_on_jnlpbatest_protein_sner

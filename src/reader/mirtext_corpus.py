@@ -1,3 +1,4 @@
+import io
 import logging
 import xml.etree.ElementTree as ET
 import os
@@ -41,7 +42,7 @@ class MirtexCorpus(Corpus):
             print '{}:{}/{}'.format(f, current + 1, total)
             did = f.split(".")[0]
             t = time.time()
-            with open(f, 'r') as txt:
+            with io.open(f, 'r', encoding='utf8') as txt:
                 doctext = txt.read()
             newdoc = Document(doctext, process=False, did=did)
             newdoc.sentence_tokenize("biomedical")
