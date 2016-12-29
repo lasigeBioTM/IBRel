@@ -2,7 +2,7 @@ chemdner_sample_base = "corpora/CHEMDNER/CHEMDNER_SAMPLE_JUNE25/"
 cpatents_sample_base = "corpora/CHEMDNER-patents/chemdner_cemp_sample_v02/"
 pubmed_test_base = "corpora/pubmed-test/"
 transmir_base = "corpora/transmir/"
-
+chemdner2017_base = "corpora/CHEMDNER2017/"
 paths = {}
 for i in range(1,11):
     paths["mirna_ds{}".format(i)] = {'corpus': "corpora/mirna-ds/abstracts_11k.txt_{}.pickle".format(i),
@@ -61,6 +61,14 @@ paths.update({
                     'annotations': cpatents_sample_base + "chemdner_cemp_gold_standard_sample.tsv",
                     'cem': cpatents_sample_base + "chemdner_cemp_gold_standard_sample_eval.tsv",
                     'corpus': "data/chemdner_patents_sample_text.txt.pickle",
+                    'format': "chemdner",
+                    },
+
+    'cemp_sample':{
+                    'text': chemdner2017_base + "BioCreative V.5 training set.txt",
+                    'annotations': chemdner2017_base + "CEMP_BioCreative V.5 training set annot.tsv",
+                    #'cem': chemdner2017 + "chemdner_cemp_gold_standard_sample_eval.tsv",
+                    'corpus': "data/chemdner_v5_text.txt.pickle",
                     'format': "chemdner",
                     },
 })
