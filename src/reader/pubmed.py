@@ -19,6 +19,8 @@ class PubmedDocument(Document):
     def __init__(self, pmid, **kwargs):
         title, abstract, status = self.get_pubmed_abs(pmid)
         self.abstract = abstract
+        self.pmid = pmid
+        self.pmcid = None
         super(PubmedDocument, self).__init__(title + "\n" + abstract, ssplit=True, title=title,
                                              did="PMID" + pmid, **kwargs)
 
@@ -33,13 +35,14 @@ class PubmedDocument(Document):
             r = requests.get('http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi', payload)
         # logging.debug("Request Status: " + str(r.status_code))
         response = r.text
-
+        print response
         # logging.info(response)
         title, abstract = self.parse_pubmed_xml(response, pmid)
         return title, abstract, str(r.status_code)
 
     
     def parse_pubmed_xml(self, xml, pmid):
+        print xml
         if xml.strip() == '':
             print "PMID not found", pmid
             sys.exit()
@@ -63,6 +66,10 @@ class PubmedDocument(Document):
                 abstext = ""
                 #print xml
                 #sys.exit()
+            articleid = root.findall('.//ArticleId')
+            for a in articleid:
+                if a.get("IdType") == "pmc":
+                    self.pmcid = a.text[3:]
         return title, abstext
 
     
