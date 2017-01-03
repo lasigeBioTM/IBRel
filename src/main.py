@@ -108,7 +108,7 @@ def main():
                       choices=["load_corpus", "annotate", "classify", "write_results", "write_goldstandard",
                                "train", "test", "train_multiple", "test_multiple", "train_matcher", "test_matcher",
                                "crossvalidation", "train_relations", "test_relations", "load_genia", "load_biomodel",
-                               "merge_corpus"])
+                               "merge_corpus", "tuples"])
     parser.add_argument("--goldstd", default="", dest="goldstd", nargs="+",
                         help="Gold standard to be used. Will override corpus, annotations",
                         choices=paths.keys())
@@ -182,6 +182,15 @@ considered when coadministering with megestrol acetate.''',
         logging.info("loading corpus %s" % corpus_path)
         corpus = pickle.load(open(corpus_path, 'rb'))
         corpus.load_biomodel()
+        corpus.save(paths[options.goldstd]["corpus"])
+    elif options.actions == "tuples":
+        options.goldstd = options.goldstd[0]
+        corpus_path = paths[options.goldstd]["corpus"]
+        corpus_ann = paths[options.goldstd]["annotations"]
+        logging.info("loading corpus %s" % corpus_path)
+        corpus = pickle.load(open(corpus_path, 'rb'))
+        logging.info("converting to tuples...")
+        corpus.to_tuple()
         corpus.save(paths[options.goldstd]["corpus"])
     elif options.actions == "annotate": # rext-add annotation to corpus
         if len(options.goldstd) > 1:

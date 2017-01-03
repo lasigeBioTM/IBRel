@@ -41,8 +41,8 @@ feature_extractors = {# "text": lambda x, i: x.tokens[i].text,
 
 chem_features = feature_extractors.copy()
 chem_features.update({ "greek": lambda x, i: str(has_greek_symbol(x.tokens[i].text)),
-                                       "aminoacid": lambda x, i: str(any(w in amino_acids for w in x.tokens[i].text.split('-'))),
-                                       "periodictable": lambda x, i: str(x.tokens[i].text in element_base.keys() or x.tokens[i].text.title() in zip(*element_base.values())[0])
+                        "aminoacid": lambda x, i: str(any(w in amino_acids for w in x.tokens[i].text.split('-'))),
+                        "periodictable": lambda x, i: str(x.tokens[i].text in element_base.keys() or x.tokens[i].text.title() in zip(*element_base.values())[0])
                                      })
 
 prot_features = feature_extractors.copy()
@@ -250,10 +250,12 @@ class SimpleTaggerModel(Model):
         didx = 0
         savecorpus = False # do not save the corpus if no new features are generated
         for did in corpus.documents:
+            logging.info(did)
             if doctype != "all" and doctype not in did:
                 continue
             # logging.debug("processing doc %s/%s" % (didx, len(corpus.documents)))
             for si, sentence in enumerate(corpus.documents[did].sentences):
+                logging.info("{}/{}".format(si, len(corpus.documents[did].sentences)))
                 # skip if no entities in this sentence
                 if sentence.sid in corpus.documents[did].invalid_sids:
                     logging.debug("Invalid sentence: {} - {}".format(sentence.sid, sentence.text))
@@ -293,11 +295,11 @@ class SimpleTaggerModel(Model):
                 #if subtype == "all" or subtype in sentencesubtypes:
                 #logging.debug(sentencesubtypes)
                 nsentences += 1
-                self.data.append(sentencefeatures)
-                self.labels.append(sentencelabels)
+                self.data.append(tuple(sentencefeatures))
+                self.labels.append(tuple(sentencelabels))
                 self.sids.append(sentence.sid)
-                self.tokens.append(sentencetokens)
-                self.subtypes.append(sentencesubtypes)
+                self.tokens.append(tuple(sentencetokens))
+                self.subtypes.append(tuple(sentencesubtypes))
                 self.sentences.append(sentence.text)
             didx += 1
         # save data back to corpus to improve performance
@@ -360,6 +362,7 @@ class SimpleTaggerModel(Model):
         # if label != "other":
         #     logging.debug("{} {}".format(sentence.tokens[i], label))
         #logging.debug(features)
+        features = tuple(features)
         return features, label
 
     def save_corpus_to_sbilou(self):
