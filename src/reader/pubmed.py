@@ -17,10 +17,15 @@ Get texts from PubMed
 
 class PubmedDocument(Document):
     def __init__(self, pmid, **kwargs):
-        title, abstract, status = self.get_pubmed_abs(pmid)
-        self.abstract = abstract
         self.pmid = pmid
         self.pmcid = None
+        self.tables = []
+        self.figures = []
+        title, abstract, status = self.get_pubmed_abs(pmid)
+        self.abstract = abstract
+        if self.pmcid:
+            print "pmc", self.pmcid
+            self.get_pmc_captions()
         super(PubmedDocument, self).__init__(title + "\n" + abstract, ssplit=True, title=title,
                                              did="PMID" + pmid, **kwargs)
 
@@ -35,14 +40,12 @@ class PubmedDocument(Document):
             r = requests.get('http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi', payload)
         # logging.debug("Request Status: " + str(r.status_code))
         response = r.text
-        print response
         # logging.info(response)
         title, abstract = self.parse_pubmed_xml(response, pmid)
         return title, abstract, str(r.status_code)
 
     
     def parse_pubmed_xml(self, xml, pmid):
-        print xml
         if xml.strip() == '':
             print "PMID not found", pmid
             sys.exit()
@@ -72,10 +75,32 @@ class PubmedDocument(Document):
                     self.pmcid = a.text[3:]
         return title, abstext
 
+    def get_pmc_captions(self):
+        payload = {"db": "pmc", "id": self.pmcid, "tool": "ibent", "email": "alamurias@lasige.di.fc.ul.pt"}
+        try:
+            r = requests.get('http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi', payload)
+        except requests.exceptions.ConnectionError:
+            r = requests.get('http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi', payload)
+        # logging.debug("Request Status: " + str(r.status_code))
+        response = r.text
+        root = ET.fromstring(response.encode("utf-8"))
+        tables = root.findall('.//table-wrap')
+        figures = root.findall('.//fig')
+        for t in tables:
+            caption = ''.join(ET.tostring(e) for e in t.find("caption"))
+            content = ''.join(ET.tostring(e) for e in t.find("table"))
+            table = {"caption": caption, "content": content}
+            self.tables.append(table)
+        for f in figures:
+            caption = ''.join(ET.tostring(e) for e in f.find("caption"))
+            figure = {"caption": caption}
+            self.figures.append(figure)
+
     
 def main():
     pubmeddoc = PubmedDocument(sys.argv[1])
     print pubmeddoc
+
     
 if __name__ == "__main__":
     main()
