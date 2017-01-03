@@ -42,8 +42,8 @@ class Sentence(object):
     def process_sentence(self, corenlpserver, doctype="biomedical"):
         corenlpres = corenlpserver.annotate(self.text.encode("utf8"), properties={
             'ssplit.eolonly': True,
-            # 'annotators': 'tokenize,ssplit,pos,ner,lemma',
-            'annotators': 'tokenize,ssplit,pos,parse,ner,lemma,depparse',
+            'annotators': 'tokenize,ssplit,pos,ner,lemma',
+            #'annotators': 'tokenize,ssplit,pos,parse,ner,lemma,depparse',
             'outputFormat': 'json',
         })
         if isinstance(corenlpres, basestring):
@@ -51,7 +51,7 @@ class Sentence(object):
             corenlpres = corenlpserver.annotate(self.text.encode("utf8"), properties={
                 'ssplit.eolonly': True,
                 # 'annotators': 'tokenize,ssplit,pos,depparse,parse',
-                'annotators': 'tokenize,ssplit,pos,ner,lemma',
+                'annotators': 'tokenize,ssplit,pos,lemma',
                 'outputFormat': 'json',
             })
         if isinstance(corenlpres, basestring):

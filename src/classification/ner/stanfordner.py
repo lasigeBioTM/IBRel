@@ -184,7 +184,7 @@ class StanfordNERModel(SimpleTaggerModel):
                 #results.entities[eid] = new_entity # deepcopy
                 sentence_entities[eid] = new_entity
                 new_entity = None
-                logging.debug("completed entity:{}".format(sentence_entities[eid]))
+                logging.debug(u"completed entity:{}".format(sentence_entities[eid]))
         return sentence_entities
 
     def split_tag_tokens(self, data, sentence):

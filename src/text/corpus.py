@@ -2,7 +2,7 @@ from __future__ import division, absolute_import
 
 import io
 import logging
-import pickle
+import cPickle as pickle
 import random
 import socket
 import sys
@@ -45,6 +45,12 @@ class Corpus(object):
         #    path = args[0]
         pickle.dump(self, open(savedir, "wb"))
         logging.info("saved corpus to " + savedir)
+
+    def to_tuple(self):
+        for did in self.documents:
+            self.documents[did].sentences = tuple(self.documents[did].sentences)
+            for sentence in self.documents[did].sentences:
+                sentence.tokens = tuple(sentence.tokens)
 
     def get_unique_results(self, source, ths, rules, mode):
         allentitites = {}
@@ -186,6 +192,11 @@ class Corpus(object):
             for sentence in self.documents[d].sentences:
                 if sentence.sid == sid:
                     return sentence
+        print "sentence not found", sid
+        for d in self.documents:
+            for sentence in self.documents[d].sentences:
+                print sentence.sid,
+            print
 
     def load_genia(self):
         os.chdir("bin/geniatagger-3.0.2/")

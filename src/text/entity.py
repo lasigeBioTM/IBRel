@@ -35,10 +35,16 @@ class Entity(object):
 
 
     def __str__(self):
-        output = "{}, s-offset: {}:{}, d-offset: {}:{}, tokens: {}, type: {}".format(self.text, self.start, self.end,
-                                                                                     self.dstart, self.dend,
-                                                                                     ' '.join([t.text for t in self.tokens]),
-                                                                                     self.type)
+        try:
+            output = "{}, s-offset: {}:{}, d-offset: {}:{}, tokens: {}, type: {}".format(self.text, self.start, self.end,
+                                                                                         self.dstart, self.dend,
+                                                                                         ' '.join([t.text for t in self.tokens]) ,
+                                                                                         self.type)
+        except UnicodeDecodeError:
+            output = "{}, s-offset: {}:{}, d-offset: {}:{}, tokens: {}, type: {}".format(self.text, self.start, self.end,
+                                                                                         self.dstart, self.dend,
+                                                                                         self.text,
+                                                                                         self.type)
         return output
 
     def write_chemdner_line(self, outfile, rank=1):
