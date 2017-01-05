@@ -79,4 +79,11 @@ paths.update({
                     'corpus': "data/chemdner_1k_text.txt.pickle",
                     'format': "chemdner",
                     },
+    'chemdner2017_test':{
+                    'text': chemdner2017_base + "test_set_patents_BioCreative_V.5.tsv",
+                    'annotations': "",
+                    #'cem': chemdner2017 + "chemdner_cemp_gold_standard_sample_eval.tsv",
+                    'corpus': "data/chemdner_test_text.txt.pickle",
+                    'format': "chemdner",
+                    },
 })
