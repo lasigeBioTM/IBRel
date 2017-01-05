@@ -249,8 +249,8 @@ class SimpleTaggerModel(Model):
         nsentences = 0
         didx = 0
         savecorpus = False # do not save the corpus if no new features are generated
-        for did in corpus.documents:
-            logging.info(did)
+        for di, did in enumerate(corpus.documents):
+            logging.info("{} - {}/{}".format(did, di, len(corpus.documents)))
             if doctype != "all" and doctype not in did:
                 continue
             # logging.debug("processing doc %s/%s" % (didx, len(corpus.documents)))

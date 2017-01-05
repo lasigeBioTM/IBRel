@@ -58,7 +58,7 @@ def run_crossvalidation(goldstd_list, corpus, model, cv, crf="stanford", entity_
             train_model = CrfSuiteModel(basemodel, entity_type)
         train_model.load_data(train_corpus, feature_extractors.keys(), entity_type)
         train_model.train()
-
+        train_corpus = None
         # test
         logging.info('CV{} - TEST'.format(nlist))
         test_model = None
@@ -74,9 +74,9 @@ def run_crossvalidation(goldstd_list, corpus, model, cv, crf="stanford", entity_
             test_model.kill_process()
         final_results.basepath = basemodel + "_results"
         final_results.path = basemodel
-
         all_results.entities.update(final_results.entities)
         all_results.corpus.documents.update(final_results.corpus.documents)
+        test_corpus = None
         # validate
         """if config.use_chebi:
             logging.info('CV{} - VALIDATE'.format(nlist))
