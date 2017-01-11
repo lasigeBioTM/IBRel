@@ -2,6 +2,7 @@ from __future__ import division, absolute_import
 #from nltk.stem.porter import PorterStemmer
 #import jsonrpclib
 #from simplejson import loads
+import io
 import logging
 import os
 from subprocess import Popen, PIPE
@@ -59,7 +60,7 @@ class Document(object):
         #    self.sentences.append(Sentence(self.title, sid=sid, did=self.did))
         # inputtext = clean_whitespace(self.text)
         inputtext = self.text
-        with codecs.open("/tmp/geniainput.txt", 'w', 'utf-8') as geniainput:
+        with io.open("/tmp/geniainput.txt", 'w', encoding='utf-8') as geniainput:
             geniainput.write(inputtext)
         current_dir = os.getcwd()
         os.chdir(geniass_path)
@@ -67,7 +68,7 @@ class Document(object):
         Popen(geniaargs, stdout=PIPE, stderr=PIPE).communicate()
         os.chdir(current_dir)
         offset = 0
-        with codecs.open("/tmp/geniaoutput.txt", 'r', "utf-8") as geniaoutput:
+        with io.open("/tmp/geniaoutput.txt", 'r', encoding="utf-8") as geniaoutput:
             for l in geniaoutput:
                 stext = l.strip()
                 if stext == "":
@@ -92,8 +93,8 @@ class Document(object):
             #corenlpres = corenlpserver.raw_parse(s.text)
             corenlpres = corenlpserver.annotate(s.text.encode("utf8"), properties={
                 'ssplit.eolonly': True,
-                #'annotators': 'tokenize,ssplit,pos,ner,lemma',
-                'annotators': 'tokenize,ssplit,pos,parse,ner,lemma,depparse',
+                'annotators': 'tokenize,ssplit,pos,ner,lemma',
+                #'annotators': 'tokenize,ssplit,pos,parse,ner,lemma,depparse',
                 'outputFormat': 'json',
             })
             if isinstance(corenlpres, basestring):

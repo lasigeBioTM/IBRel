@@ -1,6 +1,7 @@
 import codecs
 import logging
 import unicodedata
+import gc
 from classification.model import Model
 from text.chemical_entity import element_base, ChemicalEntity
 from text.chemical_entity import amino_acids
@@ -232,10 +233,12 @@ class SimpleTaggerModel(Model):
         self.sids = []
         self.tagger = None
         self.trainer = None
-        self.sentences = []
+        #self.sentences = []
         self.etype = etype
 
+
     def load_data(self, corpus, flist, etype="all", mode="train", doctype="all"):
+        #tr = tracker.SummaryTracker()
         """
             Load the data from the corpus to the format required by crfsuite.
             Generate the following variables:
@@ -255,7 +258,7 @@ class SimpleTaggerModel(Model):
                 continue
             # logging.debug("processing doc %s/%s" % (didx, len(corpus.documents)))
             for si, sentence in enumerate(corpus.documents[did].sentences):
-                logging.info("{}/{}".format(si, len(corpus.documents[did].sentences)))
+                # logging.info("{}/{}".format(si, len(corpus.documents[did].sentences)))
                 # skip if no entities in this sentence
                 if sentence.sid in corpus.documents[did].invalid_sids:
                     logging.debug("Invalid sentence: {} - {}".format(sentence.sid, sentence.text))
@@ -272,7 +275,7 @@ class SimpleTaggerModel(Model):
                 sentencesubtypes = []
                 for i in range(len(sentence.tokens)):
                     if sentence.tokens[i].text:
-                        tokensubtype = sentence.tokens[i].tags.get("goldstandard_subtype", "none")
+                        #tokensubtype = sentence.tokens[i].tags.get("goldstandard_subtype", "none")
                         # if fname in sentence.tokens[i].features:
                         #     tokenfeatures = sentence.tokens[i].features[fname]
                             #logging.info("loaded features from corpus: %s" % tokenfeatures)
@@ -283,13 +286,14 @@ class SimpleTaggerModel(Model):
                         # else:
                         tokenfeatures, tokenlabel = self.generate_features(sentence, i, flist, etype)
                         # savecorpus = True
-                        sentence.tokens[i].features[fname] = tokenfeatures[:]
+                        sentence.tokens[i].features[fname] = tokenfeatures
                         # if tokenlabel != "other":
                         #      logging.debug("%s %s" % (tokenfeatures, tokenlabel))
                         sentencefeatures.append(tokenfeatures)
                         sentencelabels.append(tokenlabel)
                         sentencetokens.append(sentence.tokens[i])
-                        sentencesubtypes.append(tokensubtype)
+                        del tokenfeatures
+                            #sentencesubtypes.append(tokensubtype)
                         # print sentencesubtypes
                 #logging.info("%s" % set(sentencesubtypes))
                 #if subtype == "all" or subtype in sentencesubtypes:
@@ -297,15 +301,24 @@ class SimpleTaggerModel(Model):
                 nsentences += 1
                 self.data.append(tuple(sentencefeatures))
                 self.labels.append(tuple(sentencelabels))
+                del sentencefeatures
+                del sentencelabels
                 self.sids.append(sentence.sid)
                 self.tokens.append(tuple(sentencetokens))
-                self.subtypes.append(tuple(sentencesubtypes))
-                self.sentences.append(sentence.text)
+                #if mode != "train":
+
+                    #self.subtypes.append(tuple(sentencesubtypes))
+                    #self.sentences.append(sentence.text)
+            if didx % 1000 == 0:
+                gc.collect()
+            #    tr.print_diff()
+
             didx += 1
         # save data back to corpus to improve performance
         #if subtype == "all" and savecorpus:
         #    corpus.save()
         logging.info("used %s sentences for model %s" % (nsentences, etype))
+        #tr.print_diff()
 
     def copy_data(self, basemodel, t="all"):
         #logging.debug(self.subtypes)
@@ -327,13 +340,13 @@ class SimpleTaggerModel(Model):
                 # print self.labels[-1]
             self.sids = [basemodel.sids[i] for i in range(len(basemodel.subtypes))]
             self.tokens =  [basemodel.tokens[i] for i in range(len(basemodel.subtypes))]
-            self.sentences = [basemodel.sentences[i] for i in range(len(basemodel.subtypes))]
+            #self.sentences = [basemodel.sentences[i] for i in range(len(basemodel.subtypes))]
         else:
             self.data = basemodel.data[:]
             self.labels = basemodel.labels[:]
             self.sids = basemodel.sids
             self.tokens = basemodel.tokens[:]
-            self.sentences = basemodel.sentences[:]
+            #self.sentences = basemodel.sentences[:]
         logging.info("copied %s for model %s" % (len(self.data), t))
 
     def generate_features(self, sentence, i, flist, subtype):
@@ -355,14 +368,15 @@ class SimpleTaggerModel(Model):
                 fvalue = mirna_features[f](sentence, i)
             else:
                 fvalue = feature_extractors[f](sentence, i)
-            sentence.tokens[i].features[f] = fvalue
+            # sentence.tokens[i].features[f] = fvalue
             #else: uncomment if it gets too slow
             #    fvalue = sentence.tokens[i].features[f]
-            features.append(f + "=" + fvalue)
+            if fvalue != "BOS" and fvalue != "EOS":
+                features.append(f + "=" + fvalue)
         # if label != "other":
         #     logging.debug("{} {}".format(sentence.tokens[i], label))
         #logging.debug(features)
-        features = tuple(features)
+        features = set(features)
         return features, label
 
     def save_corpus_to_sbilou(self):

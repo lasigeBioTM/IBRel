@@ -72,13 +72,27 @@ paths.update({
                     'corpus': "data/chemdner_v5_text.txt.pickle",
                     'format': "chemdner",
                     },
-    'chemdner2017_1k':{
-                    'text': chemdner2017_1k + "BioCreative V.5 training set.txt",
-                    'annotations': chemdner2017_1k + "CEMP_BioCreative V.5 training set annot.tsv",
+    'chemdner2017_train':{
+                    'text': chemdner2017_base + "chemdner2017_training_set.tsv",
+                    'annotations': chemdner2017_base + "train_annotations.tsv",
                     #'cem': chemdner2017 + "chemdner_cemp_gold_standard_sample_eval.tsv",
-                    'corpus': "data/chemdner_1k_text.txt.pickle",
+                    'corpus': "data/chemdner_train_text.txt.pickle",
                     'format': "chemdner",
                     },
+    'chemdner2017_dev': {
+        'text': chemdner2017_base + "chemdner2017_development_set.tsv",
+        'annotations': chemdner2017_base + "dev_annotations.tsv",
+        # 'cem': chemdner2017 + "chemdner_cemp_gold_standard_sample_eval.tsv",
+        'corpus': "data/chemdner_dev_text.txt.pickle",
+        'format': "chemdner",
+    },
+    'chemdner2017_eval': {
+        'text': chemdner2017_base + "chemdner2017_eval_set.tsv",
+        'annotations': chemdner2017_base + "eval_annotations.tsv",
+        # 'cem': chemdner2017 + "chemdner_cemp_gold_standard_sample_eval.tsv",
+        'corpus': "data/chemdner_eval_text.txt.pickle",
+        'format': "chemdner",
+    },
     'chemdner2017_test':{
                     'text': chemdner2017_base + "test_set_patents_BioCreative_V.5.tsv",
                     'annotations': "",
