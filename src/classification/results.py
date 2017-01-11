@@ -1,6 +1,6 @@
 import io
 import logging
-import pickle
+import cPickle as pickle
 import os
 import time
 import argparse
@@ -10,10 +10,10 @@ from sklearn.dummy import DummyClassifier
 from sklearn.externals import joblib
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
-
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + '../..'))
 from config.corpus_paths import paths
 
-sys.path.append(os.path.abspath(os.path.dirname(__file__) + '../..'))
+
 from text.corpus import Corpus
 from config import config
 from text.offset import Offset, perfect_overlap, contained_by, Offsets
@@ -176,13 +176,16 @@ class ResultsNER(object):
         # merge the results of this set with another set
         dids = set(self.corpus.documents.keys()).union(set(results.corpus.documents.keys()))
         for did in dids:
+            # one result set may contain more or less documents than this one
+            # in that case, simply add the document to the other result set
             if did not in self.corpus.documents:
                 self.corpus.documents[did] = results.corpus.document[did]
             elif did not in results.corpus.documents:
                 results.corpus.documents[did] = self.corpus.documents[did]
-            else:
+            else: # merge entities
                 for sentence in results.corpus.documents[did].sentences:
                     base_sentence = self.corpus.documents[did].get_sentence(sentence.sid)
+                    # add every new model in the new result set to this one
                     for model in sentence.entities.elist:
                         if model != "goldstandard" and model not in base_sentence.entities.elist:
                             base_sentence.entities.elist[model] = sentence.entities.elist[model]
@@ -283,6 +286,21 @@ class ResultsNER(object):
                             output_file.write(u"T{0}\t{1.type} {1.dstart} {1.dend}\t{1.text}\n".format(ecount, entity))
                             ecount += 1
 
+    def import_chemdner(self, filepath):
+        with io.open(filepath, encoding="utf-8") as inputfile:
+            next(inputfile)
+            for l in inputfile:
+                values = l.split("\t")
+                did = values[0]
+                sectionid = values[1]
+                # print l
+                start, end, text = int(values[2]), int(values[3]), values[5]
+                confidence = values[4]
+                if did in self.corpus.documents:
+                    self.corpus.documents[did].tag_chemdner_entity(start, end, "unknown", goldstandard=self.model,
+                                                               text=text, confidence=confidence, doct=sectionid)
+
+
 class ResultSetNER(object):
     """
     Organize and process a set a results from a TaggerCollection
@@ -354,6 +372,7 @@ def main():
     parser.add_argument("--doctype", dest="doctype", help="type of document to be considered", default="all")
     parser.add_argument("--entitytype", dest="etype", help="type of entities to be considered", default="all")
     parser.add_argument("--external", action="store_true", default=False, help="Run external evaluation script, depends on corpus type")
+    parser.add_argument("-i", "--input", action="store", help="input file to be convert to IBEnt results.")
     options = parser.parse_args()
 
     numeric_level = getattr(logging, options.loglevel.upper(), None)
@@ -384,6 +403,17 @@ def main():
         #print new_name
         results = combine_results(options.finalmodel, results_list, options.output, options.etype, options.models)
         results.save(options.output + ".pickle")
+    if options.action == "import":
+        # import results from a different format to IBEnt
+        # for now assume CHEMDNER format
+        results = ResultsNER(options.results[0])
+        logging.info("loading corpus...")
+        results.corpus = pickle.load(open(paths[options.goldstd]["corpus"]))
+        results.model = options.models[0]
+        results.import_chemdner(options.input)
+        results.save(options.output + ".pickle")
+
+
 
     """elif options.action in ("train_ensemble", "test_ensemble"):
         if "annotations" in config.paths[options.goldstd]:
