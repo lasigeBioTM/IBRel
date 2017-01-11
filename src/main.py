@@ -212,7 +212,10 @@ considered when coadministering with megestrol acetate.''',
             corpus_path = paths[g]["corpus"]
             logging.info("loading corpus %s" % corpus_path)
             this_corpus = pickle.load(open(corpus_path, 'rb'))
-            corpus.documents.update(this_corpus.documents)
+            #logging.info("adding {} documents".format(len(documents)))
+            # docs = this_corpus.documents
+            docs = dict((k, this_corpus.documents[k]) for k in this_corpus.documents.keys()[:13000])
+            corpus.documents.update(docs)
         if options.actions == "write_goldstandard":
             model = BiasModel(options.output[1])
             model.load_data(corpus, [])

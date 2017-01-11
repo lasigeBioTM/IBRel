@@ -137,8 +137,10 @@ class ResultsNER(object):
     def load_corpus(self, goldstd):
         logging.info("loading corpus %s" % paths[goldstd]["corpus"])
         corpus = pickle.load(open(paths[goldstd]["corpus"]))
-
         for did in corpus.documents:
+            if did not in self.corpus:
+                logging.info("no results for {}".format(did))
+                continue
             for sentence in corpus.documents[did].sentences:
                 sentence.entities = self.corpus[did][sentence.sid]
                 #for entity in sentence.entities.elist[options.models]:

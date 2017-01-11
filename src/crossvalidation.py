@@ -58,7 +58,8 @@ def run_crossvalidation(goldstd_list, corpus, model, cv, crf="stanford", entity_
             train_model = CrfSuiteModel(basemodel, entity_type)
         train_model.load_data(train_corpus, feature_extractors.keys(), entity_type)
         train_model.train()
-        train_corpus = None
+        del train_corpus
+        del train_model
         # test
         logging.info('CV{} - TEST'.format(nlist))
         test_model = None
@@ -167,8 +168,8 @@ def main():
         corpus_path = paths[g]["corpus"]
         logging.info("loading corpus %s" % corpus_path)
         this_corpus = pickle.load(open(corpus_path, 'rb'))
-        docs = this_corpus.documents
-        #docs = dict((k, this_corpus.documents[k]) for k in this_corpus.documents.keys()[:100])
+        #docs = this_corpus.documents
+        docs = dict((k, this_corpus.documents[k]) for k in this_corpus.documents.keys()[:2000])
         corpus.documents.update(docs)
     run_crossvalidation(options.goldstd, corpus, options.models, options.cv, options.crf, options.etype)
 
