@@ -60,7 +60,7 @@ class Entity(object):
         else:
             conf = self.score
         #outfile.write('\t'.join([self.did, loc, str(rank)]) + '\n')
-        outfile.write("{0}\t{1}\t{2}\t{3}\t{4}\n".format(self.did, loc, self.text, str(conf), str(rank)))
+        outfile.write("{0}\t{1}\t{2}\t{3}\t{4}\t{5}\n".format(self.did, loc, str(conf), self.text, "unknown", str(rank)))
         return (self.did, loc, str(rank), str(conf), self.text)
 
     def write_bioc_annotation(self, parent):

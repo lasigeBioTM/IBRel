@@ -431,9 +431,9 @@ def main():
                     get_results(result, options.models, goldset[0], ths, options.rules)
             if options.external:
                 write_chemdner_files(results, options.models, goldset, ths, options.rules)
-                evaluation = run_chemdner_evaluation(paths[options.goldstd]["cem"],
-                                                     options.results[0] + ".tsv")
-                print evaluation
+                #evaluation = run_chemdner_evaluation(paths[options.goldstd]["cem"],
+                #                                     options.results[0] + ".tsv")
+                #print evaluation
         elif options.action == "evaluate_list": # ignore the spans, the gold standard is a list of unique entities
             for result in results_list:
                 if options.ptype:

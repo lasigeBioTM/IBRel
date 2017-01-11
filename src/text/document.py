@@ -113,7 +113,7 @@ class Document(object):
                 s.process_corenlp_output(corenlpres)
 
 
-    def tag_chemdner_entity(self, start, end, subtype, **kwargs):
+    def tag_chemdner_entity(self, start, end, subtype, source="goldstandard", **kwargs):
         """
         Create an CHEMDNER entity relative to this document.
         :param start: Start index of entity
@@ -130,7 +130,7 @@ class Document(object):
             totalchars = 0
             for s in self.sentences[1:]:
                 if totalchars <= start and totalchars + len(s.text) >= end:  # entity is in this sentence
-                    s.tag_entity(start-totalchars, end-totalchars, subtype,
+                    s.tag_entity(start-totalchars, end-totalchars, subtype, source,
                                  totalchars=totalchars, **kwargs)
                     # print "found entity on sentence %s" % s.sid
                     found = True
