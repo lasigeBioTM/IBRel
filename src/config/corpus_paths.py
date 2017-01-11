@@ -89,7 +89,7 @@ paths.update({
     'chemdner2017_eval': {
         'text': chemdner2017_base + "chemdner2017_eval_set.tsv",
         'annotations': chemdner2017_base + "eval_annotations.tsv",
-        # 'cem': chemdner2017 + "chemdner_cemp_gold_standard_sample_eval.tsv",
+        'cem': chemdner2017_base + "eval_annotations.tsv",
         'corpus': "data/chemdner_eval_text.txt.pickle",
         'format': "chemdner",
     },

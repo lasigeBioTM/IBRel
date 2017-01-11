@@ -54,13 +54,13 @@ class Entity(object):
             ttype = "A"
         start = str(self.tokens[0].dstart)
         end = str(self.tokens[-1].dend)
-        loc = ttype + ":" + start + ":" + end
+        loc = ttype + "\t" + start + "\t" + end
         if isinstance(self.score ,dict):
             conf = sum(self.score.values())/len(self.score)
         else:
             conf = self.score
         #outfile.write('\t'.join([self.did, loc, str(rank)]) + '\n')
-        outfile.write("{0}\t{1}\t{2}\t{3}\t{4}\n".format(self.did, loc, str(rank), str(conf), self.text))
+        outfile.write("{0}\t{1}\t{2}\t{3}\t{4}\n".format(self.did, loc, self.text, str(conf), str(rank)))
         return (self.did, loc, str(rank), str(conf), self.text)
 
     def write_bioc_annotation(self, parent):
@@ -169,7 +169,8 @@ class Entities(object):
                     exclude = [perfect_overlap]
                     if "contained_by" in rules:
                         exclude.append(contained_by)
-                    toadd, v, alt = offsets.add_offset(eid_offset, exclude_if=exclude)
+                    toadd, v, overlapping, to_exclude = offsets.add_offset(eid_offset, exclude_this_if=exclude,
+                                                                           exclude_others_if=[])
                     if toadd:
                         #logging.info("added %s" % e)
                         line = e.write_chemdner_line(outfile, rank)

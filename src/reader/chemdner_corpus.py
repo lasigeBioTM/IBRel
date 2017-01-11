@@ -82,7 +82,7 @@ def write_chemdner_files(results, models, goldset, ths, rules):
     """ results files for CHEMDNER CEMP and CPD tasks"""
     print "saving results to {}".format(results.path + ".tsv")
     with io.open(results.path + ".tsv", 'w', encoding='utf-8') as outfile:
-        cpdlines, max_entities = results.corpus.write_chemdner_results(models, outfile, ths, rules)
+        lines, cpdlines, max_entities = results.corpus.write_chemdner_results(models, outfile, ths, rules)
     cpdlines = sorted(cpdlines, key=itemgetter(2))
     with open(results.path + "_cpd.tsv", "w") as cpdfile:
         for i, l in enumerate(cpdlines):

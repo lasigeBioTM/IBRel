@@ -22,7 +22,7 @@ from config.corpus_paths import paths
 from config import config
 from reader.Transmir_corpus import get_transmir_gold_ann_set
 from reader.bc2gm_corpus import get_b2gm_gold_ann_set
-from reader.chemdner_corpus import get_chemdner_gold_ann_set, run_chemdner_evaluation
+from reader.chemdner_corpus import get_chemdner_gold_ann_set, run_chemdner_evaluation, write_chemdner_files
 from reader.genia_corpus import get_genia_gold_ann_set
 from reader.jnlpba_corpus import get_jnlpba_gold_ann_set
 from reader.mirna_corpus import get_ddi_mirna_gold_ann_set
@@ -429,11 +429,11 @@ def main():
                     get_relations_results(result, options.models, goldset[1], ths, options.rules)
                 else: # evaluate an entity type
                     get_results(result, options.models, goldset[0], ths, options.rules)
-            #if options.bceval:
-            #    write_chemdner_files(results, options.models, goldset, ths, options.rules)
-            #    evaluation = run_chemdner_evaluation(config.paths[options.goldstd]["cem"],
-            #                                         options.results + ".tsv")
-            #    print evaluation
+            if options.external:
+                write_chemdner_files(results, options.models, goldset, ths, options.rules)
+                evaluation = run_chemdner_evaluation(paths[options.goldstd]["cem"],
+                                                     options.results[0] + ".tsv")
+                print evaluation
         elif options.action == "evaluate_list": # ignore the spans, the gold standard is a list of unique entities
             for result in results_list:
                 if options.ptype:
