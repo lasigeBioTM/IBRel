@@ -411,7 +411,7 @@ def main():
         results.corpus = pickle.load(open(paths[options.goldstd]["corpus"]))
         results.model = options.models[0]
         results.import_chemdner(options.input)
-        results.save(options.output + ".pickle")
+        results.save(results.name + ".pickle")
 
 
 
