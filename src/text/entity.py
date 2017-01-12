@@ -47,13 +47,15 @@ class Entity(object):
                                                                                          self.type)
         return output
 
-    def write_chemdner_line(self, outfile, rank=1):
+    def write_chemdner_line(self, outfile, rank=1, titleoffset=0):
         if self.sid.endswith(".s0"):
             ttype = "T"
+            start = str(self.tokens[0].dstart)
+            end = str(self.tokens[-1].dend)
         else:
             ttype = "A"
-        start = str(self.tokens[0].dstart)
-        end = str(self.tokens[-1].dend)
+            start = str(self.tokens[0].dstart - 1 - titleoffset) # because of the extra dot
+            end = str(self.tokens[-1].dend - 1 - titleoffset)
         loc = ttype + "\t" + start + "\t" + end
         if isinstance(self.score ,dict):
             conf = sum(self.score.values())/len(self.score)
@@ -139,7 +141,7 @@ class Entities(object):
         return entities
 
 
-    def write_chemdner_results(self, source, outfile, ths={"ssm":0.0}, rules=[], totalentities=0):
+    def write_chemdner_results(self, source, outfile, titleoffset, ths={"ssm":0.0}, rules=[], totalentities=0):
         """
         Write results that can be evaluated with the BioCreative evaluation script
         :param source: Base model path
@@ -173,7 +175,7 @@ class Entities(object):
                                                                            exclude_others_if=[])
                     if toadd:
                         #logging.info("added %s" % e)
-                        line = e.write_chemdner_line(outfile, rank)
+                        line = e.write_chemdner_line(outfile, rank, titleoffset)
                         lines.append(line)
                         rank += 1
         return lines, rank

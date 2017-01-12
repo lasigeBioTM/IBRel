@@ -123,25 +123,20 @@ class Document(object):
         :return:
         """
         doct = kwargs.get("doct")
-        if doct == "T": # If it's in the title, we already know the sentence (it's the first)
-            self.sentences[0].tag_entity(start, end, subtype, **kwargs)
-        else: # we have to find the sentence
-            found = False
-            totalchars = 0
-            for s in self.sentences[1:]:
-                if totalchars <= start and totalchars + len(s.text) >= end:  # entity is in this sentence
-                    s.tag_entity(start-totalchars, end-totalchars, subtype, source,
-                                 totalchars=totalchars, **kwargs)
-                    # print "found entity on sentence %s" % s.sid
-                    found = True
-                    break
-
-                totalchars += len(s.text)
-                totalchars = self.get_space_between_sentences(totalchars)
-            if not found:
-                print "could not find sentence for %s:%s on %s!" % (start,
-                                                                       end, self.did)
-                # sys.exit()
+        title_offset = 0
+        if doct == "A":
+            title_offset = len(self.title) + 1  # account for extra .
+        start, end = start + title_offset, end + title_offset
+        sentence = self.find_sentence_containing(start, end, chemdner=False)
+        if sentence:
+            sentence.tag_entity(start - sentence.offset, end - sentence.offset, "chemical", text=kwargs.get("text"),
+                                subtype=subtype)
+        else:
+            print "sentence not found between:", start, end
+            print "ignored ", kwargs.get("text")
+            # print len(self.documents[pmid].title), self.documents[pmid].title
+            # for s in self.documents[pmid].sentences:
+            #    print s.sid, s.tokens[0].dstart, s.tokens[-1].dend, s.text
 
     def add_relation(self, entity1, entity2, subtype, relation, source="goldstandard", **kwargs):
         if self.pairs.pairs:
@@ -193,7 +188,7 @@ class Document(object):
         for s in self.sentences:
             # print "processing", s.sid, "with", len(s.entities.elist[source]), "entities"
             if s.entities:
-                res = s.entities.write_chemdner_results(source, outfile, ths, rules, totalentities+1)
+                res = s.entities.write_chemdner_results(source, outfile, len(self.sentences[0].text), ths, rules, totalentities+1)
                 lines += res[0]
                 totalentities = res[1]
         return lines

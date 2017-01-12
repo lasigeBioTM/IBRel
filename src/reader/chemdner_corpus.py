@@ -33,7 +33,7 @@ class ChemdnerCorpus(Corpus):
                 t = time.time()
                 # each line is PMID  title   abs
                 tsv = line.split('\t')
-                doctext = tsv[1].strip().replace("<", "(").replace(">", ")") + " "
+                doctext = tsv[1].strip().replace("<", "(").replace(">", ")") + ". "
                 doctext += tsv[2].strip().replace("<", "(").replace(">", ")")
                 newdoc = Document(doctext, process=False,
                                   did=tsv[0], title=tsv[1].strip() + ".")
@@ -63,7 +63,7 @@ class ChemdnerCorpus(Corpus):
                     if entitytype == "all" or entitytype == "chemical" or entitytype == chemt:
                         title_offset = 0
                         if doct == "A":
-                            title_offset = len(self.documents[pmid].title)
+                            title_offset = len(self.documents[pmid].title) + 1 # account for extra .
                         start, end = start + title_offset, end + title_offset
                         sentence = self.documents[pmid].find_sentence_containing(start, end, chemdner=False)
                         if sentence:
@@ -131,7 +131,7 @@ def get_chemdner_gold_ann_set(goldann, etype, text_path, doctype):
         entity_text = docs[x[0] + "." + x[1]][start:end]
         title_offset = 0
         if x[1] == "A":
-            title_offset = len(docs[x[0] + ".T"]) + 1
+            title_offset = len(docs[x[0] + ".T"]) + 2
         goldlist.append((x[0], start + title_offset, end + title_offset, entity_text))
     #print goldlist[0:2]
     goldset = set(goldlist)

@@ -15,6 +15,7 @@ from config import config
 from evaluate import get_gold_ann_set, get_results
 # from postprocessing.chebi_resolution import add_chebi_mappings
 # from postprocessing.ssm import add_ssm_score
+from reader.chemdner_corpus import write_chemdner_files
 from text.corpus import Corpus
 
 
@@ -96,6 +97,7 @@ def run_crossvalidation(goldstd_list, corpus, model, cv, crf="stanford", entity_
                 if g[0] in testids:
                     test_goldset.add(g)
         precision, recall = get_results(final_results, basemodel, test_goldset, {}, [])
+        write_chemdner_files(final_results, basemodel, goldset, {}, {})
         # evaluation = run_chemdner_evaluation(config.paths[goldstd]["cem"], basemodel + "_results.txt", "-t")
         # values = evaluation.split("\n")[1].split('\t')
         p.append(precision)
@@ -169,7 +171,7 @@ def main():
         logging.info("loading corpus %s" % corpus_path)
         this_corpus = pickle.load(open(corpus_path, 'rb'))
         #docs = this_corpus.documents
-        docs = dict((k, this_corpus.documents[k]) for k in this_corpus.documents.keys()[:2000])
+        docs = dict((k, this_corpus.documents[k]) for k in this_corpus.documents.keys())
         corpus.documents.update(docs)
     run_crossvalidation(options.goldstd, corpus, options.models, options.cv, options.crf, options.etype)
 
