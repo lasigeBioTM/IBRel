@@ -411,12 +411,12 @@ def main():
                             counts[e.type] += 1
             print counts
             sys.exit()
-        if "annotations" in paths[options.goldstd]:
+        if paths[options.goldstd].get("annotations"):
             logging.info("loading gold standard %s" % paths[options.goldstd]["annotations"])
             goldset = get_gold_ann_set(paths[options.goldstd]["format"], paths[options.goldstd]["annotations"],
                                        options.etype, options.ptype, paths[options.goldstd]["text"])
         else:
-            goldset = None
+            goldset = ({}, {})
         logging.info("using thresholds: chebi > {!s} ssm > {!s}".format(options.chebi, options.ssm))
         #results.load_corpus(options.goldstd)
         #results.path = options.results
