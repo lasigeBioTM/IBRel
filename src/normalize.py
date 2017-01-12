@@ -63,6 +63,7 @@ def add_chebi_mappings(results, path, source, save=True):
                         entity.chebi_id = chebi_info[0]
                         entity.chebi_name = chebi_info[1]
                         entity.chebi_score = chebi_info[2]
+                        entity.scores["chebi"] = chebi_info[2]
                         # TODO: check for errors (FP and FN)
                         if chebi_info[2] == 0:
                             #logging.info("nothing for %s" % entity.text)
@@ -117,6 +118,7 @@ def add_ssm_score(results, path, source, measure, ontology, save=True):
                         e2.ssm_best_ID = e.ssm_best_ID
                         e2.ssm_best_name = e.ssm_best_name
                         e2.ssm = measure
+                        e2.scores[measure] = e.ssm_score
                     #for entity in results.corpus[did][sid].elist[s]:
                     #    logging.info("%s %s %s %s" % (entity.text, entity.chebi_name, entity.ssm_score,
                     #                                  entity.ssm_chebi_name))

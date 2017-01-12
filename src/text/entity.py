@@ -26,6 +26,7 @@ class Entity(object):
         self.subentities = []
         self.targets = [] # targets should be (eid, relationtype)
         self.score = kwargs.get("score", 0)
+        self.scores = {}
         self.original_id = kwargs.get("original_id")
         self.normalized = self.text
         self.normalized_score = 0
@@ -214,7 +215,7 @@ class Entities(object):
                         overlap = eid_offset.overlap(o)
                         if overlap == perfect_overlap:
                             combined[o.eid].recognized_by.append(s)
-                            combined[o.eid].score[s] = e.score
+                            combined[o.eid].scores[s] = e.score
                             # if hasattr(e, "ssm_score"):
                             #     combined[o.eid].ssm_score_all[s] = e.ssm_score
                             # else:
@@ -226,7 +227,7 @@ class Entities(object):
                     if not added:
                         offsets.offsets.add(eid_offset)
                         e.recognized_by = [s]
-                        e.score = {s: e.score}
+                        e.scores[s] = e.score
                         # if hasattr(e, "ssm_score"):
                         #     e.ssm_score_all= {s: e.ssm_score}
                         # else:

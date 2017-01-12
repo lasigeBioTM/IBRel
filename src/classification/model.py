@@ -8,6 +8,7 @@ class Model(object):
         self.predicted = kwargs.get("predicted", [])
         self.subtypes = kwargs.get("subtypes", [])
         self.scores = kwargs.get("scores", [])
+        self.etype = kwargs.get("etype")
 
     def reset(self):
         self.sids = []
