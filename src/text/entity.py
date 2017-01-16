@@ -2,7 +2,7 @@ from __future__ import division, absolute_import, unicode_literals
 
 import xml.etree.ElementTree as ET
 import logging
-from text.offset import Offset, Offsets, perfect_overlap, contained_by
+from text.offset import Offset, Offsets, perfect_overlap, contained_by, no_overlap
 
 
 class Entity(object):
@@ -199,7 +199,7 @@ class Entities(object):
         combined = {}
         offsets = Offsets()
         for s in self.elist:
-            #logging.info("%s - %s" % (self.sid, s))
+            # logging.info("%s - %s" % (self.sid, s))
             # use everything except what's already combined and gold standard
             if (s.endswith(base_model) or base_model == "all") and s != name and not s.startswith("goldstandard"):
                 for e in self.elist[s]: # TODO: filter for classifier confidence
@@ -224,6 +224,8 @@ class Entities(object):
                             #logging.info(combined[o.eid].ssm_score_all)
                             #logging.info("added {0}-{1} to entity {2}".format(s.split("_")[-1], e.text, combined[o.eid].text))
                             break
+                        elif overlap != no_overlap:
+                            added = True # skip this
                     if not added:
                         offsets.offsets.add(eid_offset)
                         e.recognized_by = [s]
