@@ -33,7 +33,7 @@ class ChemdnerCorpus(Corpus):
                 t = time.time()
                 # each line is PMID  title   abs
                 tsv = line.split('\t')
-                doctext = tsv[1].strip().replace("<", "(").replace(">", ")") + ". "
+                doctext = tsv[1].strip().replace("<", "(").replace(">", ")").replace(". ", ", ") + ". "
                 doctext += tsv[2].strip().replace("<", "(").replace(">", ")")
                 newdoc = Document(doctext, process=False,
                                   did=tsv[0], title=tsv[1].strip() + ".")
