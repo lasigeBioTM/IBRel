@@ -93,8 +93,8 @@ class Document(object):
             #corenlpres = corenlpserver.raw_parse(s.text)
             corenlpres = corenlpserver.annotate(s.text.encode("utf8"), properties={
                 'ssplit.eolonly': True,
-                'annotators': 'tokenize,ssplit,pos,ner,lemma',
-                #'annotators': 'tokenize,ssplit,pos,parse,ner,lemma,depparse',
+                #'annotators': 'tokenize,ssplit,pos,ner,lemma',
+                'annotators': 'tokenize,ssplit,pos,parse,ner,lemma,depparse',
                 'outputFormat': 'json',
             })
             if isinstance(corenlpres, basestring):
@@ -148,7 +148,7 @@ class Document(object):
         else:
             pid = self.did + ".p0"
         between_text = self.text[entity1.dend:entity2.start]
-        logging.info("adding {}:{}=>{}".format(pid, entity1.text.encode("utf8"), entity2.text.encode("utf8")))
+        logging.debug("adding {}:{}=>{}".format(pid, entity1.text.encode("utf8"), entity2.text.encode("utf8")))
         # print between_text
         if subtype == "tlink":
             pair = TLink(entity1, entity2, relation=relation, original_id=kwargs.get("original_id"),

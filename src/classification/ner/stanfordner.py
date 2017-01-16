@@ -184,7 +184,10 @@ class StanfordNERModel(SimpleTaggerModel):
                 #results.entities[eid] = new_entity # deepcopy
                 sentence_entities[eid] = new_entity
                 new_entity = None
-                logging.debug(u"completed entity:{}".format(sentence_entities[eid]))
+                try:
+                    logging.debug("completed entity:{}".format(sentence_entities[eid]))
+                except UnicodeDecodeError:
+                    pass
         return sentence_entities
 
     def split_tag_tokens(self, data, sentence):

@@ -89,6 +89,10 @@ class CrfSuiteModel(SimpleTaggerModel):
                                             entity=single_entity, source=self.path)
                 single_entity.eid = eid
                 results.entities[eid] = single_entity # deepcopy
+                try:
+                    logging.debug("completed entity:{}".format(results.entities[eid]))
+                except UnicodeDecodeError:
+                    pass
             elif t == "start":
                 new_entity = create_entity(tokens=[token],
                                                    sid=sentence.sid, did=sentence.did,
@@ -123,6 +127,9 @@ class CrfSuiteModel(SimpleTaggerModel):
                 new_entity.eid = eid
                 results.entities[eid] = new_entity # deepcopy
                 new_entity = None
-                #logging.debug("completed entity:{}".format(results.entities[eid]))
+                try:
+                    logging.debug("completed entity:{}".format((results.entities[eid])))
+                except UnicodeDecodeError:
+                    pass
         return results
 

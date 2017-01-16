@@ -89,7 +89,7 @@ def get_uniprot_name(text):
             # gos = values[5].split(";")
             # print values[6]
             go_ids = [v.strip() for v in values[6].split(";")]
-    logging.info("mapped  {} to {}".format(text, normalized))
+    #logging.info("mapped  {} to {}".format(text, normalized))
     return normalized, normalized_score, go_ids
 
 class ProteinEntity(Entity):
@@ -132,6 +132,9 @@ class ProteinEntity(Entity):
                     logging.debug("ignored stopword %s" % self.text)
                     stop = True
             if stop:
+                return False
+            elif self.text.startswith("let-") or self.text.startswith("miR-") or self.text.startswith("micro") or \
+                    self.text.startswith("miRNAs") or  self.text.startswith("mir-") or  self.text.startswith("Mir"):
                 return False
         if "alpha" in rules and not self.text[0].isalpha():
             logging.debug("not alpha %s" % self.text)

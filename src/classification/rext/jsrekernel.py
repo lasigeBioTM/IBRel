@@ -27,15 +27,15 @@ class JSREKernel(ReModel):
         self.examplesfile = None
         self.ner_model = ner
         self.entitytypes = (config.relation_types[self.pairtype]["source_types"], config.relation_types[self.pairtype]["target_types"])
-
+        self.corpus = corpus
 
     def load_classifier(self, outputfile="jsre_results.txt"):
         self.resultsfile = self.temp_dir + self.pairtype + "_" + outputfile
         self.examplesfile = self.temp_dir + self.modelname + ".txt"
         if os.path.isfile(self.temp_dir + self.pairtype + "_" + outputfile):
             os.remove(self.temp_dir + self.pairtype + "_" + outputfile)
-        if not os.path.isfile(self.modelname):
-            print "model", self.modelname, "not found"
+        if not os.path.isfile(self.basedir + self.modelname):
+            print "model", self.basedir +  self.modelname, "not found"
             sys.exit()
         if platform.system() == "Windows":
             sep = ";"
@@ -46,7 +46,7 @@ class JSREKernel(ReModel):
         libs = ["libsvm-2.8.jar", "log4j-1.2.8.jar", "commons-digester.jar", "commons-beanutils.jar", "commons-logging.jar", "commons-collections.jar"]
         classpath = 'bin/jsre/jsre-1.1/bin'+ sep + sep.join(["bin/jsre/jsre-1.1/lib/" + l for l in libs])
         self.test_jsre = ['java', '-mx4g', '-classpath', classpath, "org.itc.irst.tcc.sre.Predict",
-                          self.examplesfile, self.modelname,
+                          self.examplesfile, self.basedir + self.modelname,
                           self.resultsfile]
         #print ' '.join(jsrecommand)
 
@@ -66,11 +66,12 @@ class JSREKernel(ReModel):
                 "commons-logging.jar", "commons-collections.jar"]
         classpath = 'bin/jsre/jsre-1.1/bin/' + sep + sep.join(["bin/jsre/jsre-1.1/lib/" + l for l in libs])
         jsrecall = ['java', '-mx8g', '-classpath', classpath, "org.itc.irst.tcc.sre.Train",
-                          "-k",  "SL", "-n", "3", "-w", "4", "-m", "3072",  # "-c", str(2),
+                          "-k",  "SL", "-n", "3", "-w", "3", "-m", "3072", #  "-c", str(3),
                           self.temp_dir + self.modelname + ".txt", self.basedir + self.modelname]
-        # print " ".join(jsrecall)
-        jsrecall = Popen(jsrecall, stdout=PIPE, stderr=PIPE)
-        res  = jsrecall.communicate()
+        logging.info("saving model to {}".format(self.basedir + self.modelname))
+        print " ".join(jsrecall)
+        jsrecall = Popen(jsrecall) #, stdout=PIPE, stderr=PIPE)
+        res = jsrecall.communicate()
         if not os.path.isfile(self.basedir + self.modelname):
             print "error with jsre! model file was no created"
             print res[1]
@@ -85,14 +86,14 @@ class JSREKernel(ReModel):
         #logging.debug(res)
 
 
-    def test(self, outputfile="jsre_results.txt"):
+    def test(self):
         self.generatejSREdata(self.corpus, train=False, pairtype=self.pairtype)
         # print " ".join(self.test_jsre)
         jsrecall = Popen(self.test_jsre, stdout=PIPE, stderr=PIPE)
         res = jsrecall.communicate()
         #logging.debug(res[0].strip().split('\n')[-2:])
         #os.system(' '.join(jsrecommand))
-        if not os.path.isfile(self.temp_dir + outputfile):
+        if not os.path.isfile(self.resultsfile):
             print "something went wrong with JSRE!"
             print res
             sys.exit()
