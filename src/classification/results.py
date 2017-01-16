@@ -297,8 +297,13 @@ class ResultsNER(object):
                 start, end, text = int(values[2]), int(values[3]), values[5]
                 confidence = values[4]
                 if did in self.corpus.documents:
-                    self.corpus.documents[did].tag_chemdner_entity(start, end, "unknown", goldstandard=self.model,
-                                                               text=text, confidence=confidence, doct=sectionid)
+                    entity = self.corpus.documents[did].tag_chemdner_entity(start, end, "unknown", source=self.model,
+                                                               text=text, confidence=confidence, doct=sectionid, score=1)
+                    if entity:
+                        self.entities[entity.eid] = entity
+        #for d in self.corpus.documents:
+        #    for s in self.corpus.documents[d].sentences:
+        #        print s.entities.elist.keys()
 
 
 class ResultSetNER(object):
