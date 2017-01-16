@@ -218,14 +218,14 @@ class Sentence(object):
                                                                                                    self.text))
                     logging.info("text does not match: {}=>{}".format(newtext, kwargs["text"]))
                     #sys.exit()
-                    return None
+                    #return None
                 else:
                     logging.info("diferent text:|system {} {} |{}|=>|{}| {} {} input|{} {}".format(tlist[0].start, tlist[-1].end, newtext, kwargs["text"],
                                  start, end, self.sid, self.text))
-                    for t in self.tokens:
-                        print (t.start, t.end, t.text),
-                    print
-                    return None
+                    #for t in self.tokens:
+                    #    print (t.start, t.end, t.text),
+                    #print
+                    #return None
                     # print exclude, self.text[tlist[0].start:tlist[-1].end]
             #     print "tokens found:", [t.text for t in tlist]
                     # sys.exit()
