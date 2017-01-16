@@ -234,8 +234,8 @@ considered when coadministering with megestrol acetate.''',
             elif options.crf == "crfsuite":
                 model = CrfSuiteModel(options.models, options.etype)
             elif options.crf == "ensemble":
-                model = EnsembleModel(options.models, options.etype)
-            model.load_data(corpus, feature_extractors.keys(), options.etype)
+                model = EnsembleModel(options.models, options.etype, goldstd=options.goldstd[0])
+            model.load_data(corpus, feature_extractors.keys())
             model.train()
         elif options.actions == "train_matcher": # Train a simple classifier based on string matching
             model = MatcherModel(options.models)
@@ -290,7 +290,7 @@ considered when coadministering with megestrol acetate.''',
                 elif options.crf == "banner":
                     model = BANNERModel(options.models, options.etype)
                 elif options.crf == "ensemble":
-                    model = EnsembleModel(options.models, options.etype)
+                    model = EnsembleModel(options.models, options.etype, goldstd=options.goldstd[0])
                 model.load_tagger()
                 model.load_data(corpus, feature_extractors.keys(), mode="test")
                 final_results = model.test(corpus)

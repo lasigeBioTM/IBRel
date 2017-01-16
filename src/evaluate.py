@@ -92,6 +92,7 @@ def compare_results(offsets, goldoffsets, corpus, getwords=True, evaltype="entit
         for k in goldoffsets_keys:
             if k[0] not in entities or k[1] not in entities[k[0]] or k[2] not in entities[k[0]]:
                 del goldoffsets[k]
+                print "excluded ", k
     tps = set(offsets.keys()) & set(goldoffsets.keys())
     fps = set(offsets.keys()) - set(goldoffsets.keys())
     fns = set(goldoffsets.keys()) - set(offsets.keys())
