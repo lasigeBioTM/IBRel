@@ -129,8 +129,12 @@ class Document(object):
         start, end = start + title_offset, end + title_offset
         sentence = self.find_sentence_containing(start, end, chemdner=False)
         if sentence:
-            sentence.tag_entity(start - sentence.offset, end - sentence.offset, "chemical", text=kwargs.get("text"),
-                                subtype=subtype)
+            eid = sentence.tag_entity(start - sentence.offset, end - sentence.offset, "chemical", source=source,
+                                      text=kwargs.get("text"),
+                                subtype=subtype, score=kwargs.get("score"))
+            if eid:
+                entity = sentence.entities.get_entity(eid, source)
+                return entity
         else:
             print "sentence not found between:", start, end
             print "ignored ", kwargs.get("text")
