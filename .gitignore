@@ -1,13 +1,28 @@
 src/word2vec_experiments.py
 src/fuzzy_test.py
-bin/*.jar
+bin/
 venv/
 data/
 models/
 temp/
+results/
+annotators/
+triples/
+corpora/
 .env
 # Local configurations
 settings.json
+
+*.txt
+*.log
+*.tsv
+*.csv
+*.out
+*.zip
+*.gz
+*.xml
+*.jar
+*~
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
