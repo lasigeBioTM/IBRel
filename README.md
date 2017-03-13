@@ -1,6 +1,10 @@
 # IBRel
 Framework for identifying biomedical relations
 
+## Citation:
+
+Lamurias A, Clarke LA, Couto FM (2017) Extracting microRNA-gene relations from biomedical literature using distant supervision. PLOS ONE 12(3): e0171929. doi: 10.1371/journal.pone.0171929
+
 ## Dependencies:
 * Python 2.7 and Java 8
 * Pre-processing:
