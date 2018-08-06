@@ -42,7 +42,7 @@ WORKDIR /bin/geniass
 RUN apt-get update -y && apt-get install -y build-essential g++ make && make
 
 WORKDIR bin/
-RUN wget http://dl.dropbox.com/u/9060632/jsre-1.1.tgz && tar -xvzf jsre-1.1.tgz
+RUN wget https://files.pythonhosted.org/packages/db/ee/087a1b7c381041403105e87d13d729d160fa7d6010a8851ba051b00f7c67/jsre-1.1.0.zip && unzip jsre-1.1.0.zip
 WORKDIR jsre
 
 # Download sample data
