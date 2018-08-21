@@ -10,12 +10,13 @@ Lamurias A, Clarke LA, Couto FM (2017) Extracting microRNA-gene relations from b
 * Pre-processing:
     * [Genia Sentence Splitter](http://www.nactem.ac.uk/y-matsu/geniass/) (requires ruby)
     * [Python wrapper for Stanford CoreNLP](https://bitbucket.org/torotoki/corenlp-python)
+    * [MySQL Server](run 'apt-get install mysql-server' and 'service mysql start')
 * Term recognition
     * [Stanford NER 3.5.1](http://nlp.stanford.edu/software/CRF-NER.shtml)
 * Relation extraction
     * [SVM-light-TK](http://disi.unitn.it/moschitti/Tree-Kernel.htm)
     * [Shallow Language Kernel](https://hlt-nlp.fbk.eu/technologies/jsre)
-* requirements.txt - run `pip install -r requirements.txt`
+* requirements.txt - run `pip3 install -r requirements.txt`
 
 ## Configuration
 A Dockerfile is provided to help with the installation.
