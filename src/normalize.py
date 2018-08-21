@@ -6,10 +6,10 @@ import time
 
 import sys
 
-from config.corpus_paths import paths
-from config import config
-from postprocessing import chebi_resolution
-from postprocessing.ssm import get_ssm
+from .config.corpus_paths import paths
+from .config import config
+from .postprocessing import chebi_resolution
+from .postprocessing.ssm import get_ssm
 
 
 def normalize_entities(results, path, source):
@@ -35,8 +35,8 @@ def normalize_entities(results, path, source):
         percentmapped = 0
     else:
         percentmapped = total_score / mapped
-    print "{0} mapped, {1} not mapped, average score: {2}".format(mapped, not_mapped, percentmapped)
-    print "saving results to %s" % path
+    print("{0} mapped, {1} not mapped, average score: {2}".format(mapped, not_mapped, percentmapped))
+    print("saving results to %s" % path)
     pickle.dump(results, open(path, "wb"))
 
 def add_chebi_mappings(results, path, source, save=True):
@@ -141,7 +141,7 @@ def main():
                       help="Actions to be performed.")
     parser.add_argument("goldstd", default="chemdner_sample",
                         help="Gold standard to be used.",
-                        choices=paths.keys())
+                        choices=list(paths.keys()))
     parser.add_argument("--corpus", dest="corpus",
                       default="data/chemdner_sample_abstracts.txt.pickle",
                       help="format path")
@@ -170,12 +170,12 @@ def main():
         results = pickle.load(open(options.results + ".pickle", 'rb'))
         results.path = options.results
     else:
-        print "results not found"
+        print("results not found")
         results = None
 
     if options.action == "chebi":
         if not config.use_chebi:
-            print "If you want to use ChEBI, please re-run config.py and set use_chebi to true"
+            print("If you want to use ChEBI, please re-run config.py and set use_chebi to true")
             sys.exit()
         add_chebi_mappings(results, options.results + ".pickle", options.models)
     # if options.action == "go":

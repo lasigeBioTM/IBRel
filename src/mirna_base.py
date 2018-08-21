@@ -68,7 +68,7 @@ class MirbaseDB(object):
                         self.g.add((mature_instance, MIRBASE["previous_acc"], mature_previous_name))
                 self.g.add((mirna_instance, MIRBASE["stemloopOf"], mature_instance))
         self.get_label_to_acc()
-        self.choices = self.labels.keys()
+        self.choices = list(self.labels.keys())
         goa_data = self.parse_goa_gaf("data/goa_human_rna.gaf")
         for label in self.labels:
             if label in goa_data:
@@ -92,11 +92,11 @@ class MirbaseDB(object):
                         mirna_id = "hsa-" + mirna_id
                     mirna = self.map_label(mirna_id)
                     if mirna[1] != 100:
-                        print mirna_id, mirna
+                        print(mirna_id, mirna)
                     if mirna[0] not in goa_dic:
                         goa_dic[mirna[0]] = []
                     goa_dic[mirna[0]].append(go_id)
-        print "# of mirnas with gos: {}".format(len(goa_dic))
+        print("# of mirnas with gos: {}".format(len(goa_dic)))
         return goa_dic
 
 
@@ -180,7 +180,7 @@ class MirbaseDB(object):
             result = process.extractOne(new_label, self.choices)
             # print result
             # result = process.extract(label, choices, limit=3)
-            print result
+            print(result)
             if result[1] != 100:
                 #print
                 # print "original:", new_label.encode("utf-8"), result
@@ -217,7 +217,7 @@ class MirbaseDB(object):
             self.g.load(self.path + mirbasegraph_name)
             # print "Opened graph with {} triples".format(len(self.g))
             self.get_label_to_acc()
-            self.choices = self.labels.keys()
+            self.choices = list(self.labels.keys())
             logging.info("done.")
         else:
             logging.info("miRBase graph not found")
@@ -230,7 +230,7 @@ class MirbaseDB(object):
 
     def save_graph(self):
         self.g.serialize(self.path +  mirbasegraph_name, format='pretty-xml')
-        print 'Triples in graph after add: ', len(self.g)
+        print('Triples in graph after add: ', len(self.g))
         self.g.close()
 
 def main():
@@ -262,19 +262,19 @@ def main():
     else:
         mirbase.load_graph()
         if options.action == "map":
-            print mirbase.map_label(options.label)
+            print(mirbase.map_label(options.label))
         elif options.action == "geturi":
             q = prepareQuery('SELECT ?s WHERE { ?s rdfs:label ?label .}', initNs={"rdfs": RDFS })
             l = Literal(options.label)
             for row in mirbase.g.query(q, initBindings={'label': l}):
-                print row
+                print(row)
         else:
             m = URIRef("http://www.mirbase.org/cgi-bin/mirna_entry.pl?acc=MI0017413")
             #for s, p, o in g:
             #    print s, p, o
             mirna_class = URIRef("http://purl.obolibrary.org/obo/SO_0000276")
             for row in mirbase.query('select ?s where { ?s rdf:type [] .}'):
-                print row.s
+                print(row.s)
 
 if __name__ == "__main__":
     main()

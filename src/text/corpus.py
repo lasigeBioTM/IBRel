@@ -1,8 +1,8 @@
-from __future__ import division, absolute_import
+
 
 import io
 import logging
-import cPickle as pickle
+import pickle as pickle
 import random
 import socket
 import sys
@@ -134,10 +134,10 @@ class Corpus(object):
         else:
             sentence = self.documents[did].find_sentence_containing(start, end)
             if not sentence:
-                print "could not find this sentence!", start, end
+                print("could not find this sentence!", start, end)
         tokens = sentence.find_tokens_between(start, end)
         if not tokens:
-            print "could not find tokens!", start, end, sentence.sid, ':'.join(res)
+            print("could not find tokens!", start, end, sentence.sid, ':'.join(res))
             sys.exit()
         entity = sentence.entities.find_entity(start - sentence.offset, end - sentence.offset)
         return tokens, sentence, entity
@@ -175,9 +175,9 @@ class Corpus(object):
                 if "goldstandard" in s.entities.elist:
                     for e in s.entities.elist.get("goldstandard"):
                         scores.append(e.normalized_score)
-        print "score average: {}".format(sum(scores)*1.0/len(scores))
+        print("score average: {}".format(sum(scores)*1.0/len(scores)))
         scores.sort()
-        print scores[0], scores[-1]
+        print(scores[0], scores[-1])
 
     def get_sentences(self, hassource=None):
         for did in self.documents:
@@ -192,11 +192,11 @@ class Corpus(object):
             for sentence in self.documents[d].sentences:
                 if sentence.sid == sid:
                     return sentence
-        print "sentence not found", sid
+        print("sentence not found", sid)
         for d in self.documents:
             for sentence in self.documents[d].sentences:
-                print sentence.sid,
-            print
+                print(sentence.sid, end=' ')
+            print()
 
     def load_genia(self):
         os.chdir("bin/geniatagger-3.0.2/")
@@ -211,9 +211,9 @@ class Corpus(object):
                 c.expect("\r\n\r\n")
                 genia_results = c.before.split("\r\n")[1:]
                 if len(genia_results) != len(sentence.tokens):
-                    print "error with genia results", len(genia_results), len(sentence.tokens)
-                    print " ".join([t.text for t in sentence.tokens])
-                    print genia_results
+                    print("error with genia results", len(genia_results), len(sentence.tokens))
+                    print(" ".join([t.text for t in sentence.tokens]))
+                    print(genia_results)
                     for i, t in enumerate(sentence.tokens):
                         # if values[2] != sentence.tokens[i].pos:
                         #    print "pos:", values[0], values[2], sentence.tokens[i].pos
@@ -247,16 +247,16 @@ class Corpus(object):
                 #print
                 res = rrp.parse(sentence_text)
                 if len(res) > 0:
-                    print res[0].ptb_parse
-                    print sentence.parsetree
-                    print
+                    print(res[0].ptb_parse)
+                    print(sentence.parsetree)
+                    print()
                     #print
                     sentence.bio_parse = str(res[0].ptb_parse)
                 else:
-                    print sentence_text
-                    print "no parse"
+                    print(sentence_text)
+                    print("no parse")
                     sentence.bio_parse = sentence.parsetree
-                    print
+                    print()
 
     def run_ss_analysis(self, pairtype):
         correct_count = 0  # numver of real miRNA-gene pairs with common gos
@@ -326,12 +326,12 @@ class Corpus(object):
                         # incorrect_count += len(common_gos)
                         incorrect += 1
                 if correct_count != 0 and incorrect_count != 0:
-                    print "{}={}-{} ({} mirnas, {} tfs)".format(correct_count / nexp - incorrect_count / nexp,
+                    print("{}={}-{} ({} mirnas, {} tfs)".format(correct_count / nexp - incorrect_count / nexp,
                                                                 correct_count / nexp, incorrect_count / nexp,
-                                                                len(all_mirnas), len(all_tfs))
+                                                                len(all_mirnas), len(all_tfs)))
                     diff_count.append(correct_count / nexp - incorrect_count / nexp)
 
-        print sum(diff_count) * 1.0 / len(diff_count)
+        print(sum(diff_count) * 1.0 / len(diff_count))
 
     def convert_to(self, format, output_path):
         if format == "brat":
@@ -344,14 +344,14 @@ class Corpus(object):
             os.makedirs(output_path)
         for did in self.documents:
             with io.open("{}/{}.txt".format(output_path, did), "w", encoding='utf-8') as output_file:
-                output_file.write(unicode(self.documents[did].text, "utf-8"))
+                output_file.write(str(self.documents[did].text, "utf-8"))
 
     def convert_to_csv(self, output_path, entities=False, relations=False):
         if not os.path.exists(output_path):
             os.makedirs(output_path)
         with io.open("{}/documents.txt".format(output_path), "w", encoding='utf-8') as output_file:
             for did in self.documents:
-                output_file.write(u"{}\t{}\n".format(did, self.documents[did].text.replace("\n", " ")))
+                output_file.write("{}\t{}\n".format(did, self.documents[did].text.replace("\n", " ")))
 
 
 def netcat(hostname, port, content):

@@ -2,12 +2,12 @@ import argparse
 import time
 import ast
 
-from classification.ner.banner import BANNERModel
-from classification.ner.crfsuitener import CrfSuiteModel
-from classification.ner.stanfordner import StanfordNERModel
-from classification.rext.jsrekernel import JSREKernel
-from classification.rext.multiinstance import MILClassifier
-from text.sentence import Sentence
+from .classification.ner.banner import BANNERModel
+from .classification.ner.crfsuitener import CrfSuiteModel
+from .classification.ner.stanfordner import StanfordNERModel
+from .classification.rext.jsrekernel import JSREKernel
+from .classification.rext.multiinstance import MILClassifier
+from .text.sentence import Sentence
 
 __author__ = 'Andre'
 import bottle
@@ -16,22 +16,22 @@ import xml.etree.ElementTree as ET
 import xml.dom.minidom as minidom
 import logging
 import codecs
-import cPickle as pickle
+import pickle as pickle
 import random
 import string
 import MySQLdb
 import json
 
-from text.document import Document
-from text.corpus import Corpus
-from classification.ner.taggercollection import TaggerCollection
-from classification.ner.simpletagger import SimpleTaggerModel, feature_extractors
-from postprocessing.ensemble_ner import EnsembleNER
-from reader import pubmed
-from text.pair import Pair
-from config import config
-from postprocessing.chebi_resolution import add_chebi_mappings
-from postprocessing.ssm import add_ssm_score
+from .text.document import Document
+from .text.corpus import Corpus
+from .classification.ner.taggercollection import TaggerCollection
+from .classification.ner.simpletagger import SimpleTaggerModel, feature_extractors
+from .postprocessing.ensemble_ner import EnsembleNER
+from .reader import pubmed
+from .text.pair import Pair
+from .config import config
+from .postprocessing.chebi_resolution import add_chebi_mappings
+from .postprocessing.ssm import add_ssm_score
 
 
 

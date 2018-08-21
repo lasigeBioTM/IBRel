@@ -64,7 +64,7 @@ class SeeDevCorpus(Corpus):
         time_per_abs = []
         for current, f in enumerate(trainfiles):
             #logging.debug('%s:%s/%s', f, current + 1, total)
-            print '{}:{}/{}'.format(f, current + 1, total)
+            print('{}:{}/{}'.format(f, current + 1, total))
             did = f.split(".")[0].split("/")[-1]
             t = time.time()
             with codecs.open(f, 'r', 'utf-8') as txt:
@@ -124,18 +124,18 @@ class SeeDevCorpus(Corpus):
                             exclude = None
                         eid = sentence.tag_entity(start, end, entity_type, text=etext, original_id=tid, exclude=exclude)
                         if eid is None:
-                            print "no eid!", sentence.sid, start, end, exclude, etext, sentence.text
+                            print("no eid!", sentence.sid, start, end, exclude, etext, sentence.text)
                             continue
                             # sys.exit()
                         originalid_to_eid[did + "." + tid] = eid
                     else:
-                        print "{}: could not find sentence for this span: {}-{}|{}".format(did, dstart, dend, etext.encode("utf-8"))
-                        print
+                        print("{}: could not find sentence for this span: {}-{}|{}".format(did, dstart, dend, etext.encode("utf-8")))
+                        print()
                         #sys.exit()
         self.load_relations(ann_dir, originalid_to_eid)
 
     def load_relations(self, ann_dir, originalid_to_eid):
-        print "loading relations..."
+        print("loading relations...")
         relations_stats = {}
         annfiles = [ann_dir + '/' + f for f in os.listdir(ann_dir) if f.endswith('.a2')]
         total = len(annfiles)
@@ -159,9 +159,9 @@ class SeeDevCorpus(Corpus):
                     sourceid = did + "." + sourceid.split(":")[-1]
                     targetid = did + "." + targetid.split(":")[-1]
                     if sourceid not in originalid_to_eid or targetid not in originalid_to_eid:
-                        print "{}: entity not found: {}=>{}".format(did, sourceid, targetid)
+                        print("{}: entity not found: {}=>{}".format(did, sourceid, targetid))
                         # print sorted([e.split(".")[-1] for e in originalid_to_eid if e.startswith(did)])
-                        print "skipped relation {}".format(rtype)
+                        print("skipped relation {}".format(rtype))
                         continue
                     sourceid, targetid = originalid_to_eid[sourceid], originalid_to_eid[targetid]
                     sid1 = '.'.join(sourceid.split(".")[:-1])
@@ -174,7 +174,7 @@ class SeeDevCorpus(Corpus):
                     sentence1 = self.documents[did].get_sentence(sid1)
                     sentence2 = self.documents[did].get_sentence(sid2)
                     if sentence1 is None:
-                        print "sentence not found:", did, sid1, sourceid, targetid, len(self.documents[did].sentences)
+                        print("sentence not found:", did, sid1, sourceid, targetid, len(self.documents[did].sentences))
                         continue
                     else:
                         entity1 = sentence1.entities.get_entity(sourceid)
@@ -242,11 +242,11 @@ class SeeDevCorpus(Corpus):
             mc = set([x[0] for x in mc])
             int_words = mc - allmc
             with codecs.open("seedev_int_words_{}.txt".format(rtype), 'w', 'utf-8') as relfile:
-                print
-                print rtype
+                print()
+                print(rtype)
                 for i in int_words:
                     relfile.write(i + '\n')
-                    print i
+                    print(i)
             #print rtype, len(int_words), int_words
             #print
 
@@ -367,12 +367,12 @@ class SeeDevCorpus(Corpus):
         nsentences = 0
         for did in self.documents:
             nsentences += len(self.documents[did].sentences)
-        print "base corpus has {} sentences".format(nsentences)
+        print("base corpus has {} sentences".format(nsentences))
         corpus2 = pickle.load(open(corpuspath, 'rb'))
         nsentences = 0
         for did in corpus2.documents:
             if did in self.documents:
-                print "repeated did:", did
+                print("repeated did:", did)
             else:
                 self.documents[did] = corpus2.documents[did]
                 nsentences += len(corpus2.documents[did].sentences)
@@ -381,7 +381,7 @@ class SeeDevCorpus(Corpus):
                 #    print "found sentence with relations:", sentence.sid
                 #if len(sentence.entities.elist["goldstandard"]) > 1:
                 #self.documents[sentence.sid] = Document(sentence.text, sentences=[sentence])
-        print "added {} sentences".format(nsentences)
+        print("added {} sentences".format(nsentences))
         self.save("corpora/Thaliana/seedev-extended.pickle")
 
     def convert_entities_to_goldstandard(self, basemodel="models/seedev_train_entity"):
@@ -413,7 +413,7 @@ class SeeDevCorpus(Corpus):
                             # print pair[0].type in pairtypes[0], pair[1].type in pairtypes[1]
                             if pair[0].type in pairtypes[0] and pair[1].type in pairtypes[1] and pair[0].text != pair[1].text:
 
-                                    logging.info(u"found relation {0}: {1.text}.{1.type}=>{2.text}.{2.type} because of {3}".
+                                    logging.info("found relation {0}: {1.text}.{1.type}=>{2.text}.{2.type} because of {3}".
                                                  format(rtype, pair[0], pair[1], str(sentence_words & rel_words[rtype])))
                                     logging.info("context: {}".format(sentence.text.encode("utf-8")))
                                     pair[0].targets.append((pair[1].eid, rtype))
@@ -422,7 +422,7 @@ class SeeDevCorpus(Corpus):
                             else:
                                 rtypes_count[rtype][1] += 1
         for rtype in rtypes_count:
-            print rtype, (1.0*rtypes_count[rtype][0])/(rtypes_count[rtype][0]+rtypes_count[rtype][1]), rtypes_count[rtype][0], rtypes_count[rtype][1]
+            print(rtype, (1.0*rtypes_count[rtype][0])/(rtypes_count[rtype][0]+rtypes_count[rtype][1]), rtypes_count[rtype][0], rtypes_count[rtype][1])
 
 
 def get_relwords(rtypes, basedir="seedev_int_words"):
@@ -469,7 +469,7 @@ def get_seedev_gold_ann_set(goldpath, entitytype, pairtype):
                     targetid = targetid.split(":")[-1]
                     source = tid_to_offsets[did + "." + sourceid]
                     target = tid_to_offsets[did + "." + targetid]
-                    gold_relations.add((did, source[:2], target[:2], u"{}={}>{}".format(source[2], ptype, target[2])))
+                    gold_relations.add((did, source[:2], target[:2], "{}={}>{}".format(source[2], ptype, target[2])))
                     #gold_relations.add((did, source[:2], target[:2], u"{}=>{}".format(source[2], target[2])))
     return gold_offsets, gold_relations
 

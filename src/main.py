@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-from __future__ import division, unicode_literals
+
 
 import argparse
-import cPickle as pickle
+import pickle as pickle
 import codecs
 import logging
 import sys
@@ -116,7 +116,7 @@ def main():
                                "merge_corpus", "tuples"])
     parser.add_argument("--goldstd", default="", dest="goldstd", nargs="+",
                         help="Gold standard to be used. Will override corpus, annotations",
-                        choices=paths.keys())
+                        choices=list(paths.keys()))
     parser.add_argument("--submodels", default="", nargs='+', help="sub types of classifiers"),
     parser.add_argument("-i", "--input", dest="input", action="store",
                       default='''Administration of a higher dose of indinavir should be \\
@@ -158,7 +158,7 @@ considered when coadministering with megestrol acetate.''',
     # pre-processing options
     if options.actions == "load_corpus":
         if len(options.goldstd) > 1:
-            print "load only one corpus each time"
+            print("load only one corpus each time")
             sys.exit()
         options.goldstd = options.goldstd[0]
         corpus_format = paths[options.goldstd]["format"]
@@ -199,7 +199,7 @@ considered when coadministering with megestrol acetate.''',
         corpus.save(paths[options.goldstd]["corpus"])
     elif options.actions == "annotate": # rext-add annotation to corpus
         if len(options.goldstd) > 1:
-            print "load only one corpus each time"
+            print("load only one corpus each time")
             sys.exit()
         options.goldstd = options.goldstd[0]
         corpus_path = paths[options.goldstd]["corpus"]
@@ -219,7 +219,7 @@ considered when coadministering with megestrol acetate.''',
             this_corpus = pickle.load(open(corpus_path, 'rb'))
             #logging.info("adding {} documents".format(len(documents)))
             # docs = this_corpus.documents
-            docs = dict((k, this_corpus.documents[k]) for k in this_corpus.documents.keys()[:13000])
+            docs = dict((k, this_corpus.documents[k]) for k in list(this_corpus.documents.keys())[:13000])
             corpus.documents.update(docs)
         if options.actions == "write_goldstandard":
             model = BiasModel(options.output[1])
@@ -239,7 +239,7 @@ considered when coadministering with megestrol acetate.''',
                 model = CrfSuiteModel(options.models, options.etype)
             elif options.crf == "ensemble":
                 model = EnsembleModel(options.models, options.etype, goldstd=options.goldstd[0])
-            model.load_data(corpus, feature_extractors.keys())
+            model.load_data(corpus, list(feature_extractors.keys()))
             model.train()
         elif options.actions == "train_matcher": # Train a simple classifier based on string matching
             model = MatcherModel(options.models)
@@ -279,7 +279,7 @@ considered when coadministering with megestrol acetate.''',
                     model = StanfordNERModel(options.models + "_" + submodel)
                     model.load_tagger(base_port + i)
                     # load data into the model format
-                    model.load_data(corpus, feature_extractors.keys(), mode="test")
+                    model.load_data(corpus, list(feature_extractors.keys()), mode="test")
                     # run the classifier on the data
                     results = model.test(corpus, port=base_port + i)
                     allresults.add_results(results)
@@ -296,7 +296,7 @@ considered when coadministering with megestrol acetate.''',
                 elif options.crf == "ensemble":
                     model = EnsembleModel(options.models, options.etype, goldstd=options.goldstd[0])
                 model.load_tagger()
-                model.load_data(corpus, feature_extractors.keys(), mode="test")
+                model.load_data(corpus, list(feature_extractors.keys()), mode="test")
                 final_results = model.test(corpus)
             #with codecs.open(options.output[1] + ".txt", 'w', 'utf-8') as outfile:
             #    lines = final_results.corpus.write_chemdner_results(options.models, outfile)

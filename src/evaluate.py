@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-from __future__ import division
+
 import argparse
-import cPickle as pickle
+import pickle as pickle
 import codecs
 import collections
 import logging
@@ -91,11 +91,11 @@ def compare_results(offsets, goldoffsets, corpus, getwords=True, evaltype="entit
     # goldoffsets = set([x[:4] for x in goldoffsets.keys()])
     # print len(goldoffsets), len(offsets)
     if len(entities) > 0:
-        goldoffsets_keys = goldoffsets.keys()
+        goldoffsets_keys = list(goldoffsets.keys())
         for k in goldoffsets_keys:
             if k[0] not in entities or k[1] not in entities[k[0]] or k[2] not in entities[k[0]]:
                 del goldoffsets[k]
-                print "excluded ", k
+                print("excluded ", k)
     tps = set(offsets.keys()) & set(goldoffsets.keys())
     fps = set(offsets.keys()) - set(goldoffsets.keys())
     fns = set(goldoffsets.keys()) - set(offsets.keys())
@@ -103,8 +103,8 @@ def compare_results(offsets, goldoffsets, corpus, getwords=True, evaltype="entit
     fnreport, fnwords = get_report(fns, corpus, goldoffsets, getwords=getwords)
     tpreport, tpwords = get_report(tps, corpus, offsets, getwords=getwords)
     alldocs = set(fpreport.keys())
-    alldocs = alldocs.union(fnreport.keys())
-    alldocs = alldocs.union(tpreport.keys())
+    alldocs = alldocs.union(list(fnreport.keys()))
+    alldocs = alldocs.union(list(tpreport.keys()))
     if getwords:
         report.append("Common FPs")
         fpcounter = collections.Counter(fpwords)
@@ -163,7 +163,7 @@ def get_report(results, corpus, more_info, getwords=True):
             report[did] = []
         if getwords:
             # line = u"{}\t{}:{}\t{}\t{}".format(did, start, end, tokentext.encode('utf-8'), "\t".join(more_info[t]))
-            line = u"{}\t{}:{}\t{}".format(did, start, end, tokentext)
+            line = "{}\t{}:{}\t{}".format(did, start, end, tokentext)
         else:
             line = did + '\t' + start + ":" + end
         report[did].append(line)
@@ -182,11 +182,11 @@ def get_list_results(results, models, goldset, ths, rules, mode="ner"):
     :param rules: Validation rules
     """
     sysresults = results.corpus.get_unique_results(models, ths, rules, mode)
-    print "{} unique entries".format(len(sysresults))
-    print "saving results to {}".format(results.path + "_final.tsv")
+    print("{} unique entries".format(len(sysresults)))
+    print("saving results to {}".format(results.path + "_final.tsv"))
     with codecs.open(results.path + "_final.tsv", 'w', 'utf-8') as outfile:
         outfile.write('\n'.join(['\t'.join(x) for x in sysresults]))
-    print "getting corpus entities..."
+    print("getting corpus entities...")
     entities = {}
     for did in results.corpus.documents:
         entities[did] = set()
@@ -209,14 +209,14 @@ def get_list_results(results, models, goldset, ths, rules, mode="ner"):
                 recall = len(tps)/(len(tps) + len(fns))
                 fmeasure = (2*precision*recall)/(precision + recall)
             reportfile.write("Precision: {!s}\nRecall: {!s}\n".format(precision, recall))
-            print "precision: {}".format(precision)
-            print "recall: {}".format(recall)
-            print "f-measure: {}".format(fmeasure)
+            print("precision: {}".format(precision))
+            print("recall: {}".format(recall))
+            print("f-measure: {}".format(fmeasure))
             for line in reportlines:
                 reportfile.write(line + '\n')
     else:
 
-        print "no gold set"
+        print("no gold set")
 
 
 def get_relations_results(results, model, gold_pairs, ths, rules, compare_text=True):
@@ -233,10 +233,10 @@ def get_relations_results(results, model, gold_pairs, ths, rules, compare_text=T
                 if val:
                     ptrue += 1
                     pair = (did, (p.entities[0].dstart, p.entities[0].dend), (p.entities[1].dstart, p.entities[1].dend),
-                              u"{}={}>{}".format(p.entities[0].text, p.relation, p.entities[1].text))
+                              "{}={}>{}".format(p.entities[0].text, p.relation, p.entities[1].text))
                     #system_pairs.append(pair)
                     between_text = results.corpus.documents[p.entities[0].did].text[p.entities[0].dend:p.entities[1].dstart]
-                    system_pairs[pair] = [u"{}=>{}".format(p.entities[0].type, p.entities[1].type), between_text]
+                    system_pairs[pair] = ["{}=>{}".format(p.entities[0].type, p.entities[1].type), between_text]
     # print random.sample(system_pairs, 5)
     # print random.sample(gold_pairs, 5)
     # print pcount, ptrue, npairs
@@ -244,7 +244,7 @@ def get_relations_results(results, model, gold_pairs, ths, rules, compare_text=T
         gold_pairs = [(o[0], o[1], o[2], "") for o in gold_pairs]
     reportlines, tps, fps, fns = compare_results(system_pairs, gold_pairs, results.corpus, getwords=compare_text)
     with codecs.open(results.path + "_report.txt", 'w', "utf-8") as reportfile:
-        print "writing report to {}_report.txt".format(results.path)
+        print("writing report to {}_report.txt".format(results.path))
         reportfile.write("TPs: {!s}\nFPs: {!s}\nFNs: {!s}\n".format(len(tps), len(fps), len(fns)))
         reportfile.write(">\n")
         if len(tps) == 0:
@@ -256,9 +256,9 @@ def get_relations_results(results, model, gold_pairs, ths, rules, compare_text=T
         reportfile.write(">\n")
         for line in reportlines:
             reportfile.write(line + '\n')
-    print "Precision: {:.3f}".format(precision)
-    print "Recall: {:.3f}".format(recall)
-    print "Fmeasure: {:.3f}".format(fmeasure)
+    print("Precision: {:.3f}".format(precision))
+    print("Recall: {:.3f}".format(recall))
+    print("Fmeasure: {:.3f}".format(fmeasure))
     return precision, recall
 
 def get_results(results, models, gold_offsets, ths, rules, compare_text=True):
@@ -274,14 +274,14 @@ def get_results(results, models, gold_offsets, ths, rules, compare_text=True):
     # logging.debug(offsets)
     for o in offsets:
         if o[0] not in results.corpus.documents:
-            print "DID not found! {}".format(o[0])
+            print("DID not found! {}".format(o[0]))
             sys.exit()
     if not compare_text: #e.g. gold standard does not include the original text
         offsets = [(o[0], o[1], o[2], "") for o in offsets]
     # logging.info("system entities: {}; gold entities: {}".format(offsets, gold_offsets))
     reportlines, tps, fps, fns = compare_results(offsets, gold_offsets, results.corpus, getwords=compare_text)
     with codecs.open(results.path + "_report.txt", 'w', "utf-8") as reportfile:
-        print "writing report to {}_report.txt".format(results.path)
+        print("writing report to {}_report.txt".format(results.path))
         reportfile.write("TPs: {!s}\nFPs: {!s}\nFNs: {!s}\n".format(len(tps), len(fps), len(fns)))
         reportfile.write(">\n")
         if len(tps) == 0:
@@ -296,9 +296,9 @@ def get_results(results, models, gold_offsets, ths, rules, compare_text=True):
         reportfile.write(">\n")
         for line in reportlines:
             reportfile.write(line + '\n')
-    print "Precision: {:.3f}".format(precision)
-    print "Recall: {:.3f}".format(recall)
-    print "Fmeasure: {:.3f}".format(fmeasure)
+    print("Precision: {:.3f}".format(precision))
+    print("Recall: {:.3f}".format(recall))
+    print("Fmeasure: {:.3f}".format(fmeasure))
     return precision, recall
 
 
@@ -309,7 +309,7 @@ def main():
                       help="Actions to be performed.")
     parser.add_argument("goldstd", default="chemdner_sample",
                         help="Gold standard to be used.",
-                        choices=paths.keys())
+                        choices=list(paths.keys()))
     parser.add_argument("--corpus", dest="corpus",
                       default="data/chemdner_sample_abstracts.txt.pickle",
                       help="format path")
@@ -349,8 +349,8 @@ def main():
             results.path = results_path
             results_list.append(results)
         else:
-            print "results not found"
-            print results_path
+            print("results not found")
+            print(results_path)
             sys.exit()
 
     if options.action in ("combine", "train_ensemble", "test_ensemble", "savetocorpus"):
@@ -393,11 +393,11 @@ def main():
                     ('clf', svm.SVC(kernel="rbf", degree=2, C=1))
                     #('clf', DummyClassifier(strategy="constant", constant=True))
                 ])
-            print pipeline
+            print(pipeline)
             base_result.train_ensemble(pipeline, options.models, options.etype)
         elif options.action == "test_ensemble":
             pipeline = joblib.load("{}/{}/{}.pkl".format("models/ensemble/", options.models, options.models))
-            print pipeline
+            print(pipeline)
             base_result.test_ensemble(pipeline, options.models, options.etype)
             base_result.save("results/" + options.models + ".pickle")
 
@@ -406,13 +406,13 @@ def main():
         if options.action == "count_entities":
             for did in results_list[0].corpus.documents:
                 for sentence in results_list[0].corpus.documents[did].sentences:
-                    print sentence.entities.elist.keys()
+                    print(list(sentence.entities.elist.keys()))
                     if options.models in sentence.entities.elist:
                         for e in sentence.entities.elist[options.models]:
                             if e.type not in counts:
                                 counts[e.type] = 0
                             counts[e.type] += 1
-            print counts
+            print(counts)
             sys.exit()
         if paths[options.goldstd].get("annotations"):
             logging.info("loading gold standard %s" % paths[options.goldstd]["annotations"])

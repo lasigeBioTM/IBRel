@@ -25,9 +25,9 @@ class CrfSuiteModel(SimpleTaggerModel):
             # include transitions that are possible, but not observed
             'feature.possible_transitions': True
         })
-        print "training model..."
+        print("training model...")
         self.trainer.train(self.path + ".model")  # output model filename
-        print "done."
+        print("done.")
 
 
     def load_tagger(self, port=None):
@@ -46,11 +46,11 @@ class CrfSuiteModel(SimpleTaggerModel):
                 #logging.debug("{0}-{1}".format(i,x))
                 prob = self.tagger.marginal(x, i)
                 if math.isnan(prob):
-                    print "NaN!!"
+                    print("NaN!!")
                     if x == "other":
                         prob = 0
                     else:
-                        print x, xseq[i]
+                        print(x, xseq[i])
                         #print xseq
                         #print self.predicted[-1]
                         #sys.exit()
@@ -71,11 +71,11 @@ class CrfSuiteModel(SimpleTaggerModel):
     def process_sentence(self, predicted, isent, results):
         sentence = results.corpus.get_sentence(self.sids[isent])
         if len(predicted) != len(sentence.tokens):
-            print "len(predicted) != len(sentence.tokens); {}!={}".format(len(predicted), len(sentence.tokens))
+            print("len(predicted) != len(sentence.tokens); {}!={}".format(len(predicted), len(sentence.tokens)))
             sys.exit()
         if sentence is None:
-            print self.sids[isent]
-            print "not found!"
+            print(self.sids[isent])
+            print("not found!")
             sys.exit()
         sentence.tagged = predicted
         new_entity = None

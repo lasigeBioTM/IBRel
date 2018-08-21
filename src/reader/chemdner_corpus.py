@@ -23,7 +23,7 @@ class ChemdnerCorpus(Corpus):
     def load_corpus(self, corenlpserver, process=True):
         """Load the CHEMDNER corpus file on the dir element"""
         # open filename and parse lines
-        total_lines = sum(1 for line in open(self.path))
+        total_lines = sum(1 for line in open(self.path, encoding='utf-8'))
         widgets = [pb.Percentage(), ' ', pb.Bar(), ' ', pb.ETA(), ' ', pb.Timer()]
         pbar = pb.ProgressBar(widgets=widgets, maxval=total_lines).start()
         n_lines = 1
@@ -70,8 +70,8 @@ class ChemdnerCorpus(Corpus):
                             sentence.tag_entity(start - sentence.offset, end - sentence.offset, "chemical", text=text,
                                                 subtype=chemt)
                         else:
-                            print "sentence not found between:", start, end
-                            print "ignored ", text.encode("utf-8")
+                            print("sentence not found between:", start, end)
+                            print("ignored ", text.encode("utf-8"))
                             #print len(self.documents[pmid].title), self.documents[pmid].title
                             #for s in self.documents[pmid].sentences:
                             #    print s.sid, s.tokens[0].dstart, s.tokens[-1].dend, s.text
@@ -80,9 +80,9 @@ class ChemdnerCorpus(Corpus):
 
 def write_chemdner_files(results, models, goldset, ths, rules):
     """ results files for CHEMDNER CEMP and CPD tasks"""
-    print "saving results to {}".format(results.path + ".tsv")
+    print("saving results to {}".format(results.path + ".tsv"))
     with io.open(results.path + ".tsv", 'w', encoding='utf-8') as outfile:
-        outfile.write(u"DOCUMENT_ID\tSECTION\tINIT\tEND\tSCORE\tANNOTATED_TEXT\tTYPE\tDATABASE_ID\n")
+        outfile.write("DOCUMENT_ID\tSECTION\tINIT\tEND\tSCORE\tANNOTATED_TEXT\tTYPE\tDATABASE_ID\n")
         lines, cpdlines, max_entities = results.corpus.write_chemdner_results(models, outfile, ths, rules)
     cpdlines = sorted(cpdlines, key=itemgetter(2))
     with open(results.path + "_cpd.tsv", "w") as cpdfile:
@@ -144,7 +144,7 @@ def main():
                       choices=["load_corpus"])
     parser.add_argument("--goldstd", default="", dest="goldstd", nargs="+",
                         help="Gold standard to be used. Will override corpus, annotations",
-                        choices=config.corpus_paths.paths.keys())
+                        choices=list(config.corpus_paths.paths.keys()))
     parser.add_argument("--submodels", default="", nargs='+', help="sub types of classifiers"),
     parser.add_argument("-i", "--input", dest="input", action="store",
                       default='''Administration of a higher dose of indinavir should be \\
@@ -186,7 +186,7 @@ considered when coadministering with megestrol acetate.''',
     # pre-processing options
     if options.actions == "load_corpus":
         if len(options.goldstd) > 1:
-            print "load only one corpus each time"
+            print("load only one corpus each time")
             sys.exit()
         options.goldstd = options.goldstd[0]
         corpus_format = config.corpus_paths.paths[options.goldstd]["format"]
@@ -207,7 +207,7 @@ considered when coadministering with megestrol acetate.''',
             elif options.goldstd == "cemp_test_divide":
                 logging.info("loading corpus %s" % corpus_path)
                 corpus.load_corpus(corenlp_client, process=False)
-                docs = corpus.documents.keys()
+                docs = list(corpus.documents.keys())
                 step = int(len(docs)/10)
                 logging.info("step: {}".format(str(step)))
                 for i in range(10):

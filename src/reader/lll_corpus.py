@@ -30,7 +30,7 @@ class LLLCorpus(Corpus):
                 #logging.debug('%s:%s/%s', f, current + 1, total)
                 if line.startswith("ID"):
                     did = line.strip().split("\t")[1]
-                    print did
+                    print(did)
                 elif line.startswith("sentence"):
                     doctext = line.strip().split("\t")[1]
                     newdoc = Document(doctext, process=False, did=did)

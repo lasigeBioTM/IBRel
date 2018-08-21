@@ -1,4 +1,4 @@
-from __future__ import division, unicode_literals
+
 
 import os
 import sys
@@ -115,7 +115,7 @@ class BANNERModel(SimpleTaggerModel):
         :return:
         """
         # sid, genetype, start, end, etext = line.strip().split("\t")
-        print line
+        print(line)
         sid, genetype, start, end, etext = line
         tokens = sentence.find_tokens_between(int(start), int(end), relativeto="sent")
         if tokens:

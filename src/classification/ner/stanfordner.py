@@ -1,4 +1,4 @@
-from __future__ import division, unicode_literals
+
 import sys
 from subprocess import Popen, PIPE, call
 import logging
@@ -18,8 +18,8 @@ from config import config
 stanford_coding = {"-LRB-": "<", "\/": "/", "&apos;": "'", "analogs": "analogues", "analog": "analogue",
                    "-RRB-": ">", ":&apos;s": "'s"}
 # convert < to -LRB, etc
-rep = dict((re.escape(v), k) for k, v in stanford_coding.iteritems())
-pattern = re.compile("|".join(rep.keys()))
+rep = dict((re.escape(v), k) for k, v in stanford_coding.items())
+pattern = re.compile("|".join(list(rep.keys())))
 
 
 def replace_abbreviations(text):
@@ -73,7 +73,7 @@ class StanfordNERModel(SimpleTaggerModel):
         # process.communicate()
         while True:
             output = process.stdout.readline()
-            if output == '' and process.poll() is not None:
+            if output == b'' and process.poll() is not None:
                 break
             if output:
                 logging.info(output.strip())
@@ -104,9 +104,9 @@ class StanfordNERModel(SimpleTaggerModel):
         except SocketError as e:
             if e.errno != errno.ECONNRESET:
                 raise  # Not error we are looking for
-            print "socket error with sentence {}".format(text)
+            print("socket error with sentence {}".format(text))
         except:
-            print "other socket error!"
+            print("other socket error!")
             out = self.tagger.tag_text(text)
         return out
 
@@ -121,10 +121,10 @@ class StanfordNERModel(SimpleTaggerModel):
             did = '.'.join(sid.split('.')[:-1])
             sentence = results.corpus.documents[did].get_sentence(sid)
             if sentence is None:
-                print sid
-                print "not found!"
-                print results.corpus.documents['.'.join(sid.split('.')[:-1])]
-                print [s.sid for s in results.corpus.documents['.'.join(sid.split('.')[:-1])].sentences]
+                print(sid)
+                print("not found!")
+                print(results.corpus.documents['.'.join(sid.split('.')[:-1])])
+                print([s.sid for s in results.corpus.documents['.'.join(sid.split('.')[:-1])].sentences])
                 sys.exit()
             sentence_results = self.process_sentence(sentence_output, sentence)
             for eid in sentence_results:
@@ -236,7 +236,7 @@ class StanfordNERModel(SimpleTaggerModel):
             out = self.process.stderr.readline()
             if out and out != "":
                 logging.info(out)
-            if "done" in out:
+            if b"done" in out:
                 logging.info("loaded {}".format(self.path))
                 break
         #out = ner.communicate("Structure-activity relationships have been investigated for inhibition of DNA-dependent protein kinase (DNA-PK) and ATM kinase by a series of pyran-2-ones, pyran-4-ones, thiopyran-4-ones, and pyridin-4-ones.")
@@ -255,7 +255,8 @@ def kill_process(port):
     pattern = "^tcp.*((?:{0})).* (?P<pid>[0-9]*)/.*$"
     pattern = pattern.format(str(port))
     prog = re.compile(pattern)
-    for line in data.split('\n'):
+    bytes_data = data.decode('utf8').split('\n')
+    for line in bytes_data:
         match = re.match(prog, line)
         if match:
             pid = match.group('pid')

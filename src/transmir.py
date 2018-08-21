@@ -1,6 +1,6 @@
 # read transmir database and generate corpus
-from text.mirna_entity import mirna_graph
-from text.protein_entity import get_uniprot_name
+from .text.mirna_entity import mirna_graph
+from .text.protein_entity import get_uniprot_name
 
 db_name = "data/transmir_v1.2.tsv"
 tfs = set()
@@ -45,12 +45,12 @@ with open(db_name, 'r') as dbfile:
 # print mirnas.keys()
 # print "Entries:"
 # print entries
-print "Number of TFs: {}".format(len(tfs))
-print "Number of Diseases: {}".format(len(diseases))
-print "Number of Functions: {}".format(len(funcs))
-print "Number of PMIDs: {}".format(len(pmids))
-print "Number of miRNAs: {}".format(len(mirnas))
-print "Number of Entries: {}".format(len(entries))
+print("Number of TFs: {}".format(len(tfs)))
+print("Number of Diseases: {}".format(len(diseases)))
+print("Number of Functions: {}".format(len(funcs)))
+print("Number of PMIDs: {}".format(len(pmids)))
+print("Number of miRNAs: {}".format(len(mirnas)))
+print("Number of Entries: {}".format(len(entries)))
 with open("corpora/transmir/transmir_pmids.txt", 'w') as f:
     f.write('\n'.join(pmids))
 with open("corpora/transmir/transmir_tfs.txt", 'w') as f:

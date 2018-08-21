@@ -1,4 +1,4 @@
-from __future__ import division, absolute_import
+
 #from nltk.stem.porter import PorterStemmer
 #import jsonrpclib
 #from simplejson import loads
@@ -16,8 +16,8 @@ from text.pair import Pair, Pairs
 
 from text.tlink import TLink
 
-whitespace = [u"\u2002", u"\u2003", u"\u00A0", u"\u2009", u"\u200C", u"\u200D",
-              u'\u2005', u'\u2009', u'\u200A']
+whitespace = ["\u2002", "\u2003", "\u00A0", "\u2009", "\u200C", "\u200D",
+              '\u2005', '\u2009', '\u200A']
 # tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
 #porter = PorterStemmer()
 
@@ -97,17 +97,17 @@ class Document(object):
                 'annotators': 'tokenize,ssplit,pos,parse,ner,lemma,depparse',
                 'outputFormat': 'json',
             })
-            if isinstance(corenlpres, basestring):
-                print corenlpres
+            if isinstance(corenlpres, str):
+                print(corenlpres)
                 corenlpres = corenlpserver.annotate(s.text.encode("utf8"), properties={
                 'ssplit.eolonly': True,
                 # 'annotators': 'tokenize,ssplit,pos,depparse,parse',
                 'annotators': 'tokenize,ssplit,pos,ner,lemma',
                 'outputFormat': 'json',
             })
-            if isinstance(corenlpres, basestring):
-                print "could not process this sentence:", s.text.encode("utf8")
-                print corenlpres
+            if isinstance(corenlpres, str):
+                print("could not process this sentence:", s.text.encode("utf8"))
+                print(corenlpres)
                 continue
             else:
                 s.process_corenlp_output(corenlpres)
@@ -136,8 +136,8 @@ class Document(object):
                 entity = sentence.entities.get_entity(eid, source)
                 return entity
         else:
-            print "sentence not found between:", start, end
-            print "ignored ", kwargs.get("text")
+            print("sentence not found between:", start, end)
+            print("ignored ", kwargs.get("text"))
             # print len(self.documents[pmid].title), self.documents[pmid].title
             # for s in self.documents[pmid].sentences:
             #    print s.sid, s.tokens[0].dstart, s.tokens[-1].dend, s.text
@@ -277,7 +277,7 @@ class Document(object):
             for e in sentence.entities.elist[source]:
                 if e.eid == eid:
                    return e
-        print "no entity found for eid {}".format(eid)
+        print("no entity found for eid {}".format(eid))
         return None
 
     def get_entities(self, source):
@@ -324,4 +324,4 @@ class Document(object):
                     second_elem.append(t)
         for abv in self.abbreviations:
             if not any([c.isalpha() for c in abv]):
-                print abv, ":", self.abbreviations[abv]
+                print(abv, ":", self.abbreviations[abv])

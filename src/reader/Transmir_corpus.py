@@ -151,11 +151,11 @@ class TransmirCorpus(PubmedCorpus):
                         #if len(common_gos) > 0:
                         if random_mirna.best_go.startswith("GO:") and random_tf.best_go.startswith("GO"):
                             ss = ssm.simui_go(random_mirna.best_go, random_tf.best_go)
-                            print "incorrect:", ss
+                            print("incorrect:", ss)
                             incorrect_count += ss
                         else:
                             incorrect_count += 1
-                print "{}-{} ({} mirnas, {} tfs".format(correct_count, incorrect_count, len(all_mirnas), len(all_tfs))
+                print("{}-{} ({} mirnas, {} tfs".format(correct_count, incorrect_count, len(all_mirnas), len(all_tfs)))
 
 def get_transmir_gold_ann_set(goldpath, entitytype):
     logging.info("loading gold standard... {}".format(goldpath))

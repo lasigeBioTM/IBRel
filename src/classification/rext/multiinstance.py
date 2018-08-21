@@ -1,7 +1,7 @@
-from __future__ import unicode_literals
+
 import os
 import logging
-import cPickle as pickle
+import pickle as pickle
 import random
 import sys
 from collections import Counter
@@ -176,7 +176,7 @@ class MILClassifier(ReModel):
         # print self.data
         self.predicted = self.classifier.predict(self.data)
         #self.predicted = [1]*len(self.data)
-        print Counter([round(x, 1) for x in self.predicted])
+        print(Counter([round(x, 1) for x in self.predicted]))
 
     def annotate_sentences(self, sentences):
         """
@@ -231,7 +231,7 @@ class MILClassifier(ReModel):
                 #pcount += 1
                 pair_features = self.get_pair_features(sentence, pair)
                 if sentence.text.startswith("These abnormalities reflect"):
-                    print bag, pair_features.encode("utf8")
+                    print(bag, pair_features.encode("utf8"))
                 self.instances[bag].append(pair_features)
 
     def process_sentence(self, sentence):

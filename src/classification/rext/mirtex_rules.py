@@ -1,4 +1,4 @@
-from __future__ import unicode_literals
+
 
 import codecs
 import logging
@@ -98,7 +98,7 @@ class MirtexClassifier(ReModel):
                                     for trigger in mirna_trigger:
                                         trigger_i = words.index(trigger)
                                         if pos[trigger_i] not in self.trigger_words[trigger]:
-                                            print "skipped because POS did not match:", r
+                                            print("skipped because POS did not match:", r)
                                             # continue
                                         if trigger not in mirna_to_triggers:
                                             mirna_to_triggers[trigger] = set()
@@ -129,16 +129,16 @@ class MirtexClassifier(ReModel):
                                         # print "target:", target
                                         trigger_i = words.index(trigger)
                                         if pos[trigger_i] not in self.trigger_words[trigger]:
-                                            print "skipped because POS did not match:", r
+                                            print("skipped because POS did not match:", r)
                                             continue
                                         if trigger in mirna_to_triggers:
                                             for gene in gene_agent:
-                                                print "+".join(mirna_to_triggers[trigger]), trigger, gene
+                                                print("+".join(mirna_to_triggers[trigger]), trigger, gene)
                                                 for mirna in mirna_to_triggers[trigger]:
                                                     self.pids["p{}".format(len(self.pids))] = (sentence_mirnas[mirna],
                                                                                                  sentence_genes[gene])
-                                            print sentence.text
-                                            print
+                                            print(sentence.text)
+                                            print()
 
                                                     # print gene_agent, gene_target
                         #sys.exit()

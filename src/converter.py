@@ -2,8 +2,8 @@ import argparse
 import logging
 import os
 import time
-import cPickle as pickle
-from config.corpus_paths import paths
+import pickle as pickle
+from .config.corpus_paths import paths
 
 
 def main():
@@ -47,11 +47,11 @@ def main():
             results.path = options.results
             results.convert_to(options.format, options.path, options.etype)
         else:
-            print "results not found"
-            print options.results
+            print("results not found")
+            print(options.results)
 
     total_time = time.time() - start_time
-    print "Total time: %ss" % total_time
+    print("Total time: %ss" % total_time)
 
 
 if __name__ == "__main__":

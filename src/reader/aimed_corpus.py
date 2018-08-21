@@ -24,7 +24,7 @@ class AIMedCorpus(Corpus):
         time_per_abs = []
         for current, f in enumerate(trainfiles):
             #logging.debug('%s:%s/%s', f, current + 1, total)
-            print '{}:{}/{}'.format(f, current + 1, total)
+            print('{}:{}/{}'.format(f, current + 1, total))
             did = f
             t = time.time()
             with open(f, 'r') as f:
@@ -57,7 +57,7 @@ class AIMedCorpus(Corpus):
         time_per_abs = []
         for current, f in enumerate(trainfiles):
             # logging.debug('%s:%s/%s', f, current + 1, total)
-            print '{}:{}/{}'.format(f, current + 1, total)
+            print('{}:{}/{}'.format(f, current + 1, total))
             did = f
             with open(f, 'r') as f:
                 article = "<Article>" + f.read() +  "</Article>"
@@ -78,7 +78,7 @@ class AIMedCorpus(Corpus):
                 this_sentence = self.documents[did].find_sentence_containing(estart, eend, chemdner=False)
                 eid = this_sentence.tag_entity(estart, eend, "protein", text=e.text)
                 if eid is None:
-                    print "did not add this entity: {}".format(e.text)
+                    print("did not add this entity: {}".format(e.text))
                 # print e.text
                 lastindex = estart
             lastindex = 0
@@ -95,7 +95,7 @@ class AIMedCorpus(Corpus):
                 eid = this_sentence.tag_entity(estart + abs_offset - this_sentence.offset , eend + abs_offset - this_sentence.offset,
                                                "protein", text=e.text)
                 if eid is None:
-                    print "did not add this entity: {}".format(e.text)
+                    print("did not add this entity: {}".format(e.text))
                 # print e.text
                 lastindex = estart
         #for s in all_entities:

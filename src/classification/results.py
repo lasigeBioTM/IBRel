@@ -1,6 +1,6 @@
 import io
 import logging
-import cPickle as pickle
+import pickle as pickle
 import os
 import time
 import argparse
@@ -72,14 +72,14 @@ class ResultsRE(object):
                 ecount = 1
                 for sentence in self.corpus.documents[did].sentences:
                     if eset in sentence.entities.elist:
-                        print "writing...", eset
+                        print("writing...", eset)
                         for entity in sentence.entities.elist[eset]:
                             eid_map[entity.eid] = "T{0}".format(ecount)
-                            output_file.write(u"T{0}\t{1.type} {1.dstart} {1.dend}\t{1.text}\n".format(ecount, entity))
+                            output_file.write("T{0}\t{1.type} {1.dstart} {1.dend}\t{1.text}\n".format(ecount, entity))
                             ecount += 1
                 rcount = 1
                 for p in self.document_pairs[did].pairs:
-                    output_file.write(u"R{0}\tmiRNA-regulation Arg1:{1} Arg2:{2}\n".format(rcount,
+                    output_file.write("R{0}\tmiRNA-regulation Arg1:{1} Arg2:{2}\n".format(rcount,
                                                                                            eid_map[p.entities[0].eid],
                                                                                            eid_map[p.entities[1].eid]))
                     rcount += 1
@@ -136,7 +136,8 @@ class ResultsNER(object):
 
     def load_corpus(self, goldstd):
         logging.info("loading corpus %s" % paths[goldstd]["corpus"])
-        corpus = pickle.load(open(paths[goldstd]["corpus"]))
+        file = open(paths[goldstd]["corpus"], 'rb')
+        corpus = pickle.load(file)
         for did in corpus.documents:
             if did not in self.corpus:
                 logging.info("no results for {}".format(did))
@@ -194,7 +195,7 @@ class ResultsNER(object):
 
     def train_ensemble(self, pipeline, modelname, etype):
         train_data, labels, offsets = self.generate_data(etype)
-        print "training ensemble classifier..."
+        print("training ensemble classifier...")
         pipeline = pipeline.fit(train_data, labels)
         if not os.path.exists(self.basedir + modelname):
             os.makedirs(self.basedir + modelname)
@@ -204,11 +205,11 @@ class ResultsNER(object):
     def test_ensemble(self, pipeline, modelname, etype):
         train_data, labels, offsets = self.generate_data(etype, mode="test")
         pred = pipeline.predict(train_data)
-        print pred
+        print(pred)
         for i, p in enumerate(pred):
             if p == True:
-                sentence = self.corpus.get_sentence(offsets.keys()[i][0])
-                sentence.tag_entity(offsets.keys()[i][1], offsets.keys()[i][2], etype, source=modelname)
+                sentence = self.corpus.get_sentence(list(offsets.keys())[i][0])
+                sentence.tag_entity(list(offsets.keys())[i][1], list(offsets.keys())[i][2], etype, source=modelname)
 
 
     def generate_data(self, etype, mode="train"):
@@ -281,9 +282,9 @@ class ResultsNER(object):
                 ecount = 0
                 for sentence in self.corpus.documents[did].sentences:
                     if eset in sentence.entities.elist:
-                        print "writing...", eset
+                        print("writing...", eset)
                         for entity in sentence.entities.elist[eset]:
-                            output_file.write(u"T{0}\t{1.type} {1.dstart} {1.dend}\t{1.text}\n".format(ecount, entity))
+                            output_file.write("T{0}\t{1.type} {1.dstart} {1.dend}\t{1.text}\n".format(ecount, entity))
                             ecount += 1
 
     def import_chemdner(self, filepath):
@@ -334,7 +335,7 @@ def combine_results(modelname, results, resultsname, etype, models):
     # first results are used as reference
     all_results.corpus = results[0].corpus
     for r in results:
-        print r.path
+        print(r.path)
         for did in r.corpus.documents:
             for sentence in r.corpus.documents[did].sentences:
                 ref_sentence = all_results.corpus.documents[did].get_sentence(sentence.sid)
@@ -361,7 +362,7 @@ def main():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument("action", default="evaluate", help="Actions to be performed.")
     parser.add_argument("goldstd", default="chemdner_sample", help="Gold standard to be used.",
-                        choices=paths.keys())
+                        choices=list(paths.keys()))
     parser.add_argument("--corpus", dest="corpus",
                       default="data/chemdner_sample_abstracts.txt.pickle",
                       help="format path")
@@ -398,7 +399,7 @@ def main():
             results.load_corpus(options.goldstd)
             results_list.append(results)
         else:
-            print "results not found"
+            print("results not found")
 
     if options.action == "combine":
         # add another set of annotations to each sentence, ending in combined

@@ -36,12 +36,12 @@ class EnsembleModel(Model):
 
     def train(self):
         #train_data, labels, offsets = self.generate_data(self.etype)
-        print "training ensemble classifier..."
+        print("training ensemble classifier...")
         #print self.train_data, self.train_labels
         pipeline = self.pipeline.fit(self.train_data, self.train_labels)
         if not os.path.exists(self.basedir + self.path):
             os.makedirs(self.basedir + self.path)
-        print "Training complete, saving to {}/{}/{}.pkl".format(self.basedir, self.path, self.path)
+        print("Training complete, saving to {}/{}/{}.pkl".format(self.basedir, self.path, self.path))
         joblib.dump(pipeline, "{}/{}/{}.pkl".format(self.basedir, self.path, self.path))
 
     def load_tagger(self):
@@ -86,7 +86,7 @@ class EnsembleModel(Model):
                     sentence_eids = []
                     # print "no gold standard", sentence.entities.elist.keys()
                 if "results/{}".format(self.goldstd) not in sentence.entities.elist:
-                    print sentence.sid, "not entities", "results/{}".format(self.goldstd), sentence.entities.elist.keys()
+                    print(sentence.sid, "not entities", "results/{}".format(self.goldstd), list(sentence.entities.elist.keys()))
                     continue
                 for e in sentence.entities.elist["results/{}".format(self.goldstd)]:
                     #print sentence_eids, e.eid
@@ -121,7 +121,7 @@ class EnsembleModel(Model):
         self.train_data = []
         self.train_labels = []
         features = sorted(list(features))
-        print "using these features...", features
+        print("using these features...", features)
         # print gs_labels
         for o in self.offsets:
             of = []
@@ -136,7 +136,7 @@ class EnsembleModel(Model):
             else:
                 # print o, gs_labels
                 self.train_labels.append(False)
-        print "labels", set(self.train_labels)
+        print("labels", set(self.train_labels))
         # print features
         # for i, l in enumerate(train_labels[:10]):
         #     print train_data[i], l

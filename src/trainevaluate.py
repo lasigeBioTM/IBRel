@@ -1,12 +1,12 @@
 import argparse
 import logging
 import time
-import cPickle as pickle
+import pickle as pickle
 from collections import OrderedDict
-from classification.rext.multiinstance import MILClassifier
-from config.corpus_paths import paths
-from evaluate import get_gold_ann_set, get_list_results, get_relations_results
-from text.corpus import Corpus
+from .classification.rext.multiinstance import MILClassifier
+from .config.corpus_paths import paths
+from .evaluate import get_gold_ann_set, get_list_results, get_relations_results
+from .text.corpus import Corpus
 
 def main():
     start_time = time.time()
@@ -66,7 +66,7 @@ def main():
         train_model.write_to_file("temp/mil.train")
         train_model = None
         train_corpus = None
-    print "total entities:", total_entities
+    print("total entities:", total_entities)
     train_model = MILClassifier(None, options.ptype, relations, ner=options.emodels[0], generate=False,
                                 modelname=options.rmodels)
     train_model.load_kb("corpora/transmir/transmir_relations.txt")
@@ -113,7 +113,7 @@ def main():
                 for e in sentence.entities.elist[options.emodels[1]]:
                     if e.normalized_score > 0:
                         total_entities += 1
-            print "total entities:", total_entities
+            print("total entities:", total_entities)
             #sysresults = results.corpus.get_unique_results(options.kernel, {}, options.rules, mode="re")
             sysresults = []
             for did in results.corpus.documents:
@@ -145,24 +145,24 @@ def main():
                     rels[pair].append((stext, x[4]))
             # for t in rels.items():
             #     print t
-            o = OrderedDict(sorted(rels.items(), key=lambda t: t[1][0][1], reverse=True))
+            o = OrderedDict(sorted(list(rels.items()), key=lambda t: t[1][0][1], reverse=True))
             for x in o:
-                print x, len(o[x])
+                print(x, len(o[x]))
                 for s in o[x]:
-                    print "\t", s[0].encode("utf-8")
-                print
+                    print("\t", s[0].encode("utf-8"))
+                print()
             for x in o:
                 conf = round(o[x][0][1], 3)
                 unique_dids = set([sid[0].split(".")[0] for sid in o[x]])
                 # print unique_dids
-                print x[0] + "\t" + x[1] + "\t" + str(len(o[x])) + "\t" + str(len(unique_dids)) + "\t" + str(conf)
+                print(x[0] + "\t" + x[1] + "\t" + str(len(o[x])) + "\t" + str(len(unique_dids)) + "\t" + str(conf))
             #max_width = table_instance.column_max_width(2)
             #for i, line in enumerate(table_instance.table_data):
             #    wrapped_string = '\n'.join(wrap(line[2], max_width))
             #    table_instance.table_data[i][2] = wrapped_string
 
     total_time = time.time() - start_time
-    print "Total time: %ss" % total_time
+    print("Total time: %ss" % total_time)
 
 
 if __name__ == "__main__":

@@ -97,14 +97,14 @@ class BC2GMCorpus(Corpus):
                                                   "protein", text=text)
                         if eid is None:
                             not_tagged += 1
-                            print sentence.sid, text, start, end, sentence.offset, sentence_space_offsets
+                            print(sentence.sid, text, start, end, sentence.offset, sentence_space_offsets)
                         else:
                             tagged += 1
                     else:
-                        print "could not find sentence for this span: {}-{}".format(start, end)
+                        print("could not find sentence for this span: {}-{}".format(start, end))
                 else:
                     logging.info("%s not found!" % did)
-        print "tagged: {} not tagged: {}".format(tagged, not_tagged)
+        print("tagged: {} not tagged: {}".format(tagged, not_tagged))
         with codecs.open(ann_dir + "-pmids.txt", 'w', "utf-8") as pmid_list:
             pmid_list.write("\n".join(pmids) + "\n")
 

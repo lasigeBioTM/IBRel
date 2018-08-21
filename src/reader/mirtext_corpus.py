@@ -39,7 +39,7 @@ class MirtexCorpus(Corpus):
         time_per_abs = []
         for current, f in enumerate(trainfiles):
             #logging.debug('%s:%s/%s', f, current + 1, total)
-            print '{}:{}/{}'.format(f, current + 1, total)
+            print('{}:{}/{}'.format(f, current + 1, total))
             did = f.split(".")[0]
             t = time.time()
             with io.open(f, 'r', encoding='utf8') as txt:
@@ -114,14 +114,14 @@ class MirtexCorpus(Corpus):
                                 else:
                                     not_tagged += 1
                             else:
-                                print "could not find sentence for this span: {}-{}".format(dstart, dend)
+                                print("could not find sentence for this span: {}-{}".format(dstart, dend))
         logging.info("normalizing entities...")
         for sentence in self.get_sentences("goldstandard"):
                 for e in sentence.entities.elist["goldstandard"]:
                     e.normalize()
         self.find_relations(pairtype)
         # self.evaluate_normalization()
-        print "tagged: {} not tagged: {}".format(tagged, not_tagged)
+        print("tagged: {} not tagged: {}".format(tagged, not_tagged))
         with open(ann_dir[:-1] + "-pmids.txt", 'w') as pmidsfile:
             pmidsfile.write("\n".join(pmids) + "\n")
         # self.run_ss_analysis(pairtype)

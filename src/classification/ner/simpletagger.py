@@ -43,7 +43,7 @@ feature_extractors = {# "text": lambda x, i: x.tokens[i].text,
 chem_features = feature_extractors.copy()
 chem_features.update({ "greek": lambda x, i: str(has_greek_symbol(x.tokens[i].text)),
                         "aminoacid": lambda x, i: str(any(w in amino_acids for w in x.tokens[i].text.split('-'))),
-                        "periodictable": lambda x, i: str(x.tokens[i].text in element_base.keys() or x.tokens[i].text.title() in zip(*element_base.values())[0])
+                        "periodictable": lambda x, i: str(x.tokens[i].text in list(element_base.keys()) or x.tokens[i].text.title() in zip(*list(element_base.values()))[0])
                                      })
 
 prot_features = feature_extractors.copy()
@@ -57,14 +57,14 @@ mirna_features.update({"mir": lambda x, i: mirna(x, i),
 
 def genia_chunk(sentence, i):
     if hasattr(sentence[i], "genia_chunk"):
-        print sentence[i].genia_chunk
+        print(sentence[i].genia_chunk)
         return "GENIA-" + sentence[i].genia_chunk
     else:
         return "NOGENIA"
 
 def genia_tag(sentence, i):
     if hasattr(sentence[i], "genia_tag"):
-        print sentence[i].genia_tag
+        print(sentence[i].genia_tag)
         return "GENIA-" + sentence[i].genia_tag
     else:
         return "NOGENIA"
@@ -403,7 +403,7 @@ class SimpleTaggerModel(Model):
                 try:
                     lines.append("{0}\t{1}\n".format(self.tokens[isent][it].text, label))
                 except UnicodeEncodeError: #fml
-                    lines.append(u"{0}\t{1}\n".format(self.tokens[isent][it].text, label))
+                    lines.append("{0}\t{1}\n".format(self.tokens[isent][it].text, label))
             lines.append("\n")
         with codecs.open("{}.bilou".format(self.path), "w", "utf-8") as output:
             output.write("".join(lines))

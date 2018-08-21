@@ -8,13 +8,13 @@ import pickle
 from time import sleep
 from pycorenlp import StanfordCoreNLP
 
-import config.corpus_paths
-from classification.ner.matcher import MatcherModel
-from config import config
-from postprocessing import ssm
-from reader import pubmed
-from text.corpus import Corpus
-from text.document import Document
+from . import config.corpus_paths
+from .classification.ner.matcher import MatcherModel
+from .config import config
+from .postprocessing import ssm
+from .reader import pubmed
+from .text.corpus import Corpus
+from .text.document import Document
 
 
 def get_pubmed_abstracts(terms, corpus_text_path, negative_pmids):
@@ -37,15 +37,15 @@ def get_pubmed_abstracts(terms, corpus_text_path, negative_pmids):
         if pmids not in negative_pmids:
             pmids.append(pmid.text)
         else:
-            print "repeated pmid: {}".format(pmid)
+            print("repeated pmid: {}".format(pmid))
             repeats += 1
-    print "repeated: {}".format(repeats)
+    print("repeated: {}".format(repeats))
 
     with codecs.open(corpus_text_path, 'a', 'utf-8') as docfile:
         for i, pmid in enumerate(pmids):
             doc = pubmed.PubmedDocument(pmid)
             docfile.write(pmid + "\t" + doc.text.replace("\n", " ") + "\n")
-            print "{}/{}".format(i, len(pmids))
+            print("{}/{}".format(i, len(pmids)))
             sleep(0.4)
 
 def process_documents(corpus_path):
@@ -56,9 +56,9 @@ def process_documents(corpus_path):
     starts = set()
     with codecs.open(corpus_path, 'r', 'utf-8') as docfile:
         for l in docfile:
-            print lcount
+            print(lcount)
             if l[:10] in starts:
-                print "repeated abstract:", l[:10]
+                print("repeated abstract:", l[:10])
                 continue
             lcount += 1
             starts.add(l[:10])
@@ -129,9 +129,9 @@ def annotate_corpus_relations(corpus, model, corpuspath):
                 for tf in sentence_tfs:
                     ss = ssm.simui_go(mirna.best_go, tf.best_go)
                     if ss > 0:
-                        print ss, mirna.text, tf.text, mirna.best_go, tf.best_go
+                        print(ss, mirna.text, tf.text, mirna.best_go, tf.best_go)
 
-    print "saving corpus..."
+    print("saving corpus...")
     corpus.save(corpuspath)
 negative_pmids = open("negative_pmids.txt", 'r').readlines()
 
