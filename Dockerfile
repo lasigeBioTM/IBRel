@@ -17,7 +17,7 @@ RUN \
 # Define commonly used JAVA_HOME variable
 ENV JAVA_HOME /usr/lib/jvm/java-8-oracle
 
-RUN apt-get update && apt-get install unzip
+RUN apt-get update && apt-get install unzip && apt-get install net-tools
 WORKDIR /bin
 
 # Get Stanford NER 3.5.2
